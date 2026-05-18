@@ -60,7 +60,7 @@ const hasGit = (() => {
 	teardown(function () {
 		client.close();
 		if (tmpRoot) {
-			rmSync(tmpRoot, { recursive: true, force: true });
+			try { rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch { /* best-effort temp cleanup; Windows can briefly hold git handles */ }
 		}
 	});
 

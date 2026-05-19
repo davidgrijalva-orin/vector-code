@@ -383,9 +383,6 @@ import './contrib/welcomeViews/common/newFile.contribution.js';
 // Vector Code
 import './contrib/vectorCode/browser/vectorCode.contribution.js';
 
-// Welcome Onboarding
-import './contrib/welcomeOnboarding/browser/welcomeOnboarding.contribution.js';
-
 // Call Hierarchy
 import './contrib/callHierarchy/browser/callHierarchy.contribution.js';
 

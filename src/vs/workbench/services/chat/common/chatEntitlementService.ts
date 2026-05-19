@@ -409,7 +409,8 @@ export class ChatEntitlementService extends Disposable implements IChatEntitleme
 		}
 
 		if (!productService.defaultChatAgent) {
-			return; // we need a default chat agent configured going forward from here
+			ChatEntitlementContextKeys.Setup.hidden.bindTo(this.contextKeyService).set(true);
+			return; // Vector Code does not ship VS Code's default Copilot agent.
 		}
 
 		const context = this.context = new Lazy(() => this._register(instantiationService.createInstance(ChatEntitlementContext)));

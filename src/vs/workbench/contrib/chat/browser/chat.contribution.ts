@@ -110,7 +110,7 @@ import { ChatDebugServiceImpl } from '../common/chatDebugServiceImpl.js';
 import { ChatDebugEditor } from './chatDebug/chatDebugEditor.js';
 import { PromptsDebugContribution } from './promptsDebugContribution.js';
 import { ChatDebugEditorInput, ChatDebugEditorInputSerializer } from './chatDebug/chatDebugEditorInput.js';
-import './agentSessions/agentSessions.contribution.js';
+import { AgentSessionsService, IAgentSessionsService } from './agentSessions/agentSessionsService.js';
 
 import { ChatContextKeys } from '../common/actions/chatContextKeys.js';
 
@@ -1614,7 +1614,7 @@ configurationRegistry.registerConfiguration({
 		[ChatConfiguration.AIDisabled]: {
 			type: 'boolean',
 			description: nls.localize('chat.disableAIFeatures', "Disable and hide built-in AI features provided by GitHub Copilot, including chat and inline suggestions."),
-			default: false,
+			default: true,
 			scope: ConfigurationScope.WINDOW,
 		},
 		[ChatConfiguration.OfflineByok]: {
@@ -1627,7 +1627,7 @@ configurationRegistry.registerConfiguration({
 		[ChatConfiguration.TitleBarSignInEnabled]: {
 			type: 'boolean',
 			description: nls.localize('chat.titleBar.signIn.enabled', "Controls whether the Copilot Sign In button is shown in the title bar when signed out. When disabled, the Sign In affordance falls back to the status bar."),
-			default: true,
+			default: false,
 		},
 		'chat.approvedAccountOrganizations': {
 			type: 'array',
@@ -2363,6 +2363,7 @@ agentPluginDiscoveryRegistry.register(new SyncDescriptor(CopilotCliAgentPluginDi
 registerSingleton(IChatResponseResourceFileSystemProvider, ChatResponseResourceFileSystemProvider, InstantiationType.Delayed);
 registerSingleton(IChatTransferService, ChatTransferService, InstantiationType.Delayed);
 registerSingleton(IChatService, ChatService, InstantiationType.Delayed);
+registerSingleton(IAgentSessionsService, AgentSessionsService, InstantiationType.Delayed);
 registerSingleton(IChatWidgetService, ChatWidgetService, InstantiationType.Delayed);
 registerSingleton(IQuickChatService, QuickChatService, InstantiationType.Delayed);
 registerSingleton(IChatAccessibilityService, ChatAccessibilityService, InstantiationType.Delayed);

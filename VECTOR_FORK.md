@@ -19,7 +19,9 @@ Native Vector surfaces are expected for:
 - Terminal routing such as sending the current selection or line to the active terminal.
 - Project-aware terminal creation and future terminal state improvements.
 - Mobile app connection through a native Vector relay adapter.
-- Agent sessions, runtime status, verification, and run ledger workflows.
+- Vector runtime status, verification, and run ledger workflows.
+
+Stock VS Code agent status and agent-session welcome surfaces should stay hidden by default. Vector Code owns its own runtime and assistant surfaces through first-party workbench contributions.
 
 Vector-specific behavior should route through the native `IVectorCodeWorkbenchService` first. Workbench views and command actions should call that service instead of reaching into terminal, Explorer, or relay internals directly.
 

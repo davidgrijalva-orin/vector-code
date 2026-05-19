@@ -5,6 +5,7 @@
 
 import { $, addDisposableListener, append, clearNode, EventType } from '../../../../base/browser/dom.js';
 import { Codicon } from '../../../../base/common/codicons.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
@@ -44,6 +45,7 @@ const vectorCodeIcon = registerIcon('vector-code-view-icon', Codicon.sparkle, lo
 interface IVectorCodeControlAction {
 	readonly label: string;
 	readonly commandId: string;
+	readonly icon?: ThemeIcon;
 }
 
 interface IVectorCodeStatusCard {
@@ -76,34 +78,38 @@ class VectorCodeControlView extends ViewPane {
 		container.classList.add('vector-code-control-view');
 
 		const root = append(container, $('.vector-code-control'));
-		const heading = append(root, $('.vector-code-control__heading'));
+		const header = append(root, $('.vector-code-control__header'));
+		const mark = append(header, $('.vector-code-control__mark'));
+		mark.classList.add(...ThemeIcon.asClassNameArray(Codicon.sparkle));
+		const headerText = append(header, $('.vector-code-control__header-text'));
+		const heading = append(headerText, $('.vector-code-control__heading'));
 		heading.textContent = localize('vectorCodeControlHeading', 'Vector Code');
-
-		const subheading = append(root, $('.vector-code-control__subheading'));
-		subheading.textContent = localize('vectorCodeControlSubheading', 'Native workbench surface for projects, terminals, agents, and mobile continuity');
+		const headerStatus = append(headerText, $('.vector-code-control__header-status'));
+		headerStatus.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
 
 		const grid = append(root, $('.vector-code-control__grid'));
-		const projects = this.renderStatusCard(grid, localize('vectorCodeProjects', 'Projects'), this.vectorCodeWorkbenchService.getProjectStatusLabel(), [
-			{ label: localize('vectorCodeAddProject', 'Add Project'), commandId: VECTOR_CODE_ADD_PROJECT_COMMAND_ID },
-			{ label: localize('vectorCodeOpenExplorer', 'Open Explorer'), commandId: EXPLORER_VIEWLET_ID }
+		const projects = this.renderStatusCard(grid, Codicon.repo, localize('vectorCodeProjects', 'Projects'), this.vectorCodeWorkbenchService.getProjectStatusLabel(), [
+			{ label: localize('vectorCodeAddProject', 'Add Project'), commandId: VECTOR_CODE_ADD_PROJECT_COMMAND_ID, icon: Codicon.add },
+			{ label: localize('vectorCodeOpenExplorer', 'Open Explorer'), commandId: EXPLORER_VIEWLET_ID, icon: Codicon.files }
 		]);
 		const projectList = append(projects.card, $('.vector-code-control__project-list'));
 		const updateProjects = () => {
 			projects.status.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
+			headerStatus.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
 			this.renderProjectList(projectList);
 		};
 		updateProjects();
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 
-		this.renderStatusCard(grid, localize('vectorCodeTerminalRouting', 'Terminal Routing'), localize('vectorCodeTerminalRoutingState', 'Selection and current-line routing uses the native terminal service'), [
-			{ label: localize('vectorCodeSendSelection', 'Send Selection or Line'), commandId: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID },
-			{ label: localize('vectorCodeOpenProjectTerminal', 'Project Terminal'), commandId: VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID }
+		this.renderStatusCard(grid, Codicon.terminal, localize('vectorCodeTerminalRouting', 'Terminal'), localize('vectorCodeTerminalRoutingState', 'Ready'), [
+			{ label: localize('vectorCodeSendSelection', 'Send Selection or Line'), commandId: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID, icon: Codicon.run },
+			{ label: localize('vectorCodeOpenProjectTerminal', 'Project Terminal'), commandId: VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID, icon: Codicon.terminal }
 		]);
-		this.renderStatusCard(grid, localize('vectorCodeMobile', 'Mobile Connection'), this.vectorCodeWorkbenchService.getMobileStatusLabel(), [
-			{ label: localize('vectorCodeConnectMobile', 'Connect Mobile'), commandId: VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID }
+		this.renderStatusCard(grid, Codicon.deviceMobile, localize('vectorCodeMobile', 'Mobile'), this.vectorCodeWorkbenchService.getMobileStatusLabel(), [
+			{ label: localize('vectorCodeConnectMobile', 'Connect Mobile'), commandId: VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID, icon: Codicon.plug }
 		]);
-		this.renderStatusCard(grid, localize('vectorCodeAgents', 'Agent Sessions'), localize('vectorCodeAgentsState', 'Runtime adapter pending'));
-		this.renderStatusCard(grid, localize('vectorCodeVerification', 'Verification'), localize('vectorCodeVerificationState', 'Check ledger pending'));
+		this.renderStatusCard(grid, Codicon.pulse, localize('vectorCodeRuntime', 'Vector Runtime'), localize('vectorCodeRuntimeState', 'Adapter pending'));
+		this.renderStatusCard(grid, Codicon.checklist, localize('vectorCodeVerification', 'Verification'), localize('vectorCodeVerificationState', 'Check ledger pending'));
 	}
 
 	private renderProjectList(container: HTMLElement): void {
@@ -125,9 +131,12 @@ class VectorCodeControlView extends ViewPane {
 		}
 	}
 
-	private renderStatusCard(container: HTMLElement, title: string, status: string, actions: readonly IVectorCodeControlAction[] = []): IVectorCodeStatusCard {
+	private renderStatusCard(container: HTMLElement, icon: ThemeIcon, title: string, status: string, actions: readonly IVectorCodeControlAction[] = []): IVectorCodeStatusCard {
 		const card = append(container, $('.vector-code-control__card'));
-		const cardTitle = append(card, $('.vector-code-control__card-title'));
+		const cardHeader = append(card, $('.vector-code-control__card-header'));
+		const cardIcon = append(cardHeader, $('.vector-code-control__card-icon'));
+		cardIcon.classList.add(...ThemeIcon.asClassNameArray(icon));
+		const cardTitle = append(cardHeader, $('.vector-code-control__card-title'));
 		cardTitle.textContent = title;
 		const cardStatus = append(card, $('.vector-code-control__card-status'));
 		cardStatus.textContent = status;
@@ -146,7 +155,12 @@ class VectorCodeControlView extends ViewPane {
 		const button = document.createElement('button');
 		button.className = 'vector-code-control__button';
 		button.type = 'button';
-		button.textContent = action.label;
+		if (action.icon) {
+			const icon = append(button, $('.vector-code-control__button-icon'));
+			icon.classList.add(...ThemeIcon.asClassNameArray(action.icon));
+		}
+		const label = append(button, $('.vector-code-control__button-label'));
+		label.textContent = action.label;
 		container.appendChild(button);
 
 		this._register(addDisposableListener(button, EventType.CLICK, () => {

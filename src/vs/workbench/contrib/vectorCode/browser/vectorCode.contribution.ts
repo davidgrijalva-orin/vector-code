@@ -35,6 +35,7 @@ import {
 	VECTOR_CODE_VIEW_CONTAINER_ID
 } from '../common/vectorCode.js';
 import './vectorCodeActions.js';
+import './vectorCodeMobileRelayService.js';
 import './vectorCodeService.js';
 import './media/vectorCode.css';
 
@@ -98,7 +99,7 @@ class VectorCodeControlView extends ViewPane {
 			{ label: localize('vectorCodeSendSelection', 'Send Selection or Line'), commandId: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID },
 			{ label: localize('vectorCodeOpenProjectTerminal', 'Project Terminal'), commandId: VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID }
 		]);
-		this.renderStatusCard(grid, localize('vectorCodeMobile', 'Mobile Connection'), localize('vectorCodeMobileState', 'Native relay adapter pending'), [
+		this.renderStatusCard(grid, localize('vectorCodeMobile', 'Mobile Connection'), this.vectorCodeWorkbenchService.getMobileStatusLabel(), [
 			{ label: localize('vectorCodeConnectMobile', 'Connect Mobile'), commandId: VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID }
 		]);
 		this.renderStatusCard(grid, localize('vectorCodeAgents', 'Agent Sessions'), localize('vectorCodeAgentsState', 'Runtime adapter pending'));

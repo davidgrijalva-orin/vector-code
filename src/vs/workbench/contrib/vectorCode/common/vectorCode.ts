@@ -19,6 +19,28 @@ export interface IVectorCodeProjectSummary {
 	readonly uriLabel: string;
 }
 
+export const enum VectorCodeMobileConnectionState {
+	Unconfigured = 'unconfigured',
+	Disconnected = 'disconnected',
+	Pairing = 'pairing',
+	Connected = 'connected'
+}
+
+export interface IVectorCodeMobileConnectionStatus {
+	readonly state: VectorCodeMobileConnectionState;
+	readonly label: string;
+	readonly detail: string;
+}
+
+export const IVectorCodeMobileRelayService = createDecorator<IVectorCodeMobileRelayService>('vectorCodeMobileRelayService');
+
+export interface IVectorCodeMobileRelayService {
+	readonly _serviceBrand: undefined;
+
+	getStatus(): IVectorCodeMobileConnectionStatus;
+	startPairing(): Promise<IVectorCodeMobileConnectionStatus>;
+}
+
 export const IVectorCodeWorkbenchService = createDecorator<IVectorCodeWorkbenchService>('vectorCodeWorkbenchService');
 
 export interface IVectorCodeWorkbenchService {
@@ -26,6 +48,7 @@ export interface IVectorCodeWorkbenchService {
 
 	getProjectStatusLabel(): string;
 	getProjectSummaries(): readonly IVectorCodeProjectSummary[];
+	getMobileStatusLabel(): string;
 	addProjectToWorkspace(): Promise<void>;
 	sendSelectionOrLineToTerminal(): Promise<void>;
 	openProjectTerminal(): Promise<void>;

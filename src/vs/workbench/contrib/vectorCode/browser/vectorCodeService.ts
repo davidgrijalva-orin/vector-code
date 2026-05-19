@@ -13,7 +13,7 @@ import { ADD_ROOT_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCo
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import { TerminalCommandId } from '../../terminal/common/terminal.js';
-import { IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID } from '../common/vectorCode.js';
+import { IVectorCodeMobileRelayService, IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID } from '../common/vectorCode.js';
 
 class VectorCodeWorkbenchService implements IVectorCodeWorkbenchService {
 	readonly _serviceBrand: undefined;
@@ -21,6 +21,7 @@ class VectorCodeWorkbenchService implements IVectorCodeWorkbenchService {
 	constructor(
 		@ICommandService private readonly commandService: ICommandService,
 		@ILabelService private readonly labelService: ILabelService,
+		@IVectorCodeMobileRelayService private readonly mobileRelayService: IVectorCodeMobileRelayService,
 		@INotificationService private readonly notificationService: INotificationService,
 		@IViewsService private readonly viewsService: IViewsService,
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
@@ -44,6 +45,10 @@ class VectorCodeWorkbenchService implements IVectorCodeWorkbenchService {
 		}));
 	}
 
+	getMobileStatusLabel(): string {
+		return this.mobileRelayService.getStatus().label;
+	}
+
 	async addProjectToWorkspace(): Promise<void> {
 		await this.commandService.executeCommand(ADD_ROOT_FOLDER_COMMAND_ID);
 		await this.viewsService.openViewContainer(EXPLORER_VIEWLET_ID, true);
@@ -60,7 +65,8 @@ class VectorCodeWorkbenchService implements IVectorCodeWorkbenchService {
 
 	async connectMobileApp(): Promise<void> {
 		await this.viewsService.openViewContainer(VECTOR_CODE_VIEW_CONTAINER_ID, true);
-		this.notificationService.info(localize('vectorCodeMobileConnectionPending', 'Vector Code mobile connection will use the native relay adapter. That adapter is the next implementation slice.'));
+		const status = await this.mobileRelayService.startPairing();
+		this.notificationService.info(status.detail);
 	}
 }
 

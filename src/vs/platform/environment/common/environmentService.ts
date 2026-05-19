@@ -16,6 +16,8 @@ import { IProductService } from '../../product/common/productService.js';
 
 export const EXTENSION_IDENTIFIER_WITH_LOG_REGEX = /^([^.]+\..+)[:=](.+)$/;
 
+const VECTOR_SKIPPED_BUILTIN_EXTENSIONS = ['GitHub.copilot', 'GitHub.copilot-chat'];
+
 export interface INativeEnvironmentPaths {
 
 	/**
@@ -218,10 +220,12 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 
 	get skipBuiltinExtensions(): readonly string[] {
 		const value = env['VSCODE_SKIP_BUILTIN_EXTENSIONS'];
-		if (!value) {
-			return [];
+		const configuredExtensions = value ? value.split(',').map(id => id.trim()).filter(id => id) : [];
+		if (!configuredExtensions.length) {
+			return VECTOR_SKIPPED_BUILTIN_EXTENSIONS;
 		}
-		return value.split(',').map(id => id.trim()).filter(id => id);
+
+		return Array.from(new Set([...configuredExtensions, ...VECTOR_SKIPPED_BUILTIN_EXTENSIONS]));
 	}
 
 	@memoize

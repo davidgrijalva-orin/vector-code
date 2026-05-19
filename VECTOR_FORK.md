@@ -21,6 +21,8 @@ Native Vector surfaces are expected for:
 - Mobile app connection through a native Vector relay adapter.
 - Agent sessions, runtime status, verification, and run ledger workflows.
 
+Vector-specific behavior should route through the native `IVectorCodeWorkbenchService` first. Workbench views and command actions should call that service instead of reaching into terminal, Explorer, or relay internals directly.
+
 ## Current Baseline
 
 - Upstream: `microsoft/vscode`

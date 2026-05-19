@@ -68,3 +68,33 @@
 .vector-code-control__button:hover {
 	background: var(--vscode-button-secondaryHoverBackground);
 }
+
+.vector-code-control__project-list {
+	display: grid;
+	gap: 6px;
+	margin-top: 10px;
+}
+
+.vector-code-control__project {
+	min-width: 0;
+}
+
+.vector-code-control__project-empty,
+.vector-code-control__project-path {
+	color: var(--vscode-descriptionForeground);
+	font-size: 11px;
+	line-height: 16px;
+}
+
+.vector-code-control__project-name {
+	color: var(--vscode-foreground);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 16px;
+}
+
+.vector-code-control__project-path {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

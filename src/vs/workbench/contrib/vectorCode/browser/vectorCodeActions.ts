@@ -3,10 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize2 } from '../../../../nls.js';
-import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
+import { EditorContextKeys } from '../../../../editor/common/editorContextKeys.js';
+import { localize, localize2 } from '../../../../nls.js';
+import { Action2, MenuId, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
+import { TerminalContextKeys } from '../../terminal/common/terminalContextKey.js';
 import {
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
@@ -18,6 +20,7 @@ import {
 } from '../common/vectorCode.js';
 
 const vectorCodeCategory = localize2('vectorCodeCategory', 'Vector Code');
+const sendSelectionOrLineTitle = localize2('vectorCodeSendSelectionToTerminalCommand', 'Vector Code: Send Selection or Line to Terminal');
 
 registerAction2(class OpenVectorCodeControlAction extends Action2 {
 	constructor() {
@@ -55,7 +58,7 @@ registerAction2(class SendVectorCodeSelectionToTerminalAction extends Action2 {
 	constructor() {
 		super({
 			id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
-			title: localize2('vectorCodeSendSelectionToTerminalCommand', 'Vector Code: Send Selection or Line to Terminal'),
+			title: sendSelectionOrLineTitle,
 			category: vectorCodeCategory,
 			f1: true
 		});
@@ -65,6 +68,26 @@ registerAction2(class SendVectorCodeSelectionToTerminalAction extends Action2 {
 		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
 		await vectorCodeWorkbenchService.sendSelectionOrLineToTerminal();
 	}
+});
+
+MenuRegistry.appendMenuItem(MenuId.EditorContext, {
+	command: {
+		id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
+		title: sendSelectionOrLineTitle
+	},
+	group: 'navigation',
+	order: 1.5,
+	when: EditorContextKeys.editorTextFocus
+});
+
+MenuRegistry.appendMenuItem(MenuId.MenubarTerminalMenu, {
+	command: {
+		id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
+		title: localize({ key: 'miVectorCodeSendSelectionToTerminal', comment: ['&& denotes a mnemonic'] }, 'Vector Code: Send &&Selection or Line')
+	},
+	group: '3_run',
+	order: 5,
+	when: TerminalContextKeys.processSupported
 });
 
 registerAction2(class OpenVectorCodeProjectTerminalAction extends Action2 {

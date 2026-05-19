@@ -8,8 +8,8 @@ import { ICommandService } from '../../../../platform/commands/common/commands.j
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { ADD_ROOT_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCommands.js';
+import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../platform/workspace/common/workspace.js';
+import { ADD_ROOT_FOLDER_COMMAND_ID, PICK_WORKSPACE_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCommands.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import { TerminalCommandId } from '../../terminal/common/terminal.js';
@@ -59,7 +59,25 @@ class VectorCodeWorkbenchService implements IVectorCodeWorkbenchService {
 	}
 
 	async openProjectTerminal(): Promise<void> {
-		await this.commandService.executeCommand(TerminalCommandId.NewInActiveWorkspace);
+		const folders = this.workspaceContextService.getWorkspace().folders;
+		if (!folders.length) {
+			await this.commandService.executeCommand(TerminalCommandId.New);
+			await this.commandService.executeCommand(TerminalCommandId.Focus);
+			return;
+		}
+
+		let folder = folders[0];
+		if (folders.length > 1) {
+			const pickedFolder = await this.commandService.executeCommand<IWorkspaceFolder>(PICK_WORKSPACE_FOLDER_COMMAND_ID, [{
+				placeHolder: localize('vectorCodeProjectTerminalPlaceholder', 'Select project for new terminal')
+			}]);
+			if (!pickedFolder) {
+				return;
+			}
+			folder = pickedFolder;
+		}
+
+		await this.commandService.executeCommand(TerminalCommandId.NewWithCwd, { cwd: folder.uri.fsPath });
 		await this.commandService.executeCommand(TerminalCommandId.Focus);
 	}
 

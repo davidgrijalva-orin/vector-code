@@ -688,7 +688,7 @@ class PolicyDiagnosticsAction extends Action2 {
 
 		const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
 
-		let content = '# VS Code Policy Diagnostics\n\n';
+		let content = '# Vector Code Policy Diagnostics\n\n';
 		content += '*WARNING: This file may contain sensitive information.*\n\n';
 		content += '## System Information\n\n';
 		content += '| Property | Value |\n';
@@ -756,8 +756,8 @@ class PolicyDiagnosticsAction extends Action2 {
 			content += `*Error retrieving account information: ${error}*\n\n`;
 		}
 
-		// Account Policy Gate (forces AI features off until an admin-approved
-		// GitHub account is signed in AND its account-side policy data has resolved).
+		// Account Policy Gate (holds restricted account-policy values until an
+		// admin-approved GitHub account is signed in and its account-side policy data has resolved).
 		content += '## Account Policy Gate\n\n';
 		try {
 			const gateInfo = accountPolicyGateService.gateInfo;

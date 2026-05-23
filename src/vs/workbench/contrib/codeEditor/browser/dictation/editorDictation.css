@@ -4,33 +4,33 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-editor .editor-dictation-widget {
-	background-color: var(--vscode-editor-background);
+	background-color: var(--vectorcode-editor-background);
 	padding: 2px;
 	border-radius: 8px;
 	display: flex;
 	align-items: center;
-	box-shadow: var(--vscode-shadow-lg);
+	box-shadow: var(--vectorcode-shadow-lg);
 	z-index: 1000;
-	min-height: var(--vscode-editor-dictation-widget-height);
-	line-height: var(--vscode-editor-dictation-widget-height);
-	max-width: var(--vscode-editor-dictation-widget-width);
+	min-height: var(--vectorcode-editor-dictation-widget-height);
+	line-height: var(--vectorcode-editor-dictation-widget-height);
+	max-width: var(--vectorcode-editor-dictation-widget-width);
 }
 
 .monaco-editor .editor-dictation-widget.recording .codicon.codicon-mic-filled {
-	color: var(--vscode-activityBarBadge-background);
+	color: var(--vectorcode-activityBarBadge-background);
 	animation: editor-dictation-animation 1s infinite;
 }
 
 @keyframes editor-dictation-animation {
 	0% {
-		color: var(--vscode-editorCursor-background);
+		color: var(--vectorcode-editorCursor-background);
 	}
 
 	50% {
-		color: var(--vscode-activityBarBadge-background);
+		color: var(--vectorcode-activityBarBadge-background);
 	}
 
 	100% {
-		color: var(--vscode-editorCursor-background);
+		color: var(--vectorcode-editorCursor-background);
 	}
 }

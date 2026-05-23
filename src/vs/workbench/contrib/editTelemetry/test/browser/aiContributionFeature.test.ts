@@ -30,16 +30,6 @@ suite('AiContributionFeature', () => {
 	const fileA = URI.parse('file:///a.ts');
 	const fileB = URI.parse('file:///b.ts');
 
-	const chatEdit = EditSources.chatApplyEdits({
-		languageId: 'plaintext',
-		modelId: undefined,
-		codeBlockSuggestionId: undefined,
-		extensionId: undefined,
-		mode: undefined,
-		requestId: undefined,
-		sessionId: undefined,
-	});
-
 	const userEdit = EditSources.cursor({ kind: 'type' });
 
 	const inlineCompletionEdit = EditSources.inlineCompletionAccept({
@@ -61,8 +51,8 @@ suite('AiContributionFeature', () => {
 		disposables.add(instantiationService.createInstance(AiContributionFeature, annotatedDocuments));
 	}
 
-	function hasAiContributions(uris: URI[], level: 'chatAndAgent' | 'all'): boolean {
-		return CommandsRegistry.getCommand('_aiEdits.hasAiContributions')!.handler(undefined!, uris, level) as unknown as boolean;
+	function hasAiContributions(uris: URI[]): boolean {
+		return CommandsRegistry.getCommand('_aiEdits.hasAiContributions')!.handler(undefined!, uris) as unknown as boolean;
 	}
 
 	function clearAiContributions(uris: URI[]): void {
@@ -77,25 +67,11 @@ suite('AiContributionFeature', () => {
 		setup();
 		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
 		await timeout(1500);
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), false);
-		assert.strictEqual(hasAiContributions([d.uri], 'chatAndAgent'), false);
+		assert.strictEqual(hasAiContributions([d.uri]), false);
 		disposables.dispose();
 	}));
 
-	test('detects chat AI edits', () => runWithFakedTimers({}, async () => {
-		setup();
-		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
-		await timeout(1500);
-
-		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', chatEdit));
-		await timeout(1500);
-
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), true);
-		assert.strictEqual(hasAiContributions([d.uri], 'chatAndAgent'), true);
-		disposables.dispose();
-	}));
-
-	test('detects inline completion AI edits at all level only', () => runWithFakedTimers({}, async () => {
+	test('detects inline completion AI edits', () => runWithFakedTimers({}, async () => {
 		setup();
 		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
 		await timeout(1500);
@@ -103,8 +79,19 @@ suite('AiContributionFeature', () => {
 		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', inlineCompletionEdit));
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), true);
-		assert.strictEqual(hasAiContributions([d.uri], 'chatAndAgent'), false);
+		assert.strictEqual(hasAiContributions([d.uri]), true);
+		disposables.dispose();
+	}));
+
+	test('detects inline completion AI edits across resources', () => runWithFakedTimers({}, async () => {
+		setup();
+		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
+		await timeout(1500);
+
+		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', inlineCompletionEdit));
+		await timeout(1500);
+
+		assert.strictEqual(hasAiContributions([d.uri, fileB]), true);
 		disposables.dispose();
 	}));
 
@@ -116,8 +103,7 @@ suite('AiContributionFeature', () => {
 		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', userEdit));
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), false);
-		assert.strictEqual(hasAiContributions([d.uri], 'chatAndAgent'), false);
+		assert.strictEqual(hasAiContributions([d.uri]), false);
 		disposables.dispose();
 	}));
 
@@ -127,17 +113,17 @@ suite('AiContributionFeature', () => {
 		const dB = disposables.add(workspace.createDocument({ uri: fileB, initialValue: 'world' }, undefined));
 		await timeout(1500);
 
-		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', chatEdit));
-		dB.applyEdit(StringEditWithReason.replace(dB.findRange('world'), 'bar', chatEdit));
+		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', inlineCompletionEdit));
+		dB.applyEdit(StringEditWithReason.replace(dB.findRange('world'), 'bar', inlineCompletionEdit));
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([dA.uri], 'all'), true);
-		assert.strictEqual(hasAiContributions([dB.uri], 'all'), true);
+		assert.strictEqual(hasAiContributions([dA.uri]), true);
+		assert.strictEqual(hasAiContributions([dB.uri]), true);
 
 		clearAiContributions([dA.uri]);
 
-		assert.strictEqual(hasAiContributions([dA.uri], 'all'), false);
-		assert.strictEqual(hasAiContributions([dB.uri], 'all'), true);
+		assert.strictEqual(hasAiContributions([dA.uri]), false);
+		assert.strictEqual(hasAiContributions([dB.uri]), true);
 		disposables.dispose();
 	}));
 
@@ -147,14 +133,14 @@ suite('AiContributionFeature', () => {
 		const dB = disposables.add(workspace.createDocument({ uri: fileB, initialValue: 'world' }, undefined));
 		await timeout(1500);
 
-		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', chatEdit));
-		dB.applyEdit(StringEditWithReason.replace(dB.findRange('world'), 'bar', chatEdit));
+		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', inlineCompletionEdit));
+		dB.applyEdit(StringEditWithReason.replace(dB.findRange('world'), 'bar', inlineCompletionEdit));
 		await timeout(1500);
 
 		clearAllAiContributions();
 
-		assert.strictEqual(hasAiContributions([dA.uri], 'all'), false);
-		assert.strictEqual(hasAiContributions([dB.uri], 'all'), false);
+		assert.strictEqual(hasAiContributions([dA.uri]), false);
+		assert.strictEqual(hasAiContributions([dB.uri]), false);
 		disposables.dispose();
 	}));
 
@@ -163,16 +149,16 @@ suite('AiContributionFeature', () => {
 		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
 		await timeout(1500);
 
-		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', chatEdit));
+		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', inlineCompletionEdit));
 		await timeout(1500);
 
 		clearAiContributions([d.uri]);
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), false);
+		assert.strictEqual(hasAiContributions([d.uri]), false);
 
-		d.applyEdit(StringEditWithReason.replace(d.findRange('world'), 'again', chatEdit));
+		d.applyEdit(StringEditWithReason.replace(d.findRange('world'), 'again', inlineCompletionEdit));
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), true);
+		assert.strictEqual(hasAiContributions([d.uri]), true);
 		disposables.dispose();
 	}));
 
@@ -181,21 +167,21 @@ suite('AiContributionFeature', () => {
 		const d = disposables.add(workspace.createDocument({ uri: fileA, initialValue: 'hello' }, undefined));
 		await timeout(1500);
 
-		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', chatEdit));
+		d.applyEdit(StringEditWithReason.replace(d.findRange('hello'), 'world', inlineCompletionEdit));
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([d.uri], 'all'), true);
+		assert.strictEqual(hasAiContributions([d.uri]), true);
 
 		d.dispose();
 		await timeout(1500);
 
-		assert.strictEqual(hasAiContributions([fileA], 'all'), false);
+		assert.strictEqual(hasAiContributions([fileA]), false);
 		disposables.dispose();
 	}));
 
 	test('returns false for unknown URIs', () => runWithFakedTimers({}, async () => {
 		setup();
-		assert.strictEqual(hasAiContributions([URI.parse('file:///unknown.ts')], 'all'), false);
+		assert.strictEqual(hasAiContributions([URI.parse('file:///unknown.ts')]), false);
 		disposables.dispose();
 	}));
 
@@ -205,13 +191,13 @@ suite('AiContributionFeature', () => {
 		disposables.add(workspace.createDocument({ uri: fileB, initialValue: 'world' }, undefined));
 		await timeout(1500);
 
-		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', chatEdit));
+		dA.applyEdit(StringEditWithReason.replace(dA.findRange('hello'), 'foo', inlineCompletionEdit));
 		await timeout(1500);
 
 		// Returns true if any of the resources has AI contributions
-		assert.strictEqual(hasAiContributions([fileA, fileB], 'all'), true);
-		assert.strictEqual(hasAiContributions([fileB, fileA], 'all'), true);
-		assert.strictEqual(hasAiContributions([fileB], 'all'), false);
+		assert.strictEqual(hasAiContributions([fileA, fileB]), true);
+		assert.strictEqual(hasAiContributions([fileB, fileA]), true);
+		assert.strictEqual(hasAiContributions([fileB]), false);
 		disposables.dispose();
 	}));
 });

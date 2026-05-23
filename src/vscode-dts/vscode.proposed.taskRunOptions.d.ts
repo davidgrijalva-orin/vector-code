@@ -20,7 +20,7 @@ declare module 'vscode' {
 		FolderOpen = 2,
 
 		/**
-		 * The task runs when an Agent Session worktree is created.
+		 * The task runs when a worktree is created.
 		 */
 		WorktreeCreated = 3,
 	}

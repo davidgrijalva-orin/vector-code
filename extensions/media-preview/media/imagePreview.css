@@ -34,14 +34,14 @@ body img {
 .container.image img {
 	padding: 0;
 	background-size: 16px 16px;
-	border: 1px solid var(--vscode-imagePreview-border);
+	border: 1px solid var(--vectorcode-imagePreview-border);
 }
 
 .container.image img {
 	background-image: conic-gradient(rgb(230, 230, 230) 25%, transparent 25% 50%, rgb(230, 230, 230) 50% 75%, transparent 75%);
 }
 
-.vscode-dark.container.image img {
+.vectorcode-dark.container.image img {
 	background-image: conic-gradient(rgb(20, 20, 20) 25%, transparent 25% 50%, rgb(20, 20, 20) 50% 75%, transparent 75%);
 }
 
@@ -106,10 +106,10 @@ body img {
 	margin: 1em;
 }
 
-.vscode-dark .loading-indicator {
+.vectorcode-dark .loading-indicator {
 	background-image: url('./loading-dark.svg');
 }
 
-.vscode-high-contrast .loading-indicator {
+.vectorcode-high-contrast .loading-indicator {
 	background-image: url('./loading-hc.svg');
 }

@@ -73,7 +73,7 @@ export async function collectWorkspaceStats(folder: string, filter: string[]): P
 		{ tag: 'claude-skills-dir', filePattern: /^SKILL\.md$/i, relativePathPattern: /^\.claude[\/\\]skills[\/\\]/i },
 		{ tag: 'claude-rules-dir', filePattern: /\.md$/i, relativePathPattern: /^\.claude[\/\\]rules$/i },
 		{ tag: 'gemini.md', filePattern: /^gemini\.md$/i },
-		{ tag: 'copilot-instructions.md', filePattern: /^copilot\-instructions\.md$/i, relativePathPattern: /^\.github$/i },
+		{ tag: 'vectorcode-instructions.md', filePattern: /^vectorcode\-instructions\.md$/i, relativePathPattern: /^\.github$/i },
 	];
 
 	const fileTypes = new Map<string, number>();

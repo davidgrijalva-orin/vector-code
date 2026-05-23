@@ -13,11 +13,11 @@
 	z-index: 40;
 	overflow: hidden;
 	max-width: 700px;
-	background: var(--vscode-editorHoverWidget-background);
-	border: 1px solid var(--vscode-editorHoverWidget-border);
+	background: var(--vectorcode-editorHoverWidget-background);
+	border: 1px solid var(--vectorcode-editorHoverWidget-border);
 	border-radius: 5px;
-	color: var(--vscode-editorHoverWidget-foreground);
-	box-shadow: var(--vscode-shadow-hover);
+	color: var(--vectorcode-editorHoverWidget-foreground);
+	box-shadow: var(--vectorcode-shadow-hover);
 }
 
 .monaco-hover.workbench-hover.with-pointer {
@@ -49,10 +49,10 @@
 }
 
 .workbench-hover-container.locked .monaco-hover.workbench-hover {
-	outline: 1px solid var(--vscode-editorHoverWidget-border);
+	outline: 1px solid var(--vectorcode-editorHoverWidget-border);
 }
 .workbench-hover-container:focus-within.locked .monaco-hover.workbench-hover {
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .workbench-hover-pointer {
@@ -67,9 +67,9 @@
 	position: absolute;
 	width: 5px;
 	height: 5px;
-	background-color: var(--vscode-editorHoverWidget-background);
-	border-right: 1px solid var(--vscode-editorHoverWidget-border);
-	border-bottom: 1px solid var(--vscode-editorHoverWidget-border);
+	background-color: var(--vectorcode-editorHoverWidget-background);
+	border-right: 1px solid var(--vectorcode-editorHoverWidget-border);
+	border-bottom: 1px solid var(--vectorcode-editorHoverWidget-border);
 }
 .workbench-hover-container:not(:focus-within).locked .workbench-hover-pointer:after {
 	width: 4px;
@@ -78,8 +78,8 @@
 	border-bottom-width: 2px;
 }
 .workbench-hover-container:focus-within .workbench-hover-pointer:after {
-	border-right: 1px solid var(--vscode-focusBorder);
-	border-bottom: 1px solid var(--vscode-focusBorder);
+	border-right: 1px solid var(--vectorcode-focusBorder);
+	border-bottom: 1px solid var(--vectorcode-focusBorder);
 }
 
 .workbench-hover-pointer.left   { left: -3px; }
@@ -104,14 +104,14 @@
 }
 
 .monaco-hover.workbench-hover a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-hover.workbench-hover a:focus {
 	outline: 1px solid;
 	outline-offset: -1px;
 	text-decoration: underline;
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .monaco-hover.workbench-hover a.codicon:focus,
@@ -121,15 +121,15 @@
 
 .monaco-hover.workbench-hover a:hover,
 .monaco-hover.workbench-hover a:active {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .monaco-hover.workbench-hover code {
-	background: var(--vscode-textCodeBlock-background);
+	background: var(--vectorcode-textCodeBlock-background);
 }
 
 .monaco-hover.workbench-hover .hover-row .actions {
-	background: var(--vscode-editorHoverWidget-statusBarBackground);
+	background: var(--vectorcode-editorHoverWidget-statusBarBackground);
 }
 
 .monaco-hover.workbench-hover.right-aligned {

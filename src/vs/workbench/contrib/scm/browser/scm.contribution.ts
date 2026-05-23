@@ -8,7 +8,7 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IWorkbenchContributionsRegistry, registerWorkbenchContribution2, Extensions as WorkbenchExtensions, WorkbenchPhase } from '../../../common/contributions.js';
 import { VIEWLET_ID, ISCMService, VIEW_PANE_ID, ISCMProvider, ISCMViewService, REPOSITORIES_VIEW_PANE_ID, HISTORY_VIEW_PANE_ID } from '../common/scm.js';
 import { KeyMod, KeyCode } from '../../../../base/common/keyCodes.js';
-import { MenuRegistry, MenuId, registerAction2, Action2 } from '../../../../platform/actions/common/actions.js';
+import { MenuRegistry, MenuId } from '../../../../platform/actions/common/actions.js';
 import { SCMActiveResourceContextKeyController, SCMActiveRepositoryController } from './activity.js';
 import { LifecyclePhase } from '../../../services/lifecycle/common/lifecycle.js';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions, ConfigurationScope } from '../../../../platform/configuration/common/configurationRegistry.js';
@@ -34,15 +34,11 @@ import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IListService, WorkbenchList } from '../../../../platform/list/browser/listService.js';
 import { isSCMRepository } from './util.js';
 import { SCMHistoryViewPane } from './scmHistoryViewPane.js';
-import { RemoteNameContext, ResourceContextKey } from '../../../common/contextkeys.js';
+import { RemoteNameContext } from '../../../common/contextkeys.js';
 import { AccessibleViewRegistry } from '../../../../platform/accessibility/browser/accessibleViewRegistry.js';
 import { SCMAccessibilityHelp } from './scmAccessibilityHelp.js';
 import { EditorContextKeys } from '../../../../editor/common/editorContextKeys.js';
-import { SCMHistoryItemContextContribution } from './scmHistoryChatContext.js';
-import { ChatContextKeys } from '../../chat/common/actions/chatContextKeys.js';
-import { CHAT_SETUP_SUPPORT_ANONYMOUS_ACTION_ID } from '../../chat/browser/actions/chatActions.js';
 import { SCMInputContextKeys } from './scmInput.js';
-import product from '../../../../platform/product/common/product.js';
 
 ModesRegistry.registerLanguage({
 	id: 'scminput',
@@ -51,11 +47,11 @@ ModesRegistry.registerLanguage({
 	mimetypes: ['text/x-scm-input']
 });
 
-const sourceControlViewIcon = registerIcon('source-control-view-icon', Codicon.sourceControl, localize('sourceControlViewIcon', 'View icon of the Source Control view.'));
+const sourceControlViewIcon = registerIcon('source-control-view-icon', Codicon.sourceControl, localize('sourceControlViewIcon', 'View icon of the Git view.'));
 
 const viewContainer = Registry.as<IViewContainersRegistry>(ViewContainerExtensions.ViewContainersRegistry).registerViewContainer({
 	id: VIEWLET_ID,
-	title: localize2('source control', 'Source Control'),
+	title: localize2('git', 'Git'),
 	ctorDescriptor: new SyncDescriptor(SCMViewPaneContainer),
 	storageId: 'workbench.scm.views.state',
 	icon: sourceControlViewIcon,
@@ -65,10 +61,10 @@ const viewContainer = Registry.as<IViewContainersRegistry>(ViewContainerExtensio
 }, ViewContainerLocation.Sidebar, { doNotRegisterOpenCommand: true });
 
 const viewsRegistry = Registry.as<IViewsRegistry>(ViewContainerExtensions.ViewsRegistry);
-const containerTitle = localize('source control view', "Source Control");
+const containerTitle = localize('git view', "Git");
 
 viewsRegistry.registerViewWelcomeContent(VIEW_PANE_ID, {
-	content: localize('no open repo', "No source control providers registered."),
+	content: localize('no open repo', "No Git project is active."),
 	when: 'default'
 });
 
@@ -91,7 +87,7 @@ viewsRegistry.registerViews([{
 	id: REPOSITORIES_VIEW_PANE_ID,
 	containerTitle,
 	name: localize2('scmRepositories', "Repositories"),
-	singleViewPaneContainerTitle: localize('source control repositories', "Source Control Repositories"),
+	singleViewPaneContainerTitle: localize('git repositories', "Git Repositories"),
 	ctorDescriptor: new SyncDescriptor(SCMRepositoriesViewPane),
 	canToggleVisibility: true,
 	hideByDefault: true,
@@ -116,7 +112,7 @@ viewsRegistry.registerViews([{
 	containerIcon: sourceControlViewIcon,
 	openCommandActionDescriptor: {
 		id: viewContainer.id,
-		mnemonicTitle: localize({ key: 'miViewSCM', comment: ['&& denotes a mnemonic'] }, "Source &&Control"),
+		mnemonicTitle: localize({ key: 'miViewSCM', comment: ['&& denotes a mnemonic'] }, "&&Git"),
 		keybindings: {
 			primary: 0,
 			win: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyG },
@@ -131,7 +127,7 @@ viewsRegistry.registerViews([{
 	id: HISTORY_VIEW_PANE_ID,
 	containerTitle,
 	name: localize2('scmGraph', "Graph"),
-	singleViewPaneContainerTitle: localize('source control graph', "Source Control Graph"),
+	singleViewPaneContainerTitle: localize('git graph', "Git Graph"),
 	ctorDescriptor: new SyncDescriptor(SCMHistoryViewPane),
 	canToggleVisibility: true,
 	canMoveView: true,
@@ -153,12 +149,6 @@ Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 registerWorkbenchContribution2(
 	SCMWorkingSetController.ID,
 	SCMWorkingSetController,
-	WorkbenchPhase.AfterRestored
-);
-
-registerWorkbenchContribution2(
-	SCMHistoryItemContextContribution.ID,
-	SCMHistoryItemContextContribution,
 	WorkbenchPhase.AfterRestored
 );
 
@@ -665,43 +655,6 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		if (scmView) {
 			scmView.focusNextResourceGroup();
 		}
-	}
-});
-
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'scm.editor.triggerSetup',
-			title: localize('scmEditorResolveMergeConflict', "Resolve Conflicts with AI"),
-			icon: Codicon.chatSparkle,
-			f1: false,
-			menu: {
-				id: MenuId.EditorContent,
-				when: ContextKeyExpr.and(
-					ChatContextKeys.Setup.hidden.negate(),
-					ChatContextKeys.Setup.disabledInWorkspace.negate(),
-					ChatContextKeys.Setup.completed.negate(),
-					ContextKeyExpr.in(ResourceContextKey.Resource.key, 'git.mergeChanges'),
-					ContextKeyExpr.equals('git.activeResourceHasMergeConflicts', true)
-				)
-			}
-		});
-	}
-
-	override async run(accessor: ServicesAccessor, ...args: unknown[]): Promise<void> {
-		const commandService = accessor.get(ICommandService);
-
-		const result = await commandService.executeCommand(CHAT_SETUP_SUPPORT_ANONYMOUS_ACTION_ID);
-		if (!result) {
-			return;
-		}
-
-		const command = product.defaultChatAgent?.resolveMergeConflictsCommand;
-		if (!command) {
-			return;
-		}
-
-		await commandService.executeCommand(command, ...args);
 	}
 });
 

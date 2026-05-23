@@ -446,7 +446,6 @@ export class NotebookCompatibleFileMatch extends FileMatchImpl implements INoteb
 	override createMatches(): void {
 		const model = this.modelService.getModel(this._resource);
 		if (model) {
-			// todo: handle better when ai contributed results has model, currently, createMatches does not work for this
 			this.bindModel(model);
 			this.updateMatchesForModel();
 		} else {

@@ -27,7 +27,9 @@
     "onLanguage:skill",
     "onCommand:markdown.api.render",
     "onCommand:markdown.api.reloadPlugins",
-    "onWebviewPanel:markdown.preview"
+    "onWebviewPanel:markdown.preview",
+    "onCustomEditor:vectorcode.markdown.richEditor",
+    "onStartupFinished"
   ],
   "capabilities": {
     "virtualWorkspaces": true,
@@ -194,6 +196,12 @@
         "icon": "$(preview)"
       },
       {
+        "command": "markdown.reopenAsRichEditor",
+        "title": "%markdown.reopenAsRichEditor.title%",
+        "category": "Markdown",
+        "icon": "$(edit)"
+      },
+      {
         "command": "markdown.reopenAsSource",
         "title": "%markdown.reopenAsSource.title%",
         "category": "Markdown",
@@ -251,7 +259,7 @@
         },
         {
           "command": "markdown.reopenAsSource",
-          "when": "activeCustomEditorId == 'vscode.markdown.preview.editor' && !activeCustomEditorTextDiff",
+          "when": "(activeCustomEditorId == 'vscode.markdown.preview.editor' || activeCustomEditorId == 'vectorcode.markdown.richEditor') && !activeCustomEditorTextDiff",
           "group": "navigation"
         },
         {
@@ -284,7 +292,7 @@
         },
         {
           "command": "markdown.reopenAsSource",
-          "when": "activeCustomEditorId == 'vscode.markdown.preview.editor' && !activeCustomEditorTextDiff",
+          "when": "(activeCustomEditorId == 'vscode.markdown.preview.editor' || activeCustomEditorId == 'vectorcode.markdown.richEditor') && !activeCustomEditorTextDiff",
           "group": "navigation"
         }
       ],
@@ -370,8 +378,13 @@
           "group": "navigation"
         },
         {
+          "command": "markdown.reopenAsRichEditor",
+          "when": "activeEditor == workbench.editors.files.textFileEditor && resourceLangId =~ /^(markdown|prompt|instructions|chatagent|skill)$/",
+          "group": "navigation"
+        },
+        {
           "command": "markdown.reopenAsSource",
-          "when": "activeCustomEditorId == 'vscode.markdown.preview.editor'",
+          "when": "activeCustomEditorId == 'vscode.markdown.preview.editor' || activeCustomEditorId == 'vectorcode.markdown.richEditor'",
           "group": "navigation"
         },
         {
@@ -391,7 +404,7 @@
         "command": "markdown.togglePreview",
         "key": "shift+ctrl+v",
         "mac": "shift+cmd+v",
-        "when": "!terminalFocus && ((editorFocus && resourceLangId =~ /^(markdown|prompt|instructions|chatagent|skill)$/ && !notebookEditorFocused) || activeCustomEditorId == 'vscode.markdown.preview.editor')"
+        "when": "!terminalFocus && ((editorFocus && resourceLangId =~ /^(markdown|prompt|instructions|chatagent|skill)$/ && !notebookEditorFocused) || activeCustomEditorId == 'vscode.markdown.preview.editor' || activeCustomEditorId == 'vectorcode.markdown.richEditor')"
       }
     ],
     "configuration": [
@@ -399,6 +412,20 @@
         "title": "%configuration.editor%",
         "order": 20,
         "properties": {
+          "markdown.defaultOpenMode": {
+            "type": "string",
+            "scope": "window",
+            "default": "rich",
+            "markdownDescription": "%configuration.markdown.defaultOpenMode.description%",
+            "enum": [
+              "rich",
+              "markdown"
+            ],
+            "enumDescriptions": [
+              "%configuration.markdown.defaultOpenMode.rich%",
+              "%configuration.markdown.defaultOpenMode.markdown%"
+            ]
+          },
           "markdown.links.openLocation": {
             "type": "string",
             "default": "currentGroup",
@@ -829,6 +856,10 @@
       }
     ],
     "configurationDefaults": {
+      "workbench.editorAssociations": {
+        "*.md": "vectorcode.markdown.richEditor",
+        "*.markdown": "vectorcode.markdown.richEditor"
+      },
       "[markdown]": {
         "editor.wordWrap": "on",
         "editor.quickSuggestions": {
@@ -855,6 +886,19 @@
       }
     ],
     "customEditors": [
+      {
+        "viewType": "vectorcode.markdown.richEditor",
+        "displayName": "%markdown.richEditor.displayName%",
+        "priority": "default",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.markdown"
+          }
+        ]
+      },
       {
         "viewType": "vscode.markdown.preview.editor",
         "displayName": "Markdown Preview",

@@ -14,7 +14,7 @@ export const enum ClickAnimation {
 }
 
 const confettiColors = [
-	'#007acc',
+	'#37d6c2',
 	'#005a9e',
 	'#0098ff',
 	'#4fc3f7',
@@ -167,7 +167,7 @@ export function triggerConfettiAnimation(element: HTMLElement) {
 	ring.style.width = `${rect.width}px`;
 	ring.style.height = `${rect.height}px`;
 	ring.style.borderRadius = '50%';
-	ring.style.border = '2px solid var(--vscode-focusBorder, #007acc)';
+	ring.style.border = '2px solid var(--vectorcode-focusBorder, #37d6c2)';
 	ring.style.boxSizing = 'border-box';
 	overlay.appendChild(ring);
 
@@ -211,7 +211,7 @@ export function triggerFloatingIconsAnimation(element: HTMLElement, icon: ThemeI
 		iconEl.style.top = `${cy}px`;
 		iconEl.style.fontSize = `${size}px`;
 		iconEl.style.lineHeight = '1';
-		iconEl.style.color = 'var(--vscode-focusBorder, #007acc)';
+		iconEl.style.color = 'var(--vectorcode-focusBorder, #37d6c2)';
 		iconEl.classList.add(...ThemeIcon.asClassNameArray(icon));
 		overlay.appendChild(iconEl);
 
@@ -241,7 +241,7 @@ export function triggerFloatingIconsAnimation(element: HTMLElement, icon: ThemeI
 	ring.style.width = `${rect.width}px`;
 	ring.style.height = `${rect.height}px`;
 	ring.style.borderRadius = '50%';
-	ring.style.border = '2px solid var(--vscode-focusBorder, #007acc)';
+	ring.style.border = '2px solid var(--vectorcode-focusBorder, #37d6c2)';
 	ring.style.boxSizing = 'border-box';
 	overlay.appendChild(ring);
 
@@ -285,7 +285,7 @@ export function triggerPulseWaveAnimation(element: HTMLElement) {
 		ring.style.width = `${rect.width}px`;
 		ring.style.height = `${rect.height}px`;
 		ring.style.borderRadius = '50%';
-		ring.style.border = '2px solid var(--vscode-focusBorder, #007acc)';
+		ring.style.border = '2px solid var(--vectorcode-focusBorder, #37d6c2)';
 		ring.style.boxSizing = 'border-box';
 		overlay.appendChild(ring);
 
@@ -340,7 +340,7 @@ export function triggerPulseWaveAnimation(element: HTMLElement) {
 	glow.style.width = `${rect.width}px`;
 	glow.style.height = `${rect.height}px`;
 	glow.style.borderRadius = '50%';
-	glow.style.backgroundColor = 'var(--vscode-focusBorder, #007acc)';
+	glow.style.backgroundColor = 'var(--vectorcode-focusBorder, #37d6c2)';
 	overlay.appendChild(glow);
 
 	glow.animate([
@@ -386,7 +386,7 @@ export function triggerRadiantLinesAnimation(element: HTMLElement) {
 		dot.style.width = `${size}px`;
 		dot.style.height = `${size}px`;
 		dot.style.borderRadius = '50%';
-		dot.style.backgroundColor = 'var(--vscode-editor-foreground, #ffffff)';
+		dot.style.backgroundColor = 'var(--vectorcode-editor-foreground, #ffffff)';
 		dot.style.left = `${cx - size / 2}px`;
 		dot.style.top = `${cy - size / 2}px`;
 		overlay.appendChild(dot);
@@ -426,7 +426,7 @@ export function triggerRadiantLinesAnimation(element: HTMLElement) {
 		line.style.position = 'absolute';
 		line.style.width = '2px';
 		line.style.height = '10px';
-		line.style.backgroundColor = 'var(--vscode-focusBorder, #007acc)';
+		line.style.backgroundColor = 'var(--vectorcode-focusBorder, #37d6c2)';
 		line.style.left = '-1px';
 		line.style.top = '-22px';
 		line.style.transformOrigin = 'bottom center';

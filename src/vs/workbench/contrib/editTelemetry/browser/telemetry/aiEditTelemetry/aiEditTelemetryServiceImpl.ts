@@ -6,7 +6,7 @@
 import { EditSuggestionId } from '../../../../../../editor/common/textModelEditSource.js';
 import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
 import { escapeModelIdForTelemetry, ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
-import { DataChannelForwardingTelemetryService, forwardToChannelIf, isCopilotLikeExtension } from '../../../../../../platform/dataChannel/browser/forwardingTelemetryService.js';
+import { DataChannelForwardingTelemetryService, forwardToChannelIf, isTelemetryForwardingExtension } from '../../../../../../platform/dataChannel/browser/forwardingTelemetryService.js';
 import { IAiEditTelemetryService, IEditTelemetryCodeAcceptedData, IEditTelemetryCodeRejectedData, IEditTelemetryCodeSuggestedData } from './aiEditTelemetryService.js';
 import { IRandomService } from '../../randomService.js';
 
@@ -29,7 +29,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			suggestionId: string | undefined;
 
 			presentation: 'codeBlock' | 'highlightedEdit' | 'inlineCompletion' | 'nextEditSuggestion' | undefined;
-			feature: 'sideBarChat' | 'inlineChat' | 'inlineSuggestion' | string | undefined;
+			feature: 'inlineSuggestion' | string | undefined;
 
 			sourceExtensionId: string | undefined;
 			sourceExtensionVersion: string | undefined;
@@ -41,7 +41,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			editLinesInserted: number | undefined;
 			editLinesDeleted: number | undefined;
 
-			modeId: 'ask' | 'edit' | 'agent' | 'custom' | 'applyCodeBlock' | undefined;
+			modeId: 'ask' | 'edit' | 'custom' | 'applyCodeBlock' | undefined;
 			modelId: string | undefined;
 			applyCodeBlockSuggestionId: string | undefined;
 			sourceRequestId: string | undefined;
@@ -68,7 +68,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			modeId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The mode. See #IEditTelemetryBaseData.modeId for possible values.' };
 			modelId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The AI model used to generate the suggestion.' };
 			applyCodeBlockSuggestionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If this suggestion is for applying a suggested code block, this is the id of the suggested code block.' };
-			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The chat request ID that produced the suggestion, for correlating suggestions with specific requests.' };
+			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The source request ID that produced the suggestion, for correlating suggestions with specific requests.' };
 		}>('editTelemetry.codeSuggested', {
 			eventId: this._randomService.generatePrefixedUuid('evt'),
 			suggestionId: suggestionId as unknown as string,
@@ -90,7 +90,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			applyCodeBlockSuggestionId: data.applyCodeBlockSuggestionId as unknown as string,
 			sourceRequestId: data.sourceRequestId,
 
-			...forwardToChannelIf(isCopilotLikeExtension(data.source?.extensionId)),
+			...forwardToChannelIf(isTelemetryForwardingExtension(data.source?.extensionId)),
 		});
 
 		return suggestionId;
@@ -102,7 +102,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			suggestionId: string | undefined;
 
 			presentation: 'codeBlock' | 'highlightedEdit' | 'inlineCompletion' | 'nextEditSuggestion' | undefined;
-			feature: 'sideBarChat' | 'inlineChat' | 'inlineSuggestion' | string | undefined;
+			feature: 'inlineSuggestion' | string | undefined;
 
 			sourceExtensionId: string | undefined;
 			sourceExtensionVersion: string | undefined;
@@ -115,7 +115,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			editLinesInserted: number | undefined;
 			editLinesDeleted: number | undefined;
 
-			modeId: 'ask' | 'edit' | 'agent' | 'custom' | 'applyCodeBlock' | undefined;
+			modeId: 'ask' | 'edit' | 'custom' | 'applyCodeBlock' | undefined;
 			modelId: string | undefined;
 			applyCodeBlockSuggestionId: string | undefined;
 			sourceRequestId: string | undefined;
@@ -151,7 +151,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			modelId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The AI model used to generate the suggestion.' };
 
 			applyCodeBlockSuggestionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If this suggestion is for applying a suggested code block, this is the id of the suggested code block.' };
-			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The chat request ID that produced the edit, for correlating accepts/rejects with specific requests.' };
+			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The source request ID that produced the edit, for correlating accepts/rejects with specific requests.' };
 			acceptanceMethod: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'How the user accepted the code suggestion. See #IEditTelemetryCodeAcceptedData.acceptanceMethod for possible values.' };
 		}>('editTelemetry.codeAccepted', {
 			eventId: this._randomService.generatePrefixedUuid('evt'),
@@ -175,7 +175,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			sourceRequestId: data.sourceRequestId,
 			acceptanceMethod: data.acceptanceMethod,
 
-			...forwardToChannelIf(isCopilotLikeExtension(data.source?.extensionId)),
+			...forwardToChannelIf(isTelemetryForwardingExtension(data.source?.extensionId)),
 		});
 	}
 
@@ -185,7 +185,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			suggestionId: string | undefined;
 
 			presentation: 'codeBlock' | 'highlightedEdit' | 'inlineCompletion' | 'nextEditSuggestion' | undefined;
-			feature: 'sideBarChat' | 'inlineChat' | 'inlineSuggestion' | string | undefined;
+			feature: 'inlineSuggestion' | string | undefined;
 
 			sourceExtensionId: string | undefined;
 			sourceExtensionVersion: string | undefined;
@@ -197,7 +197,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			editLinesInserted: number | undefined;
 			editLinesDeleted: number | undefined;
 
-			modeId: 'ask' | 'edit' | 'agent' | 'custom' | 'applyCodeBlock' | undefined;
+			modeId: 'ask' | 'edit' | 'custom' | 'applyCodeBlock' | undefined;
 			modelId: string | undefined;
 			applyCodeBlockSuggestionId: string | undefined;
 			sourceRequestId: string | undefined;
@@ -227,7 +227,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			modelId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The AI model used to generate the suggestion.' };
 
 			applyCodeBlockSuggestionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If this suggestion is for applying a suggested code block, this is the id of the suggested code block.' };
-			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The chat request ID that produced the edit, for correlating accepts/rejects with specific requests.' };
+			sourceRequestId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The source request ID that produced the edit, for correlating accepts/rejects with specific requests.' };
 			rejectionMethod: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'How the user rejected the code suggestion. See #IEditTelemetryCodeRejectedData.rejectionMethod for possible values.' };
 		}>('editTelemetry.codeRejected', {
 			eventId: this._randomService.generatePrefixedUuid('evt'),
@@ -251,7 +251,7 @@ export class AiEditTelemetryServiceImpl implements IAiEditTelemetryService {
 			sourceRequestId: data.sourceRequestId,
 			rejectionMethod: data.rejectionMethod,
 
-			...forwardToChannelIf(isCopilotLikeExtension(data.source?.extensionId)),
+			...forwardToChannelIf(isTelemetryForwardingExtension(data.source?.extensionId)),
 		});
 	}
 }

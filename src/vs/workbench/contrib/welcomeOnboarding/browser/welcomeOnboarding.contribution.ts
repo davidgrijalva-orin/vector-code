@@ -4,17 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 // Load styles for the remaining onboarding variant.
-import './media/variationA.css';
+import '../../vectorCode/browser/media/vectorWelcomeOnboarding.css';
 
+import { Event } from '../../../../base/common/event.js';
 import { localize2 } from '../../../../nls.js';
 import { Categories } from '../../../../platform/action/common/actionCommonCategories.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IOnboardingService } from '../common/onboardingService.js';
-import { OnboardingVariationA } from './onboardingVariationA.js';
 
-registerSingleton(IOnboardingService, OnboardingVariationA, InstantiationType.Delayed);
+class VectorCodeOnboardingService implements IOnboardingService {
+	declare readonly _serviceBrand: undefined;
+	readonly onDidDismiss = Event.None;
+	show(): void { }
+}
+
+registerSingleton(IOnboardingService, VectorCodeOnboardingService, InstantiationType.Delayed);
 
 registerAction2(class extends Action2 {
 	constructor() {

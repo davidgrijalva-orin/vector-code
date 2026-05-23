@@ -7,7 +7,7 @@
 .monaco-workbench .part.titlebar {
 	display: flex;
 	flex-direction: row;
-	box-shadow: var(--vscode-shadow-md);
+	box-shadow: var(--vectorcode-shadow-md);
 }
 
 .monaco-workbench.mac .part.titlebar {
@@ -153,12 +153,12 @@
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label,
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item.monaco-dropdown-with-primary .action-label {
-	color: var(--vscode-titleBar-activeForeground);
+	color: var(--vectorcode-titleBar-activeForeground);
 }
 
 .monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label,
 .monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item.monaco-dropdown-with-primary .action-label {
-	color: var(--vscode-titleBar-inactiveForeground);
+	color: var(--vectorcode-titleBar-inactiveForeground);
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label {
@@ -168,12 +168,12 @@
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center {
 	display: flex;
 	align-items: stretch;
-	color: var(--vscode-commandCenter-foreground);
-	background-color: var(--vscode-commandCenter-background);
-	border: 1px solid var(--vscode-commandCenter-border);
+	color: var(--vectorcode-commandCenter-foreground);
+	background-color: var(--vectorcode-commandCenter-background);
+	border: 1px solid var(--vectorcode-commandCenter-border);
 	overflow: hidden;
 	margin: 0 6px;
-	border-radius: var(--vscode-cornerRadius-medium);
+	border-radius: var(--vectorcode-cornerRadius-medium);
 	height: 22px;
 	width: 38vw;
 	max-width: 600px;
@@ -191,35 +191,16 @@
 	font-size: 14px;
 	opacity: .8;
 	margin: auto 3px;
-	color: var(--vscode-commandCenter-foreground);
+	color: var(--vectorcode-commandCenter-foreground);
 }
 
 .monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-icon {
-	color: var(--vscode-titleBar-inactiveForeground);
+	color: var(--vectorcode-titleBar-inactiveForeground);
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-/* Compact mode: left-aligned label, no icon, full width */
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick.compact-mode {
-	margin: auto auto auto 0;
-	padding-left: 8px;
-	flex: 1;
-}
-
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:has(.compact-mode) > .monaco-toolbar > .monaco-action-bar > .actions-container {
-	margin: 0;
-}
-
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:has(.compact-mode) > .monaco-toolbar {
-	flex: 1;
-}
-
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:has(.compact-mode) > .monaco-toolbar > .monaco-action-bar {
-	width: 100%;
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center.multiple {
@@ -236,14 +217,14 @@
 }
 
 .monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center {
-	color: var(--vscode-titleBar-inactiveForeground);
-	border-color: var(--vscode-commandCenter-inactiveBorder) !important;
+	color: var(--vectorcode-titleBar-inactiveForeground);
+	border-color: var(--vectorcode-commandCenter-inactiveBorder) !important;
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:HOVER {
-	color: var(--vscode-commandCenter-activeForeground);
-	background-color: var(--vscode-commandCenter-activeBackground);
-	border-color: var(--vscode-commandCenter-activeBorder);
+	color: var(--vectorcode-commandCenter-activeForeground);
+	background-color: var(--vectorcode-commandCenter-activeBackground);
+	border-color: var(--vectorcode-commandCenter-activeBorder);
 }
 
 /* Menubar */
@@ -369,11 +350,11 @@
 	height: 100%;
 	width: 46px;
 	font-size: 16px;
-	color: var(--vscode-titleBar-activeForeground);
+	color: var(--vectorcode-titleBar-activeForeground);
 }
 
 .monaco-workbench .part.titlebar.inactive .window-controls-container > .window-icon {
-	color: var(--vscode-titleBar-inactiveForeground);
+	color: var(--vectorcode-titleBar-inactiveForeground);
 }
 
 .monaco-workbench .part.titlebar .window-controls-container > .window-icon::before {
@@ -382,15 +363,15 @@
 }
 
 .monaco-workbench .part.titlebar .window-controls-container > .window-icon:hover {
-	background-color: rgba(255, 255, 255, 0.1);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .monaco-workbench .part.titlebar.light .window-controls-container > .window-icon:hover {
-	background-color: rgba(0, 0, 0, 0.1);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .monaco-workbench .part.titlebar .window-controls-container > .window-icon.window-close:hover {
-	background-color: rgba(232, 17, 35, 0.9);
+	background-color: var(--vectorcode-errorForeground);
 }
 
 .monaco-workbench .part.titlebar .window-controls-container .window-icon.window-close:hover {

@@ -28,7 +28,7 @@ async function init() {
 	const config: MermaidConfig = {
 		startOnLoad: false,
 		maxTextSize: extConfig.maxTextSize,
-		theme: (document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+		theme: (document.body.classList.contains('vectorcode-dark') || document.body.classList.contains('vectorcode-high-contrast')
 			? extConfig.darkModeTheme
 			: extConfig.lightModeTheme) as MermaidConfig['theme'],
 	};

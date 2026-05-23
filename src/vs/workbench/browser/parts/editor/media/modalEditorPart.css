@@ -14,14 +14,14 @@
 	z-index: 2540;
 	/* Never allow content to escape above the title bar */
 	overflow: hidden;
-	background: rgba(0, 0, 0, 0.3);
+	background: var(--vectorcode-overlayBackground, rgba(11, 15, 18, 0.78));
 
 	.modal-editor-resizable {
 		position: absolute;
 	}
 
 	.modal-editor-shadow {
-		box-shadow: var(--vscode-shadow-xl);
+		box-shadow: var(--vectorcode-shadow-xl);
 		border-radius: 8px;
 		overflow: hidden;
 		width: 100%;
@@ -36,8 +36,8 @@
 	grid-template-columns: 1fr;
 	width: 100%;
 	height: 100%;
-	background-color: var(--vscode-editor-background);
-	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
+	background-color: var(--vectorcode-editor-background);
+	border: 1px solid var(--vectorcode-editorWidget-border, var(--vectorcode-contrastBorder));
 	border-radius: 8px;
 	overflow: hidden;
 	position: relative;
@@ -71,8 +71,8 @@
 	overflow: hidden;
 	box-sizing: border-box;
 	padding: 8px;
-	background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
-	border-right: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-editorWidget-border, transparent));
+	background-color: var(--vectorcode-sideBar-background, var(--vectorcode-editor-background));
+	border-right: 1px solid var(--vectorcode-sideBarSectionHeader-border, var(--vectorcode-editorWidget-border, transparent));
 }
 
 .monaco-modal-editor-block .modal-editor-sidebar .monaco-tl-twistie.force-no-twistie {
@@ -90,9 +90,9 @@
 	height: 32px;
 	min-height: 32px;
 	padding: 0 8px 0 10px;
-	color: var(--vscode-titleBar-activeForeground);
-	background-color: var(--vscode-titleBar-activeBackground);
-	border-bottom: 1px solid var(--vscode-titleBar-border, transparent);
+	color: var(--vectorcode-titleBar-activeForeground);
+	background-color: var(--vectorcode-titleBar-activeBackground);
+	border-bottom: 1px solid var(--vectorcode-titleBar-border, transparent);
 
 	&.dragging {
 		cursor: grabbing;
@@ -111,7 +111,7 @@
 		grid-column: 2;
 		font-size: 12px;
 		font-weight: 500;
-		color: var(--vscode-titleBar-activeForeground);
+		color: var(--vectorcode-titleBar-activeForeground);
 		overflow: hidden;
 
 		.monaco-icon-label {
@@ -133,7 +133,7 @@
 		align-items: center;
 		height: 22px;
 		border-radius: 4px;
-		border: 1px solid var(--vscode-commandCenter-border, transparent);
+		border: 1px solid var(--vectorcode-commandCenter-border, transparent);
 		overflow: hidden;
 		user-select: none;
 		-webkit-user-select: none;
@@ -154,7 +154,7 @@
 
 		.modal-editor-nav-button.monaco-button:hover:not(.disabled) {
 			opacity: 1;
-			background-color: var(--vscode-commandCenter-activeBackground);
+			background-color: var(--vectorcode-commandCenter-activeBackground);
 		}
 
 		.modal-editor-nav-button.monaco-button.disabled {
@@ -189,7 +189,7 @@
 			width: 1px;
 			height: 16px;
 			margin: 0 4px;
-			background-color: var(--vscode-titleBar-activeForeground);
+			background-color: var(--vectorcode-titleBar-activeForeground);
 			opacity: 0.3;
 		}
 	}

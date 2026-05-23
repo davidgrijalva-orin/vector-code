@@ -9,12 +9,12 @@
 	align-items: center;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	color: var(--vscode-editorCodeLens-foreground);
-	line-height: var(--vscode-editorCodeLens-lineHeight);
-	font-size: var(--vscode-editorCodeLens-fontSize);
-	padding-right: calc(var(--vscode-editorCodeLens-fontSize)*0.5);
-	font-feature-settings: var(--vscode-editorCodeLens-fontFeatureSettings);
-	font-family: var(--vscode-editorCodeLens-fontFamily), var(--vscode-editorCodeLens-fontFamilyDefault);
+	color: var(--vectorcode-editorCodeLens-foreground);
+	line-height: var(--vectorcode-editorCodeLens-lineHeight);
+	font-size: var(--vectorcode-editorCodeLens-fontSize);
+	padding-right: calc(var(--vectorcode-editorCodeLens-fontSize)*0.5);
+	font-feature-settings: var(--vectorcode-editorCodeLens-fontFeatureSettings);
+	font-family: var(--vectorcode-editorCodeLens-fontFamily), var(--vectorcode-editorCodeLens-fontFamilyDefault);
 }
 
 .monaco-editor .codelens-decoration > span,
@@ -33,19 +33,19 @@
 
 .monaco-editor .codelens-decoration > a:hover {
 	cursor: pointer;
-	color: var(--vscode-editorLink-activeForeground) !important;
+	color: var(--vectorcode-editorLink-activeForeground) !important;
 }
 
 .monaco-editor .codelens-decoration > a:hover .codicon {
-	color: var(--vscode-editorLink-activeForeground) !important;
+	color: var(--vectorcode-editorLink-activeForeground) !important;
 }
 
 .monaco-editor .codelens-decoration .codicon[class*='codicon-'] {
 	vertical-align: middle;
 	color: currentColor !important;
-	color: var(--vscode-editorCodeLens-foreground);
-	line-height: var(--vscode-editorCodeLens-lineHeight);
-	font-size: var(--vscode-editorCodeLens-fontSize);
+	color: var(--vectorcode-editorCodeLens-foreground);
+	line-height: var(--vectorcode-editorCodeLens-lineHeight);
+	font-size: var(--vectorcode-editorCodeLens-fontSize);
 }
 
 

@@ -45,7 +45,7 @@
 }
 
 .ports-view .monaco-list .monaco-list-row .ports-view-actionbar-cell .ports-view-actionbar-cell-localaddress {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 	text-decoration: var(--text-link-decoration);
 }
 
@@ -108,5 +108,5 @@
 }
 
 .monaco-workbench .codicon.codicon-ports-forwarded-with-process-icon {
-	color: var(--vscode-ports-iconRunningProcessForeground);
+	color: var(--vectorcode-ports-iconRunningProcessForeground);
 }

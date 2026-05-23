@@ -10,12 +10,12 @@
 	z-index: 40;
 	display: block;
 	width: 100%;
-	border: 1px solid var(--vscode-editorHoverWidget-border) !important;
-	border-radius: var(--vscode-cornerRadius-large);
-	background-color: var(--vscode-menu-background);
-	color: var(--vscode-menu-foreground);
+	border: 1px solid var(--vectorcode-editorHoverWidget-border) !important;
+	border-radius: var(--vectorcode-cornerRadius-large);
+	background-color: var(--vectorcode-menu-background);
+	color: var(--vectorcode-menu-foreground);
 	padding: 4px;
-	box-shadow: var(--vscode-shadow-lg);
+	box-shadow: var(--vectorcode-shadow-lg);
 }
 
 .context-view-block {
@@ -59,18 +59,18 @@
 	white-space: nowrap;
 	cursor: pointer;
 	touch-action: none;
-	border-radius: var(--vscode-cornerRadius-medium);
+	border-radius: var(--vectorcode-cornerRadius-medium);
 }
 
 .action-widget .monaco-list .monaco-list-row.action.focused:not(.option-disabled) {
-	background-color: var(--vscode-list-hoverBackground) !important;
-	color: var(--vscode-list-hoverForeground);
-	outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+	background-color: var(--vectorcode-list-hoverBackground) !important;
+	color: var(--vectorcode-list-hoverForeground);
+	outline: 1px solid var(--vectorcode-menu-selectionBorder, transparent);
 	outline-offset: -1px;
 }
 
 .action-widget .monaco-list-row.group-header {
-	color: var(--vscode-descriptionForeground) !important;
+	color: var(--vectorcode-descriptionForeground) !important;
 	font-weight: 500;
 	font-size: 11px;
 }
@@ -80,8 +80,8 @@
 }
 
 .action-widget .monaco-scrollable-element .monaco-list-rows .monaco-list-row.separator {
-	border-top: 1px solid var(--vscode-editorHoverWidget-border);
-	color: var(--vscode-descriptionForeground);
+	border-top: 1px solid var(--vectorcode-editorHoverWidget-border);
+	color: var(--vectorcode-descriptionForeground);
 	font-size: 12px;
 	margin: 4px 0px;
 	width: 100%;
@@ -143,7 +143,7 @@
 .action-widget .monaco-list:focus .monaco-list-row.focused.action.option-disabled,
 .action-widget .monaco-list-row.action.option-disabled .codicon,
 .action-widget .monaco-list:not(.drop-target):not(.dragging) .monaco-list-row:hover:not(.selected):not(.focused).option-disabled {
-	color: var(--vscode-disabledForeground);
+	color: var(--vectorcode-disabledForeground);
 }
 
 
@@ -163,7 +163,7 @@
 	padding-left: 18px;
 	font-size: 11px;
 	line-height: 14px;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	opacity: 0.8;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -173,29 +173,29 @@
 .action-widget .monaco-list-row.action .action-item-badge {
 	padding: 0px 6px;
 	border-radius: 10px;
-	background-color: var(--vscode-badge-background);
-	color: var(--vscode-badge-foreground);
+	background-color: var(--vectorcode-badge-background);
+	color: var(--vectorcode-badge-foreground);
 	font-size: 11px;
 	line-height: 18px;
 	flex-shrink: 0;
 }
 
 .action-widget .monaco-list-row.action .monaco-keybinding > .monaco-keybinding-key {
-	background-color: var(--vscode-keybindingLabel-background);
-	color: var(--vscode-keybindingLabel-foreground);
+	background-color: var(--vectorcode-keybindingLabel-background);
+	color: var(--vectorcode-keybindingLabel-foreground);
 	border-style: solid;
 	border-width: 1px;
 	border-radius: 3px;
-	border-color: var(--vscode-keybindingLabel-border);
-	border-bottom-color: var(--vscode-keybindingLabel-bottomBorder);
-	box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow);
+	border-color: var(--vectorcode-keybindingLabel-border);
+	border-bottom-color: var(--vectorcode-keybindingLabel-bottomBorder);
+	box-shadow: inset 0 -1px 0 var(--vectorcode-widget-shadow);
 }
 
 /* Action bar */
 
 .action-widget .action-widget-action-bar {
-	background-color: var(--vscode-menu-background);
-	border-top: 1px solid var(--vscode-editorHoverWidget-border);
+	background-color: var(--vectorcode-menu-background);
+	border-top: 1px solid var(--vectorcode-editorHoverWidget-border);
 	margin-top: 4px;
 }
 
@@ -211,7 +211,7 @@
 }
 
 .action-widget-action-bar .action-label {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 	font-size: 12px;
 	line-height: 22px;
 	padding: 0;
@@ -229,17 +229,17 @@
 
 .monaco-action-bar .actions-container.highlight-toggled .action-label.checked {
 	/* The important gives this rule precedence over the hover rule. */
-	background: var(--vscode-actionBar-toggledBackground) !important;
+	background: var(--vectorcode-actionBar-toggledBackground) !important;
 }
 
 .action-widget .monaco-list .monaco-list-row .description {
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	margin-left: 0.5em;
 	font-size: 12px;
 }
 
 .action-widget .monaco-list-row.action .group-title {
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	margin-left: 0.5em;
 	margin-right: 6px;
 	font-size: 12px;
@@ -307,7 +307,7 @@
 }
 
 .action-widget .monaco-list-row .action-list-item-toolbar .monaco-action-bar:not(.vertical) .action-label:not(.disabled):hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .action-widget-delegate-label {
@@ -334,7 +334,7 @@
 }
 
 .action-widget .action-list-filter:last-child {
-	border-top: 1px solid var(--vscode-editorHoverWidget-border);
+	border-top: 1px solid var(--vectorcode-editorHoverWidget-border);
 }
 
 .action-widget .action-list-filter-input {
@@ -342,19 +342,19 @@
 	flex: 1;
 	box-sizing: border-box;
 	padding: 4px 8px;
-	border: 1px solid var(--vscode-input-border, transparent);
+	border: 1px solid var(--vectorcode-input-border, transparent);
 	border-radius: 3px;
-	background-color: var(--vscode-input-background);
-	color: var(--vscode-input-foreground);
+	background-color: var(--vectorcode-input-background);
+	color: var(--vectorcode-input-foreground);
 	outline: none;
 }
 
 .action-widget .action-list-filter-input:focus {
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--vectorcode-focusBorder);
 }
 
 .action-widget .action-list-filter-input::placeholder {
-	color: var(--vscode-input-placeholderForeground);
+	color: var(--vectorcode-input-placeholderForeground);
 }
 
 .action-widget .action-list-filter-actions .action-label {
@@ -363,11 +363,11 @@
 }
 
 .action-widget .action-list-filter-actions .action-label:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .action-widget .action-list-filter-label {
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	font-size: 12px;
 	flex-shrink: 0;
 	margin-right: 2px;
@@ -375,10 +375,10 @@
 
 /* Footer text */
 .action-widget .action-list-footer {
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	font-size: 11px;
 	padding: 4px 10px 2px 10px;
-	border-top: 1px solid var(--vscode-editorHoverWidget-border);
+	border-top: 1px solid var(--vectorcode-editorHoverWidget-border);
 }
 
 /* Anchor for the absolutely-positioned submenu panel */
@@ -406,11 +406,11 @@
 }
 
 .action-list-submenu-panel {
-	background-color: var(--vscode-menu-background);
-	color: var(--vscode-menu-foreground);
-	border: 1px solid var(--vscode-menu-border, var(--vscode-editorHoverWidget-border));
+	background-color: var(--vectorcode-menu-background);
+	color: var(--vectorcode-menu-foreground);
+	border: 1px solid var(--vectorcode-menu-border, var(--vectorcode-editorHoverWidget-border));
 	border-radius: 5px;
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+	box-shadow: 0 2px 8px var(--vectorcode-widget-shadow);
 	z-index: 50;
 	width: max-content;
 	outline: none;
@@ -427,16 +427,16 @@
 }
 
 .action-list-submenu-hover-header a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .action-list-submenu-hover-header a:hover,
 .action-list-submenu-hover-header a:active {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .action-list-submenu-hover-header.has-submenu {
-	border-bottom: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
+	border-bottom: 1px solid var(--vectorcode-menu-separatorBackground, var(--vectorcode-editorWidget-border));
 }
 
 .action-list-submenu-hover-header > p {

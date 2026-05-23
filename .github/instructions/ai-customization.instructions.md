@@ -183,7 +183,7 @@ Themed icons using `registerIcon(id, codicon, label)`:
 
 **View/Types:**
 - aiCustomizationViewIcon - Codicon.sparkle
-- agentIcon - Codicon.copilot
+- agentIcon - Codicon.vectorcode
 - skillIcon - Codicon.lightbulb
 - instructionsIcon - Codicon.book
 - promptIcon - Codicon.bookmark

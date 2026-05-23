@@ -47,7 +47,7 @@ async function renderFindWidget(options: FindFixtureOptions): Promise<void> {
 	const { container, disposableStore, theme } = options;
 	container.style.width = '600px';
 	container.style.height = '350px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
 

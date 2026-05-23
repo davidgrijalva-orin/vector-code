@@ -81,27 +81,27 @@
 .extensions-viewlet .notification-container .message-text-action {
 	cursor: pointer;
 	margin-left: 5px;
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 	text-decoration: underline;
 }
 
 .extensions-viewlet .notification-container .message-text-action:hover,
 .extensions-viewlet .notification-container .message-text-action:active {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .extensions-viewlet .notification-container .message-action-button {
 	cursor: pointer;
 	padding: 1px 6px;
-	border-radius: var(--vscode-cornerRadius-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
 	font-size: 11px;
-	color: var(--vscode-button-foreground);
-	background-color: var(--vscode-button-background);
+	color: var(--vectorcode-button-foreground);
+	background-color: var(--vectorcode-button-background);
 	white-space: nowrap;
 }
 
 .extensions-viewlet .notification-container .message-action-button:hover {
-	background-color: var(--vscode-button-hoverBackground);
+	background-color: var(--vectorcode-button-hoverBackground);
 }
 
 .extensions-viewlet .notification-container .notification-actions {
@@ -161,11 +161,11 @@
 
 .extensions-viewlet > .extensions .extension-list-item {
 	position: absolute;
-	box-shadow: var(--vscode-shadow-sm);
+	box-shadow: var(--vectorcode-shadow-sm);
 }
 
 .extensions-viewlet > .extensions .extension-list-item:hover {
-	box-shadow: var(--vscode-shadow-md);
+	box-shadow: var(--vectorcode-shadow-md);
 }
 
 .extensions-viewlet > .extensions .extension-list-item.loading {
@@ -217,13 +217,13 @@
 }
 
 .extensions-viewlet .codicon-error::before {
-	color: var(--vscode-editorError-foreground);
+	color: var(--vectorcode-editorError-foreground);
 }
 
 .extensions-viewlet .codicon-warning::before {
-	color: var(--vscode-editorWarning-foreground);
+	color: var(--vectorcode-editorWarning-foreground);
 }
 
 .extensions-viewlet .codicon-info::before {
-	color: var(--vscode-editorInfo-foreground);
+	color: var(--vectorcode-editorInfo-foreground);
 }

@@ -17,7 +17,7 @@
 }
 
 .monaco-workbench .part.sidebar > .title {
-	background-color: var(--vscode-sideBarTitle-background);
+	background-color: var(--vectorcode-sideBarTitle-background);
 }
 
 .monaco-workbench .part.sidebar > .title > .title-label h2 {
@@ -91,26 +91,26 @@
 .monaco-workbench .part.sidebar > .header-or-footer.header > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked.clicked:focus .active-item-indicator:before,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked:not(:focus) .active-item-indicator:before,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked.clicked:focus .active-item-indicator:before {
-	border-top-color: var(--vscode-activityBarTop-activeBorder) !important;
+	border-top-color: var(--vectorcode-activityBarTop-activeBorder) !important;
 }
 
 .monaco-workbench .part.sidebar > .header-or-footer.footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked:not(:focus) .active-item-indicator:before,
 .monaco-workbench .part.sidebar > .header-or-footer.footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked.clicked:focus .active-item-indicator:before {
-	border-bottom-color: var(--vscode-activityBarTop-activeBorder) !important;
+	border-bottom-color: var(--vectorcode-activityBarTop-activeBorder) !important;
 }
 
 .monaco-workbench .part.sidebar > .header-or-footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:hover .action-label,
 .monaco-workbench .part.sidebar > .header-or-footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:focus .action-label,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:hover .action-label,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:focus .action-label {
-	color: var(--vscode-activityBarTop-foreground) !important;
+	color: var(--vectorcode-activityBarTop-foreground) !important;
 }
 
 .monaco-workbench .part.sidebar > .header-or-footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:hover .action-label.uri-icon,
 .monaco-workbench .part.sidebar > .header-or-footer > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:focus .action-label.uri-icon,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:hover .action-label.uri-icon,
 .monaco-workbench .part.sidebar > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:focus .action-label.uri-icon {
-	background-color: var(--vscode-activityBarTop-foreground) !important;
+	background-color: var(--vectorcode-activityBarTop-foreground) !important;
 }
 
 .monaco-workbench .sidebar.pane-composite-part > .title > .composite-bar-container {

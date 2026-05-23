@@ -108,10 +108,6 @@ export function forwardToChannelIf(value: boolean): Record<string, unknown> {
 	};
 }
 
-export function isCopilotLikeExtension(extensionId: string | undefined): boolean {
-	if (!extensionId) {
-		return false;
-	}
-	const extIdLowerCase = extensionId.toLowerCase();
-	return extIdLowerCase === 'github.copilot' || extIdLowerCase === 'github.copilot-chat';
+export function isTelemetryForwardingExtension(_extensionId: string | undefined): boolean {
+	return false;
 }

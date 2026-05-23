@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-workbench.vs .breadcrumbs-control {
-	border-bottom: 1px solid var(--vscode-editorWidget-border);
+	border-bottom: 1px solid var(--vectorcode-editorWidget-border);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container .breadcrumbs-control.hidden {

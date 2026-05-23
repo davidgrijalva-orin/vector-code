@@ -13,10 +13,10 @@ import { AbstractPolicyService, getRestrictedPolicyValue, IPolicyService, Policy
 import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
 
 /**
- * Policy name (declared by `chat.approvedAccountOrganizations`) holding the list of
+ * Policy name (declared by `vectorCode.approvedAccountOrganizations`) holding the list of
  * GitHub organization logins that satisfy the gate. The token `*` is a wildcard.
  */
-export const APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME = 'ChatApprovedAccountOrganizations';
+export const APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME = 'VectorCodeApprovedAccountOrganizations';
 
 export const enum AccountPolicyGateState {
 	Inactive = 'inactive',
@@ -38,10 +38,10 @@ export interface IAccountPolicyGateInfo {
 	readonly approvedOrganizations?: readonly string[];
 }
 
-export const ChatAccountPolicyGateActiveContext = new RawContextKey<boolean>(
-	'chatAccountPolicyGateActive',
+export const AccountPolicyGateActiveContext = new RawContextKey<boolean>(
+	'accountPolicyGateActive',
 	false,
-	{ type: 'boolean', description: localize('chatAccountPolicyGateActive', "True when the 'Require Approved Account' policy is in effect and the user is not yet signed into an approved GitHub organization, so all AI features are disabled until they sign in.") }
+	{ type: 'boolean', description: localize('accountPolicyGateActive', "True when the 'Require Approved Account' policy is in effect and the user is not yet signed into an approved GitHub organization.") }
 );
 
 /**
@@ -119,9 +119,7 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 		// `policyNotResolved` is a transient state where the user IS in an approved
 		// org but account-side policy data hasn't loaded yet. We don't force restricted
 		// values here — `policy.value(policyData)` naturally returns undefined when
-		// `policyData` is null, so no account overrides slip through. Forcing
-		// `restrictedValue` would transiently flip `chat.disableAIFeatures = true`,
-		// surfacing confusing "Unable to write" errors and a UI flash.
+		// `policyData` is null, so no account overrides slip through.
 		const gateRestricted = this._gateInfo.state === AccountPolicyGateState.Restricted
 			&& this._gateInfo.reason !== AccountPolicyGateUnsatisfiedReason.PolicyNotResolved;
 

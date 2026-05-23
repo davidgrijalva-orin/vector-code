@@ -35,15 +35,6 @@
 	"urlProtocol": "vector-code",
 	"agentsTelemetryAppName": "agents",
 	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
-	"extensionsGallery": {
-		"serviceUrl": "https://open-vsx.org/vscode/gallery",
-		"itemUrl": "https://open-vsx.org/vscode/item",
-		"publisherUrl": "https://open-vsx.org/user",
-		"extensionUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest",
-		"resourceUrlTemplate": "https://open-vsx.org/api/{publisher}/{name}/{version}/file/{path}",
-		"controlUrl": "https://raw.githubusercontent.com/EclipseFdn/publish-extensions/refs/heads/master/extension-control/extensions.json",
-		"nlsBaseUrl": ""
-	},
 	"linkProtectionTrustedDomains": [
 		"https://open-vsx.org"
 	],
@@ -100,7 +91,7 @@
 	"onboardingKeymaps": [
 		{
 			"id": "vscode",
-			"label": "VS Code",
+			"label": "Vector Code",
 			"description": "Default keyboard mapping"
 		},
 		{

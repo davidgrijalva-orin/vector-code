@@ -12,7 +12,6 @@ import { RawContextKey } from '../../../../platform/contextkey/common/contextkey
 import { IExtensionGalleryService, IGalleryExtension } from '../../../../platform/extensionManagement/common/extensionManagement.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
-import { IChatEntitlementService } from '../../../services/chat/common/chatEntitlementService.js';
 import { ISearchResult, ISettingsEditorModel } from '../../../services/preferences/common/preferences.js';
 
 export interface IWorkbenchSettingsConfiguration {
@@ -105,7 +104,6 @@ export const ID_SETTING_TAG = 'id:';
 export const LANGUAGE_SETTING_TAG = 'lang:';
 export const GENERAL_TAG_SETTING_TAG = 'tag:';
 export const POLICY_SETTING_TAG = 'hasPolicy';
-export const AGENTS_WINDOW_SETTING_TAG = 'override:agentsWindow';
 export const WORKSPACE_TRUST_SETTING_TAG = 'workspaceTrust';
 export const REQUIRE_TRUSTED_WORKSPACE_SETTING_TAG = 'requireTrustedWorkspace';
 export const ADVANCED_SETTING_TAG = 'advanced';
@@ -135,7 +133,6 @@ export type ExtensionToggleData = {
 let cachedExtensionToggleData: ExtensionToggleData | undefined;
 
 export async function getExperimentalExtensionToggleData(
-	chatEntitlementService: IChatEntitlementService,
 	extensionGalleryService: IExtensionGalleryService,
 	productService: IProductService,
 ): Promise<ExtensionToggleData | undefined> {
@@ -144,10 +141,6 @@ export async function getExperimentalExtensionToggleData(
 	}
 
 	if (!extensionGalleryService.isEnabled()) {
-		return undefined;
-	}
-
-	if (chatEntitlementService.sentiment.hidden || chatEntitlementService.sentiment.disabled) {
 		return undefined;
 	}
 

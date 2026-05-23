@@ -35,22 +35,22 @@ suite('MarkdownRenderer', () => {
 		});
 
 		test('Strips links with disallowed schemes (default config)', () => {
-			const markdown = { value: `Read [](vscode-agent-host://my-host/file/-/path/to/foo.ts)` };
+			const markdown = { value: `Read [](custom-resource://my-host/file/-/path/to/foo.ts)` };
 			const result: HTMLElement = store.add(renderMarkdown(markdown)).element;
 			// No <a> element should remain because the scheme isn't allowed.
 			assert.strictEqual(result.querySelector('a'), null);
 		});
 
 		test('Preserves link when scheme is allowed via allowedLinkSchemes.augment', () => {
-			const markdown = { value: `Read [](vscode-agent-host://my-host/file/-/path/to/foo.ts)` };
+			const markdown = { value: `Read [](custom-resource://my-host/file/-/path/to/foo.ts)` };
 			const result: HTMLElement = store.add(renderMarkdown(markdown, {
 				sanitizerConfig: {
-					allowedLinkSchemes: { augment: ['vscode-agent-host'] },
+					allowedLinkSchemes: { augment: ['custom-resource'] },
 				},
 			})).element;
 			const anchor = result.querySelector('a');
 			assert.ok(anchor, 'expected <a> to be preserved when scheme is allowed');
-			assert.strictEqual(anchor!.dataset.href, 'vscode-agent-host://my-host/file/-/path/to/foo.ts');
+			assert.strictEqual(anchor!.dataset.href, 'custom-resource://my-host/file/-/path/to/foo.ts');
 		});
 	});
 

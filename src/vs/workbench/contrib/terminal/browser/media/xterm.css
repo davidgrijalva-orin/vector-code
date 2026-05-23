@@ -294,7 +294,7 @@
 	left: 3px;
 	height: 3px;
 	width: 100%;
-	box-shadow: var(--vscode-scrollbar-shadow, #000) 0 6px 6px -6px inset;
+	box-shadow: var(--vectorcode-scrollbar-shadow, #000) 0 6px 6px -6px inset;
 }
 
 .xterm .xterm-scrollable-element > .xterm-shadow.xterm-shadow-left {
@@ -303,7 +303,7 @@
 	left: 0;
 	height: 100%;
 	width: 3px;
-	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+	box-shadow: var(--vectorcode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
 }
 
 .xterm .xterm-scrollable-element > .xterm-shadow.xterm-shadow-top-left-corner {
@@ -315,5 +315,5 @@
 }
 
 .xterm .xterm-scrollable-element > .xterm-shadow.xterm-shadow-top.xterm-shadow-left {
-	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+	box-shadow: var(--vectorcode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
 }

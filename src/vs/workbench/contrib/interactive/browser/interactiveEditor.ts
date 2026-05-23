@@ -64,7 +64,6 @@ import { ContentHoverController } from '../../../../editor/contrib/hover/browser
 import { GlyphHoverController } from '../../../../editor/contrib/hover/browser/glyphHoverController.js';
 import { ReplInputHintContentWidget } from './replInputHintContentWidget.js';
 import { ServiceCollection } from '../../../../platform/instantiation/common/serviceCollection.js';
-import { INLINE_CHAT_ID } from '../../inlineChat/common/inlineChat.js';
 import { ReplEditorControl } from '../../replNotebook/browser/replEditor.js';
 
 const DECORATION_KEY = 'interactiveInputDecoration';
@@ -243,24 +242,24 @@ export class InteractiveEditor extends EditorPane implements IEditorPaneWithScro
 		if (focusIndicator === 'gutter') {
 			styleSheets.push(`
 				.interactive-editor .input-cell-container:focus-within .input-focus-indicator::before {
-					border-color: var(--vscode-notebook-focusedCellBorder) !important;
+					border-color: var(--vectorcode-notebook-focusedCellBorder) !important;
 				}
 				.interactive-editor .input-focus-indicator::before {
-					border-color: var(--vscode-notebook-inactiveFocusedCellBorder) !important;
+					border-color: var(--vectorcode-notebook-inactiveFocusedCellBorder) !important;
 				}
 				.interactive-editor .input-cell-container .input-focus-indicator {
 					display: block;
 					top: ${INPUT_CELL_VERTICAL_PADDING}px;
 				}
 				.interactive-editor .input-cell-container {
-					border-top: 1px solid var(--vscode-notebook-inactiveFocusedCellBorder);
+					border-top: 1px solid var(--vectorcode-notebook-inactiveFocusedCellBorder);
 				}
 			`);
 		} else {
 			// border
 			styleSheets.push(`
 				.interactive-editor .input-cell-container {
-					border-top: 1px solid var(--vscode-notebook-inactiveFocusedCellBorder);
+					border-top: 1px solid var(--vectorcode-notebook-inactiveFocusedCellBorder);
 				}
 				.interactive-editor .input-cell-container .input-focus-indicator {
 					display: none;
@@ -408,7 +407,6 @@ export class InteractiveEditor extends EditorPane implements IEditorPaneWithScro
 					ContentHoverController.ID,
 					GlyphHoverController.ID,
 					MarkerController.ID,
-					INLINE_CHAT_ID,
 				])
 			}
 		});

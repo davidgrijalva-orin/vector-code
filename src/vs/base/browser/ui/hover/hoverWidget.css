@@ -11,7 +11,7 @@
 	-webkit-user-select: text;
 	box-sizing: border-box;
 	line-height: 1.5em;
-	white-space: var(--vscode-hover-whiteSpace, normal);
+	white-space: var(--vectorcode-hover-whiteSpace, normal);
 }
 
 .monaco-hover.fade-in {
@@ -31,7 +31,7 @@
 }
 
 .monaco-hover .markdown-hover > .hover-contents:not(.code-hover-contents) {
-	max-width: var(--vscode-hover-maxWidth, 500px);
+	max-width: var(--vectorcode-hover-maxWidth, 500px);
 	word-wrap: break-word;
 }
 
@@ -109,7 +109,7 @@
 }
 
 .monaco-hover .monaco-tokenized-source {
-	white-space: var(--vscode-hover-sourceWhiteSpace, pre-wrap);
+	white-space: var(--vectorcode-hover-sourceWhiteSpace, pre-wrap);
 }
 
 .monaco-hover .hover-row.status-bar {
@@ -143,12 +143,12 @@
 }
 
 .monaco-hover .hover-row.status-bar .actions .action-container a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 	text-decoration: var(--text-link-decoration);
 }
 
 .monaco-hover .hover-row.status-bar .actions .action-container a .icon.codicon {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-hover .markdown-hover .hover-contents .codicon {
@@ -175,16 +175,16 @@
 	/** Hack to force underline to show **/
 	border-bottom: 1px solid transparent;
 	text-underline-position: under;
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-hover .hover-contents a.code-link > span:hover {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 /**
  * Add a slight margin to try vertically align codicons with any text
- * https://github.com/microsoft/vscode/issues/221359
+ * https://github.com/microsoft/vector/issues/221359
  */
 .monaco-hover .markdown-hover .hover-contents:not(.code-hover-contents):not(.html-hover-contents) span.codicon {
 	margin-bottom: 2px;

@@ -174,7 +174,7 @@ export class TextFileEditor extends AbstractTextCodeEditor<ICodeEditorViewState>
 			const actions: IAction[] = [];
 
 			actions.push(toAction({
-				id: 'workbench.files.action.openFolder', label: localize('openFolder', "Open Folder"), run: async () => {
+				id: 'workbench.files.action.openFolder', label: localize('openProject', "Open Project"), run: async () => {
 					return this.hostService.openWindow([{ folderUri: input.resource }], { forceNewWindow: true });
 				}
 			}));

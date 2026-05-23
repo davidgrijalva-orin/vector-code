@@ -30,12 +30,12 @@ export interface IEntitlementsData extends ILegacyQuotaSnapshotData {
 	readonly chat_enabled: boolean;
 	readonly assigned_date: string;
 	readonly can_signup_for_limited: boolean;
-	readonly copilot_plan: string;
+	readonly plan: string;
 	readonly organization_login_list: string[];
 	readonly analytics_tracking_id: string;
-	readonly limited_user_reset_date?: string; 	// for Copilot Free
-	readonly quota_reset_date?: string; 		// for all other Copilot SKUs
-	readonly quota_reset_date_utc?: string; 	// for all other Copilot SKUs (includes time)
+	readonly limited_user_reset_date?: string; 	// for free plan
+	readonly quota_reset_date?: string; 		// for all other plans
+	readonly quota_reset_date_utc?: string; 	// for all other plans (includes time)
 	readonly token_based_billing?: boolean;
 	readonly can_upgrade_plan?: boolean;
 	readonly quota_snapshots?: {
@@ -54,7 +54,7 @@ export interface IPolicyData {
 	readonly mcpAccess?: 'allow_all' | 'registry_only';
 }
 
-export interface ICopilotTokenInfo {
+export interface IDefaultAccountTokenInfo {
 	readonly sn?: string;
 	readonly fcv1?: string;
 }

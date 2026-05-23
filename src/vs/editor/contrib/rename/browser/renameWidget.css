@@ -7,7 +7,7 @@
 	z-index: 100;
 	color: inherit;
 	border-radius: 4px;
-	box-shadow: var(--vscode-shadow-hover);
+	box-shadow: var(--vectorcode-shadow-hover);
 }
 
 .monaco-editor .rename-box.preview {
@@ -40,7 +40,7 @@
 }
 
 .monaco-editor .rename-box .rename-suggestions-button:hover {
-	background-color: var(--vscode-toolbar-hoverBackground)
+	background-color: var(--vectorcode-toolbar-hoverBackground)
 }
 
 .monaco-editor .rename-box .rename-candidate-list-container .monaco-list-row {

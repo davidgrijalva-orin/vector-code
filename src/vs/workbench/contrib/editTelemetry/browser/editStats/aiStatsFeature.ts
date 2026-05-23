@@ -36,8 +36,6 @@ export class AiStatsFeature extends Disposable {
 		}));
 
 
-		const lastRequestIds: string[] = [];
-
 		const obs = mapObservableArrayCached(this, annotatedDocuments.documents, (doc, store) => {
 			store.add(runOnChange(doc.documentWithAnnotations.value, (_val, _prev, edit) => {
 				const e = AnnotatedStringEdit.compose(edit.map(e => e.edit));
@@ -60,20 +58,6 @@ export class AiStatsFeature extends Disposable {
 							sessionToUpdate.acceptedInlineSuggestions = 0;
 						}
 						sessionToUpdate.acceptedInlineSuggestions += 1;
-					}
-
-					if (s.metadata.source === 'Chat.applyEdits' && s.metadata.$$requestId !== undefined) {
-						const didSeeRequestId = lastRequestIds.includes(s.metadata.$$requestId);
-						if (!didSeeRequestId) {
-							lastRequestIds.push(s.metadata.$$requestId);
-							if (lastRequestIds.length > 10) {
-								lastRequestIds.shift();
-							}
-							if (sessionToUpdate.chatEditCount === undefined) {
-								sessionToUpdate.chatEditCount = 0;
-							}
-							sessionToUpdate.chatEditCount += 1;
-						}
 					}
 				}
 
@@ -148,7 +132,6 @@ export class AiStatsFeature extends Disposable {
 				typedCharacters: 0,
 				aiCharacters: 0,
 				acceptedInlineSuggestions: 0,
-				chatEditCount: 0,
 			});
 			lastSession = state.sessions.at(-1)!;
 
@@ -172,7 +155,6 @@ interface ISession {
 	typedCharacters: number;
 	aiCharacters: number;
 	acceptedInlineSuggestions: number | undefined;
-	chatEditCount: number | undefined;
 }
 
 

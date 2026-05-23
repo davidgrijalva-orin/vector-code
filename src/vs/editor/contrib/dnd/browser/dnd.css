@@ -5,16 +5,16 @@
 
 .monaco-editor.vs .dnd-target,
 .monaco-editor.hc-light .dnd-target {
-	border-right: 2px dotted black;
-	color: white; /* opposite of black */
+	border-right: 2px dotted var(--vectorcode-focusBorder, #0f8f8c);
+	color: var(--vectorcode-editor-background, #fff);
 }
 .monaco-editor.vs-dark .dnd-target {
-	border-right: 2px dotted #AEAFAD;
-	color: #51504f; /* opposite of #AEAFAD */
+	border-right: 2px dotted var(--vectorcode-focusBorder, #37d6c2);
+	color: var(--vectorcode-editor-background, #0b0f12);
 }
 .monaco-editor.hc-black .dnd-target {
-	border-right: 2px dotted #fff;
-	color: #000; /* opposite of #fff */
+	border-right: 2px dotted var(--vectorcode-focusBorder, #37d6c2);
+	color: var(--vectorcode-editor-background, #0b0f12);
 }
 
 .monaco-editor.mouse-default .view-lines,

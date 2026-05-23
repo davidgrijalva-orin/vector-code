@@ -82,8 +82,8 @@ export class ExplorerViewletViewsContribution extends Disposable implements IWor
 			if (registeredExplorerViewDescriptor) {
 				viewDescriptorsToDeregister.push(registeredExplorerViewDescriptor);
 			}
-			if (!registeredEmptyViewDescriptor) {
-				viewDescriptorsToRegister.push(emptyViewDescriptor);
+			if (registeredEmptyViewDescriptor) {
+				viewDescriptorsToDeregister.push(registeredEmptyViewDescriptor);
 			}
 		} else {
 			if (registeredEmptyViewDescriptor) {
@@ -256,7 +256,7 @@ const viewContainerRegistry = Registry.as<IViewContainersRegistry>(Extensions.Vi
  */
 export const VIEW_CONTAINER: ViewContainer = viewContainerRegistry.registerViewContainer({
 	id: VIEWLET_ID,
-	title: localize2('explore', "Explorer"),
+	title: localize2('files', "Files"),
 	ctorDescriptor: new SyncDescriptor(ExplorerViewPaneContainer),
 	storageId: 'workbench.explorer.views.state',
 	icon: explorerViewIcon,
@@ -265,15 +265,15 @@ export const VIEW_CONTAINER: ViewContainer = viewContainerRegistry.registerViewC
 	order: 0,
 	openCommandActionDescriptor: {
 		id: VIEWLET_ID,
-		title: localize2('explore', "Explorer"),
-		mnemonicTitle: localize({ key: 'miViewExplorer', comment: ['&& denotes a mnemonic'] }, "&&Explorer"),
+		title: localize2('files', "Files"),
+		mnemonicTitle: localize({ key: 'miViewFiles', comment: ['&& denotes a mnemonic'] }, "&&Files"),
 		keybindings: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyE },
 		order: 0
 	},
 }, ViewContainerLocation.Sidebar, { isDefault: true });
 
-const openFolder = localize('openFolder', "Open Folder");
-const addAFolder = localize('addAFolder', "add a folder");
+const openFolder = localize('openProject', "Open Project");
+const addAFolder = localize('addAProject', "add a project");
 const openRecent = localize('openRecent', "Open Recent");
 
 const addRootFolderButton = `[${openFolder}](command:${AddRootFolderAction.ID})`;
@@ -285,7 +285,7 @@ const openRecentButton = `[${openRecent}](command:${OpenRecentAction.ID})`;
 const viewsRegistry = Registry.as<IViewsRegistry>(Extensions.ViewsRegistry);
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	content: localize({ key: 'noWorkspaceHelp', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
-		"You have not yet added a folder to the workspace.\n{0}", addRootFolderButton),
+		"You have not yet added a project.\n{0}", addRootFolderButton),
 	when: ContextKeyExpr.and(
 		// inside a .code-workspace
 		WorkbenchStateContext.isEqualTo('workspace'),
@@ -298,7 +298,7 @@ viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	content: localize({ key: 'noFolderHelpWeb', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
-		"You have not yet opened a folder.\n{0}\n{1}", openFolderViaWorkspaceButton, openRecentButton),
+		"You have not yet opened a project.\n{0}\n{1}", openFolderViaWorkspaceButton, openRecentButton),
 	when: ContextKeyExpr.and(
 		// inside a .code-workspace
 		WorkbenchStateContext.isEqualTo('workspace'),
@@ -325,7 +325,7 @@ viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	content: localize({ key: 'noFolderButEditorsHelp', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
-		"You have not yet opened a folder.\n{0}\nOpening a folder will close all currently open editors. To keep them open, {1} instead.", openFolderButton, addAFolderButton),
+		"You have not yet opened a project.\n{0}\nOpening a project will close all currently open editors. To keep them open, {1} instead.", openFolderButton, addAFolderButton),
 	when: ContextKeyExpr.and(
 		// editors are opened
 		ContextKeyExpr.has('editorIsOpen'),
@@ -342,7 +342,7 @@ viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 
 viewsRegistry.registerViewWelcomeContent(EmptyView.ID, {
 	content: localize({ key: 'noFolderHelp', comment: ['Please do not translate the word "command", it is part of our internal syntax which must not change'] },
-		"You have not yet opened a folder.\n{0}", openFolderButton),
+		"You have not yet opened a project.\n{0}", openFolderButton),
 	when: ContextKeyExpr.and(
 		// no editor is open
 		ContextKeyExpr.has('editorIsOpen')?.negate(),

@@ -7,11 +7,7 @@ metadata:
 
 # Chat Customizations Editor
 
-Split-view management pane for AI customization items across workspace, user, extension, and plugin storage. Supports harness-based filtering (Local, Copilot CLI, Claude).
-
-## Spec
-
-**`src/vs/sessions/AI_CUSTOMIZATIONS.md`** — always read before making changes, always update after.
+Split-view management pane for AI customization items across workspace, user, extension, and plugin storage. Supports harness-based filtering (Local, VectorCode CLI, Claude).
 
 ## Key Folders
 
@@ -19,10 +15,8 @@ Split-view management pane for AI customization items across workspace, user, ex
 |--------|------|
 | `src/vs/workbench/contrib/chat/common/` | `ICustomizationHarnessService`, `ISectionOverride`, `IStorageSourceFilter` — shared interfaces and filter helpers |
 | `src/vs/workbench/contrib/chat/browser/aiCustomization/` | Management editor, list widgets (prompts, MCP, plugins), harness service registration |
-| `src/vs/sessions/contrib/chat/browser/` | Sessions-window overrides (harness service, workspace service) |
-| `src/vs/sessions/contrib/sessions/browser/` | Sessions tree view counts and toolbar |
 
-When changing harness descriptor interfaces or factory functions, verify both core and sessions registrations compile.
+When changing harness descriptor interfaces or factory functions, verify the core workbench registration compiles.
 
 ## Key Interfaces
 
@@ -100,20 +94,20 @@ All test data lives in `allFiles` (prompt-based items) and the `mcpWorkspace/Use
 
 The list widget regroups items from the default chat extension under a "Built-in" header. Three things must be in place for fixtures to exercise this:
 1. Include `BUILTIN_STORAGE` in the harness descriptor's visible sources
-2. Mock `IProductService.defaultChatAgent.chatExtensionId` (e.g., `'GitHub.copilot-chat'`)
+2. Mock `IProductService.defaultChatAgent.chatExtensionId` (e.g., `'VectorCode.vectorcode'`)
 3. Give mock items extension provenance via `extensionId` / `extensionDisplayName` matching that ID
 
 Without all three, built-in regrouping silently doesn't run and the fixture only shows flat lists.
 
 ### Editor contribution service mocks
 
-The management editor embeds a `CodeEditorWidget`. Electron-side editor contributions (e.g., `AgentFeedbackEditorWidgetContribution`) are instantiated automatically and crash if their injected services aren't registered. The fixture must mock at minimum:
+The management editor embeds a `CodeEditorWidget`. Electron-side editor contributions can be instantiated automatically and crash if their injected services aren't registered. The fixture must mock at minimum:
 - `IAgentFeedbackService` — needs `onDidChangeFeedback`, `onDidChangeNavigation` as `Event.None`
 - `ICodeReviewService` — needs `getReviewState()` / `getPRReviewState()` returning idle observables
 - `IChatEditingService` — needs `editingSessionsObs` as empty observable
 - `IAgentSessionsService` — needs `model.sessions` as empty array
 
-These are cross-layer imports from `vs/sessions/` — use `// eslint-disable-next-line local/code-import-patterns` on the import lines.
+The component fixture utilities now provide local no-op service decorators for removed sessions-only services; do not reintroduce imports from `src/vs/sessions`.
 
 ### CI regression gates
 

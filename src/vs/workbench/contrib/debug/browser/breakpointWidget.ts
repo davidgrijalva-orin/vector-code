@@ -45,7 +45,7 @@ import { IColorTheme, IThemeService } from '../../../../platform/theme/common/th
 import { hasNativeContextMenu } from '../../../../platform/window/common/window.js';
 import { getSimpleCodeEditorWidgetOptions, getSimpleEditorOptions } from '../../codeEditor/browser/simpleEditorOptions.js';
 import { BREAKPOINT_EDITOR_CONTRIBUTION_ID, CONTEXT_BREAKPOINT_WIDGET_VISIBLE, CONTEXT_IN_BREAKPOINT_WIDGET, BreakpointWidgetContext as Context, DEBUG_SCHEME, IBreakpoint, IBreakpointEditorContribution, IBreakpointUpdateData, IDebugService } from '../common/debug.js';
-import './media/breakpointWidget.css';
+import '../../vectorCode/browser/media/vectorBreakpointWidget.css';
 
 const $ = dom.$;
 const IPrivateBreakpointWidgetService = createDecorator<IPrivateBreakpointWidgetService>('privateBreakpointWidgetService');

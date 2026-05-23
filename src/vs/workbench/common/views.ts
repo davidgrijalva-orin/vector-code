@@ -69,11 +69,7 @@ export const enum WindowEnablement {
 	 */
 	Editor = 1,
 	/**
-	 * Visible only in agent sessions window
-	 */
-	Sessions = 2,
-	/**
-	 * Visible in both editor and agent sessions windows
+	 * Visible in all workbench windows.
 	 */
 	Both = 3,
 }

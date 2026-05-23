@@ -6,8 +6,8 @@
 .monaco-workbench .quick-input-list .quick-input-list-entry.has-actions:hover .quick-input-list-entry-action-bar .action-label.dirty-workspace::before,
 .monaco-workbench .quick-input-list .quick-input-list-entry.has-actions:hover .quick-input-list-entry-action-bar .action-label.opened-workspace::before {
 	/* Close icon flips between black dot and "X" some entries in the recently opened picker */
-	content: var(--vscode-icon-x-content);
-	font-family: var(--vscode-icon-x-font-family);
+	content: var(--vectorcode-icon-x-content);
+	font-family: var(--vectorcode-icon-x-font-family);
 }
 
 .monaco-workbench .screencast-mouse {
@@ -23,12 +23,12 @@
 
 .monaco-workbench .screencast-keyboard {
 	position: absolute;
-	background-color: rgba(0, 0, 0, 0.5);
+	background-color: var(--vectorcode-overlayBackground, rgba(11, 15, 18, 0.78));
 	width: 100%;
 	left: 0;
 	z-index: 100000;
 	pointer-events: none;
-	color: #eee;
+	color: var(--vectorcode-shell-text);
 	line-height: 1.75em;
 	text-align: center;
 	white-space: nowrap;
@@ -46,11 +46,11 @@
 
 .monaco-workbench .screencast-keyboard > .key {
 	padding: 0 8px;
-	box-shadow: inset 0 -3px 0 hsla(0, 0%, 73%, .4);
+	box-shadow: inset 0 -3px 0 var(--vectorcode-keybindingLabel-bottomBorder);
 	margin-right: 6px;
-	border: 1px solid hsla(0, 0%, 80%, .4);
+	border: 1px solid var(--vectorcode-keybindingLabel-border);
 	border-radius: 5px;
-	background-color: rgba(255, 255, 255, 0.05);
+	background-color: var(--vectorcode-keybindingLabel-background);
 }
 
 .monaco-workbench .screencast-keyboard > .title {

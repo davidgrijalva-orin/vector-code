@@ -5,12 +5,21 @@
 
 import * as vscode from 'vscode';
 import { Command } from '../commandManager';
+import { RichMarkdownEditorProvider } from '../richEditor/richMarkdownEditor';
 
 export class ReopenAsPreviewCommand implements Command {
 	public readonly id = 'markdown.reopenAsPreview';
 
 	public async execute() {
 		await vscode.commands.executeCommand('reopenActiveEditorWith', 'vscode.markdown.preview.editor');
+	}
+}
+
+export class ReopenAsRichEditorCommand implements Command {
+	public readonly id = 'markdown.reopenAsRichEditor';
+
+	public async execute() {
+		await vscode.commands.executeCommand('reopenActiveEditorWith', RichMarkdownEditorProvider.viewType);
 	}
 }
 
@@ -27,10 +36,10 @@ export class TogglePreviewCommand implements Command {
 
 	public async execute() {
 		if (vscode.window.activeTextEditor) {
-			// In source editor, switch to preview
-			await vscode.commands.executeCommand('reopenActiveEditorWith', 'vscode.markdown.preview.editor');
+			// In source editor, switch to the default rich Markdown editor.
+			await vscode.commands.executeCommand('reopenActiveEditorWith', RichMarkdownEditorProvider.viewType);
 		} else {
-			// In custom editor preview, switch to source
+			// In a custom editor, switch to source.
 			await vscode.commands.executeCommand('reopenActiveEditorWith', 'default');
 		}
 	}

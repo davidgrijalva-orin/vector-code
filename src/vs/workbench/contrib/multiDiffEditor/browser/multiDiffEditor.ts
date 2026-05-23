@@ -17,7 +17,6 @@ import { IStorageService } from '../../../../platform/storage/common/storage.js'
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ResourceLabel } from '../../../browser/labels.js';
-import { IsSessionsWindowContext } from '../../../common/contextkeys.js';
 import { AbstractEditorWithViewState } from '../../../browser/parts/editor/editorWithViewState.js';
 import { ICompositeControl } from '../../../common/composite.js';
 import { IEditorOpenContext } from '../../../common/editor.js';
@@ -227,10 +226,9 @@ class WorkbenchUIElementFactory implements IWorkbenchUIElementFactory {
 	readonly headerClickToCollapse: boolean;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IContextKeyService contextKeyService: IContextKeyService,
+		@IInstantiationService private readonly _instantiationService: IInstantiationService
 	) {
-		this.headerClickToCollapse = IsSessionsWindowContext.getValue(contextKeyService) === true;
+		this.headerClickToCollapse = false;
 	}
 
 	createResourceLabel(element: HTMLElement): IResourceLabel {

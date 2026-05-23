@@ -13,6 +13,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
+import type { IKeybindingService } from '../../../../../platform/keybinding/common/keybinding.js';
 import { ResultKind } from '../../../../../platform/keybinding/common/keybindingResolver.js';
 import { TerminalCapability, type ICwdDetectionCapability } from '../../../../../platform/terminal/common/capabilities/capabilities.js';
 import { TerminalCapabilityStore } from '../../../../../platform/terminal/common/capabilities/terminalCapabilityStore.js';
@@ -223,7 +224,7 @@ suite('Workbench - TerminalInstance', () => {
 
 		test('custom key event handler should handle commands in DEFAULT_COMMANDS_TO_SKIP_SHELL in VS Code and not xterm when sendKeybindingsToShell is disabled', async () => {
 			const instance = await createTerminalInstance();
-			const keybindingService = instance['_keybindingService'];
+			const keybindingService = (instance as unknown as { _keybindingService: IKeybindingService })._keybindingService;
 			const originalSoftDispatch = keybindingService.softDispatch;
 			keybindingService.softDispatch = () => ({ kind: ResultKind.KbFound, commandId: 'workbench.action.zoomIn', commandArgs: undefined, isBubble: false });
 
@@ -248,7 +249,7 @@ suite('Workbench - TerminalInstance', () => {
 
 		test('custom key event handler should intercept Meta-modified keys that resolve to a command when sendKeybindingsToShell is disabled', async () => {
 			const instance = await createTerminalInstance();
-			const keybindingService = instance['_keybindingService'];
+			const keybindingService = (instance as unknown as { _keybindingService: IKeybindingService })._keybindingService;
 			const originalSoftDispatch = keybindingService.softDispatch;
 			strictEqual(DEFAULT_COMMANDS_TO_SKIP_SHELL.includes('test.metaKeyInterceptCommand'), false);
 			keybindingService.softDispatch = () => ({ kind: ResultKind.KbFound, commandId: 'test.metaKeyInterceptCommand', commandArgs: undefined, isBubble: false });
@@ -507,8 +508,8 @@ suite('Workbench - TerminalInstance', () => {
 		});
 		test('should use ${sequence} for agent CLI shell types', () => {
 			const terminalLabelComputer = createLabelComputer({ terminal: { integrated: { tabs: { separator: ' - ', title: '${process}', description: '${cwd}', allowAgentCliTitle: true } } } });
-			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Copilot, sequence: 'Copilot Agent', processName: 'copilot' }));
-			strictEqual(terminalLabelComputer.title, 'Copilot Agent');
+			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Claude, sequence: 'Claude Code', processName: 'claude' }));
+			strictEqual(terminalLabelComputer.title, 'Claude Code');
 		});
 		test('should use ${sequence} for Gemini agent CLI shell type', () => {
 			const terminalLabelComputer = createLabelComputer({ terminal: { integrated: { tabs: { separator: ' - ', title: '${process}', description: '${cwd}', allowAgentCliTitle: true } } } });
@@ -517,13 +518,13 @@ suite('Workbench - TerminalInstance', () => {
 		});
 		test('should prefer shellLaunchConfig.titleTemplate over agent CLI shell type override', () => {
 			const terminalLabelComputer = createLabelComputer({ terminal: { integrated: { tabs: { separator: ' - ', title: '${process}', description: '${cwd}', allowAgentCliTitle: true } } } });
-			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Copilot, sequence: 'Copilot Agent', processName: 'copilot', shellLaunchConfig: { titleTemplate: '${process}' } }));
-			strictEqual(terminalLabelComputer.title, 'copilot');
+			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Claude, sequence: 'Claude Code', processName: 'claude', shellLaunchConfig: { titleTemplate: '${process}' } }));
+			strictEqual(terminalLabelComputer.title, 'claude');
 		});
 		test('should fall back to configured title when allowAgentCliTitle is disabled', () => {
 			const terminalLabelComputer = createLabelComputer({ terminal: { integrated: { tabs: { separator: ' - ', title: '${process}', description: '${cwd}', allowAgentCliTitle: false } } } });
-			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Copilot, sequence: 'Copilot Agent', processName: 'copilot' }));
-			strictEqual(terminalLabelComputer.title, 'copilot');
+			terminalLabelComputer.refreshLabel(createInstance({ capabilities, shellType: GeneralShellType.Claude, sequence: 'Claude Code', processName: 'claude' }));
+			strictEqual(terminalLabelComputer.title, 'claude');
 		});
 		test('should provide cwdFolder for all cwds only when in multi-root', () => {
 			const terminalLabelComputer = createLabelComputer({ terminal: { integrated: { tabs: { separator: ' ~ ', title: '${process}${separator}${cwdFolder}', description: '${cwdFolder}' } } } });

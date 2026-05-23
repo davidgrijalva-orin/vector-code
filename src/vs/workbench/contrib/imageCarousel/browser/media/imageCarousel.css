@@ -16,7 +16,7 @@
 	align-items: center;
 	justify-content: center;
 	height: 100%;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	font-size: 14px;
 }
 
@@ -59,7 +59,7 @@
 .image-carousel-editor .main-image-container.zoomed {
 	overflow: auto;
 	padding: 0;
-	scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+	scrollbar-color: var(--vectorcode-scrollbarSlider-background) transparent;
 }
 
 .image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar {
@@ -68,15 +68,15 @@
 }
 
 .image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar-thumb {
-	background-color: var(--vscode-scrollbarSlider-background);
+	background-color: var(--vectorcode-scrollbarSlider-background);
 }
 
 .image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar-thumb:hover {
-	background-color: var(--vscode-scrollbarSlider-hoverBackground);
+	background-color: var(--vectorcode-scrollbarSlider-hoverBackground);
 }
 
 .image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar-thumb:active {
-	background-color: var(--vscode-scrollbarSlider-activeBackground);
+	background-color: var(--vectorcode-scrollbarSlider-activeBackground);
 }
 
 .image-carousel-editor .main-image {
@@ -111,8 +111,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--vscode-toolbar-hoverBackground);
-	color: var(--vscode-foreground);
+	background: var(--vectorcode-toolbar-hoverBackground);
+	color: var(--vectorcode-foreground);
 	border: none;
 	border-radius: 50%;
 	cursor: pointer;
@@ -134,13 +134,13 @@
 
 .image-carousel-editor .nav-arrow:hover:not(:disabled) {
 	opacity: 1 !important;
-	background: var(--vscode-toolbar-activeBackground);
-	color: var(--vscode-foreground);
+	background: var(--vectorcode-toolbar-activeBackground);
+	color: var(--vectorcode-foreground);
 }
 
 .image-carousel-editor .nav-arrow:focus-visible:not(:disabled) {
 	opacity: 1 !important;
-	outline: 1px solid var(--vscode-focusBorder);
+	outline: 1px solid var(--vectorcode-focusBorder);
 	outline-offset: -1px;
 }
 
@@ -176,7 +176,7 @@
 /* Info bar: caption · counter */
 .image-carousel-editor .image-info-bar {
 	text-align: center;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	font-size: 12px;
 	padding: 0 24px;
 	min-height: 16px;
@@ -216,7 +216,7 @@
 .image-carousel-editor .thumbnail-separator {
 	width: 1px;
 	height: 24px;
-	background: var(--vscode-editorWidget-border, var(--vscode-widget-border));
+	background: var(--vectorcode-editorWidget-border, var(--vectorcode-widget-border));
 	opacity: 0.4;
 	flex-shrink: 0;
 	margin: 0 6px;
@@ -238,30 +238,30 @@
 
 .image-carousel-editor .thumbnail:hover {
 	opacity: 1;
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--vectorcode-focusBorder);
 }
 
 .image-carousel-editor .thumbnail:focus-visible {
 	opacity: 1;
-	outline: 1px solid var(--vscode-focusBorder);
+	outline: 1px solid var(--vectorcode-focusBorder);
 	outline-offset: 1px;
 }
 
 .image-carousel-editor .thumbnail.active {
 	opacity: 1;
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--vectorcode-focusBorder);
 }
 
 .image-carousel-editor .thumbnail.broken {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--vscode-editor-background);
+	background: var(--vectorcode-editor-background);
 }
 
 .image-carousel-editor .thumbnail-broken-icon {
 	font-size: 20px;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 }
 
 .image-carousel-editor .thumbnail-image {
@@ -276,12 +276,12 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--vscode-editor-background);
+	background: var(--vectorcode-editor-background);
 }
 
 .image-carousel-editor .thumbnail-play-icon {
 	font-size: 20px;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 }
 
 /* Visually hidden but available to screen readers */

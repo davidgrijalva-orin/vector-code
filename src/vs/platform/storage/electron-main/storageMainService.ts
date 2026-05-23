@@ -44,8 +44,7 @@ export interface IStorageMainService {
 	readonly applicationStorage: IStorageMain;
 
 	/**
-	 * Provides access to the application shared storage that is shared
-	 * across VS Code and Agents app.
+	 * Provides access to application shared storage across windows.
 	 */
 	readonly applicationSharedStorage: IStorageMain;
 

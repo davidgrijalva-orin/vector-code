@@ -13,7 +13,7 @@
 	<div class="container">
 		<div class="content">
 			<div class="icon-container">
-				<img src="code-icon.svg" class="vscode-icon">
+				<img src="code-icon.svg" class="vectorcode-icon">
 			</div>
 			<h1 class="title">Launching <span class="app-name"></span></h1>
 			<div class="message">
@@ -35,10 +35,10 @@
 
 		// if name contains 'insiders', update filter CSS variables
 		if (appName.toLowerCase().includes('insiders')) {
-			document.documentElement.style.setProperty('--vscode-filter-0', 'var(--vscode-insiders-filter-0)');
-			document.documentElement.style.setProperty('--vscode-filter-50', 'var(--vscode-insiders-filter-50)');
-			document.documentElement.style.setProperty('--vscode-filter-70', 'var(--vscode-insiders-filter-70)');
-			document.documentElement.style.setProperty('--vscode-filter-100', 'var(--vscode-insiders-filter-100)');
+			document.documentElement.style.setProperty('--vectorcode-filter-0', 'var(--vectorcode-insiders-filter-0)');
+			document.documentElement.style.setProperty('--vectorcode-filter-50', 'var(--vectorcode-insiders-filter-50)');
+			document.documentElement.style.setProperty('--vectorcode-filter-70', 'var(--vectorcode-insiders-filter-70)');
+			document.documentElement.style.setProperty('--vectorcode-filter-100', 'var(--vectorcode-insiders-filter-100)');
 		}
 
 		const error = urlParams.get('error');

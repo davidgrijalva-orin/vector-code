@@ -14,15 +14,15 @@
 	top: 0;
 	border-style: solid;
 	border-width: 1px;
-	border-color: var(--vscode-editorSuggestWidget-border);
-	background-color: var(--vscode-editorSuggestWidget-background);
+	border-color: var(--vectorcode-editorSuggestWidget-border);
+	background-color: var(--vectorcode-editorSuggestWidget-background);
 }
 
 .workbench-suggest-widget .suggest-details {
 	border-style: solid;
 	border-width: 1px;
-	border-color: var(--vscode-editorSuggestWidget-border);
-	background-color: var(--vscode-editorSuggestWidget-background);
+	border-color: var(--vectorcode-editorSuggestWidget-border);
+	background-color: var(--vectorcode-editorSuggestWidget-background);
 }
 
 /* Suggest widget*/
@@ -46,8 +46,8 @@
 	width: 100%;
 	border-style: solid;
 	border-width: 1px;
-	border-color: var(--vscode-editorSuggestWidget-border);
-	background-color: var(--vscode-editorSuggestWidget-background);
+	border-color: var(--vectorcode-editorSuggestWidget-border);
+	background-color: var(--vectorcode-editorSuggestWidget-background);
 }
 
 .monaco-workbench.hc-black .workbench-suggest-widget,
@@ -71,7 +71,7 @@
 	width: 100%;
 	font-size: 80%;
 	padding: 0 4px 0 4px;
-	border-top: 1px solid var(--vscode-editorSuggestWidget-border);
+	border-top: 1px solid var(--vectorcode-editorSuggestWidget-border);
 	overflow: hidden;
 }
 
@@ -80,7 +80,7 @@
 }
 
 .monaco-workbench .workbench-suggest-widget.with-status-bar .suggest-status-bar .action-label {
-	color: var(--vscode-editorSuggestWidgetStatus-foreground);
+	color: var(--vectorcode-editorSuggestWidgetStatus-foreground);
 }
 
 .monaco-workbench .workbench-suggest-widget.with-status-bar .suggest-status-bar .action-item:not(:last-of-type) .action-label {
@@ -88,8 +88,8 @@
 }
 
 .monaco-workbench .workbench-suggest-widget.increased-discoverability.with-status-bar .suggest-status-bar .monaco-action-bar.right .actions-container .action-item:first-child .action-label {
-	color: var(--vscode-button-foreground);
-	background-color: var(--vscode-button-background);
+	color: var(--vectorcode-button-foreground);
+	background-color: var(--vectorcode-button-background);
 }
 
 
@@ -119,11 +119,11 @@
 }
 
 .workbench-suggest-widget .monaco-list .monaco-list-row.focused {
-	color: var(--vscode-editorSuggestWidget-selectedForeground);
+	color: var(--vectorcode-editorSuggestWidget-selectedForeground);
 }
 
 .workbench-suggest-widget .monaco-list .monaco-list-row.focused .codicon {
-	color: var(--vscode-editorSuggestWidget-selectedIconForeground);
+	color: var(--vectorcode-editorSuggestWidget-selectedIconForeground);
 }
 
 .workbench-suggest-widget .monaco-list .monaco-list-row > .contents {
@@ -147,7 +147,7 @@
 }
 
 .workbench-suggest-widget .monaco-list .monaco-list-row:not(.focused) > .contents > .main .monaco-icon-label {
-	color: var(--vscode-editorSuggestWidget-foreground);
+	color: var(--vectorcode-editorSuggestWidget-foreground);
 }
 
 .workbench-suggest-widget:not(.frozen) .monaco-highlighted-label .highlight {
@@ -155,11 +155,11 @@
 }
 
 .workbench-suggest-widget .monaco-list .monaco-list-row > .contents > .main .monaco-highlighted-label .highlight {
-	color: var(--vscode-editorSuggestWidget-highlightForeground);
+	color: var(--vectorcode-editorSuggestWidget-highlightForeground);
 }
 
 .workbench-suggest-widget:not(.partial-selection) .monaco-list .monaco-list-row.focused > .contents > .main .monaco-highlighted-label .highlight {
-	color: var(--vscode-editorSuggestWidget-focusHighlightForeground);
+	color: var(--vectorcode-editorSuggestWidget-focusHighlightForeground);
 }
 
 /** Styles for each row in the list **/
@@ -204,7 +204,7 @@
 
 .workbench-suggest-widget .monaco-list .monaco-list-row .icon.customcolor .colorspan {
 	margin: 0 0 0 0.3em;
-	border: 0.1em solid #000;
+	border: 0.1em solid var(--vectorcode-editorWidget-border);
 	width: 0.7em;
 	height: 0.7em;
 	display: inline-block;
@@ -328,23 +328,23 @@
 	display: flex;
 	flex-direction: column;
 	cursor: default;
-	color: var(--vscode-editorSuggestWidget-foreground);
+	color: var(--vectorcode-editorSuggestWidget-foreground);
 }
 
 .workbench-suggest-widget .suggest-details:focus {
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--vectorcode-focusBorder);
 }
 
 .workbench-suggest-widget .suggest-details a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .workbench-suggest-widget .suggest-details a:hover {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .workbench-suggest-widget .suggest-details code {
-	background-color: var(--vscode-textCodeBlock-background);
+	background-color: var(--vectorcode-textCodeBlock-background);
 }
 
 .workbench-suggest-widget .suggest-details.no-docs {

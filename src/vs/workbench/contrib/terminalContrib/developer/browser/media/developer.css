@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-workbench .xterm.dev-mode .xterm-sequence-decoration {
-	background-color: var(--vscode-terminal-background, var(--vscode-panel-background));
+	background-color: var(--vectorcode-terminal-background, var(--vectorcode-panel-background));
 	visibility: hidden;
 }
 .monaco-workbench .xterm.dev-mode:hover .xterm-sequence-decoration {

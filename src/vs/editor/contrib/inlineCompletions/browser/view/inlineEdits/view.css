@@ -16,9 +16,9 @@
 		z-index: 34; /* Below the find widget */
 		height: 20px;
 
-		color: var(--vscode-inlineEdit-gutterIndicator-primaryForeground);
-		background-color: var(--vscode-inlineEdit-gutterIndicator-background);
-		border: 1px solid var(--vscode-inlineEdit-gutterIndicator-primaryBorder);
+		color: var(--vectorcode-inlineEdit-gutterIndicator-primaryForeground);
+		background-color: var(--vectorcode-inlineEdit-gutterIndicator-background);
+		border: 1px solid var(--vectorcode-inlineEdit-gutterIndicator-primaryBorder);
 		border-radius: var(--inline-edit-border-radius);
 
 		align-items: center;
@@ -65,7 +65,7 @@
 			transform: none;
 			transition: transform 0.2s ease-in-out;
 			.codicon {
-				color: var(--vscode-inlineEdit-gutterIndicator-primaryForeground);
+				color: var(--vectorcode-inlineEdit-gutterIndicator-primaryForeground);
 			}
 		}
 
@@ -99,49 +99,49 @@
 	}
 
 	.inlineCompletions-line-insert {
-		background: var(--vscode-inlineEdit-modifiedChangedLineBackground);
+		background: var(--vectorcode-inlineEdit-modifiedChangedLineBackground);
 	}
 
 	.inlineCompletions-line-delete {
-		background: var(--vscode-inlineEdit-originalChangedLineBackground);
+		background: var(--vectorcode-inlineEdit-originalChangedLineBackground);
 	}
 
 	.inlineCompletions-char-insert {
-		background: var(--vscode-inlineEdit-modifiedChangedTextBackground);
+		background: var(--vectorcode-inlineEdit-modifiedChangedTextBackground);
 		cursor: pointer;
 	}
 
 	.inlineCompletions-char-delete {
-		background: var(--vscode-inlineEdit-originalChangedTextBackground);
+		background: var(--vectorcode-inlineEdit-originalChangedTextBackground);
 	}
 
 	.inlineCompletions-char-delete.diff-range-empty {
 		margin-left: -1px;
-		border-left: solid var(--vscode-inlineEdit-originalChangedTextBackground) 3px;
+		border-left: solid var(--vectorcode-inlineEdit-originalChangedTextBackground) 3px;
 	}
 
 	.inlineCompletions-char-insert.diff-range-empty {
-		border-left: solid var(--vscode-inlineEdit-modifiedChangedTextBackground) 3px;
+		border-left: solid var(--vectorcode-inlineEdit-modifiedChangedTextBackground) 3px;
 	}
 
 	.inlineCompletions-char-delete.single-line-inline { /* Editor Decoration */
-		border: 1px solid var(--vscode-editorHoverWidget-border);
+		border: 1px solid var(--vectorcode-editorHoverWidget-border);
 		margin: -2px 0 0 -2px;
 	}
 
 	.inlineCompletions-char-insert.single-line-inline { /* Inline Decoration */
-		border-top: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
-		border-bottom: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
+		border-top: 1px solid var(--vectorcode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
+		border-bottom: 1px solid var(--vectorcode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
 	}
 	.inlineCompletions-char-insert.single-line-inline.start {
 		border-top-left-radius: var(--inline-edit-border-radius);
 		border-bottom-left-radius: var(--inline-edit-border-radius);
-		border-left: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
+		border-left: 1px solid var(--vectorcode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
 	}
 	.inlineCompletions-char-insert.single-line-inline.end {
 		border-top-right-radius: var(--inline-edit-border-radius);
 		border-bottom-right-radius: var(--inline-edit-border-radius);
-		border-right: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
+		border-right: 1px solid var(--vectorcode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
 	}
 
 	.inlineCompletions-char-delete.single-line-inline.empty,
@@ -156,11 +156,11 @@
 	/* line replacement bubbles */
 
 	.inlineCompletions-modified-bubble {
-		background: var(--vscode-inlineEdit-modifiedChangedTextBackground);
+		background: var(--vectorcode-inlineEdit-modifiedChangedTextBackground);
 	}
 
 	.inlineCompletions-original-bubble {
-		background: var(--vscode-inlineEdit-originalChangedTextBackground);
+		background: var(--vectorcode-inlineEdit-originalChangedTextBackground);
 	}
 
 	.inlineCompletions-modified-bubble,
@@ -183,12 +183,12 @@
 	.inline-edit.modified-background.ghost-text-decoration,
 	.inline-edit.modified-background.ghost-text-decoration-preview,
 	.inline-edit.modified-background.suggest-preview-text .ghost-text {
-		background: var(--vscode-inlineEdit-modifiedChangedTextBackground) !important;
+		background: var(--vectorcode-inlineEdit-modifiedChangedTextBackground) !important;
 		display: inline-block !important;
 	}
 
 	.inlineCompletions-original-lines {
-		background: var(--vscode-editor-background);
+		background: var(--vectorcode-editor-background);
 	}
 
 	.inline-edit-jump-to-widget {
@@ -204,7 +204,7 @@
 }
 
 .monaco-menu-option {
-	color: var(--vscode-editorActionList-foreground);
+	color: var(--vectorcode-editorActionList-foreground);
 	font-size: 13px;
 	padding: 0 4px;
 	line-height: 28px;
@@ -224,13 +224,13 @@
 	}
 
 	&.active {
-		background: var(--vscode-editorActionList-focusBackground);
-		color: var(--vscode-editorActionList-focusForeground);
-		outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+		background: var(--vectorcode-editorActionList-focusBackground);
+		color: var(--vectorcode-editorActionList-focusForeground);
+		outline: 1px solid var(--vectorcode-menu-selectionBorder, transparent);
 		outline-offset: -1px;
 
 		.monaco-keybinding-key {
-			color: var(--vscode-editorActionList-focusForeground);
+			color: var(--vectorcode-editorActionList-focusForeground);
 		}
 	}
 }
@@ -242,13 +242,13 @@
 	top: 0;
 	width: 12px;
 	height: 100%;
-	background: linear-gradient(to left, var(--vscode-editorWidget-background) 0, transparent 12px);
+	background: linear-gradient(to left, var(--vectorcode-editorWidget-background) 0, transparent 12px);
 }
 
 .hc-black .inline-edits-long-distance-hint-widget .go-to-label::before,
 .hc-light .inline-edits-long-distance-hint-widget .go-to-label::before {
 	/* Remove gradient in high contrast mode for clearer separation */
-	background: var(--vscode-editorWidget-background);
+	background: var(--vectorcode-editorWidget-background);
 }
 
 .inline-edit-alternative-action-label .codicon {

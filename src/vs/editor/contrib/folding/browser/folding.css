@@ -31,7 +31,7 @@
 }
 
 .monaco-editor .inline-folded:after {
-	color: var(--vscode-editor-foldPlaceholderForeground);
+	color: var(--vectorcode-editor-foldPlaceholderForeground);
 	margin: 0.1em 0.2em 0 0.2em;
 	content: "\22EF"; /* ellipses unicode character */
 	display: inline;
@@ -40,12 +40,12 @@
 }
 
 .monaco-editor .folded-background {
-	background-color: var(--vscode-editor-foldBackground);
+	background-color: var(--vectorcode-editor-foldBackground);
 }
 
 .monaco-editor .cldr.codicon.codicon-folding-expanded,
 .monaco-editor .cldr.codicon.codicon-folding-collapsed,
 .monaco-editor .cldr.codicon.codicon-folding-manual-expanded,
 .monaco-editor .cldr.codicon.codicon-folding-manual-collapsed {
-	color: var(--vscode-editorGutter-foldingControlForeground) !important;
+	color: var(--vectorcode-editorGutter-foldingControlForeground) !important;
 }

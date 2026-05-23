@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/scm.css';
+import '../../vectorCode/browser/media/vectorScm.css';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { VIEWLET_ID } from '../common/scm.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';

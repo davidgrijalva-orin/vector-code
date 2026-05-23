@@ -12,8 +12,6 @@ import { AnnotatedDocument, IAnnotatedDocuments } from './helpers/annotatedDocum
 import { createDocWithJustReason } from './helpers/documentWithAnnotatedEdits.js';
 import { DocumentEditSourceTracker } from './telemetry/editTracker.js';
 
-export type AiContributionLevel = 'chatAndAgent' | 'all';
-
 interface TrackerEntry {
 	readonly trackerStore: DisposableStore;
 	readonly tracker: DocumentEditSourceTracker;
@@ -55,8 +53,8 @@ export class AiContributionFeature extends Disposable {
 			}
 		}));
 
-		this._register(CommandsRegistry.registerCommand('_aiEdits.hasAiContributions', (_accessor, resources: UriComponents[], level: AiContributionLevel) => {
-			return this._hasAiContributions(resources, level);
+		this._register(CommandsRegistry.registerCommand('_aiEdits.hasAiContributions', (_accessor, resources: UriComponents[]) => {
+			return this._hasAiContributions(resources);
 		}));
 
 		this._register(CommandsRegistry.registerCommand('_aiEdits.clearAiContributions', (_accessor, resources: UriComponents[]) => {
@@ -82,12 +80,12 @@ export class AiContributionFeature extends Disposable {
 		return { trackerStore, tracker };
 	}
 
-	private _hasAiContributions(resources: UriComponents[], level: AiContributionLevel): boolean {
+	private _hasAiContributions(resources: UriComponents[]): boolean {
 		for (const resource of resources) {
 			const entry = this._trackers.get(URI.revive(resource));
 			if (entry) {
 				for (const edit of entry.tracker.getTrackedRanges()) {
-					if (edit.source.category === 'ai' && (level === 'all' || edit.source.feature === 'chat')) {
+					if (edit.source.category === 'ai') {
 						return true;
 					}
 				}

@@ -38,12 +38,12 @@ export interface SizeContribution {
 
 /**
  * Returns the css variable name for the given size identifier. Dots (`.`) are replaced with hyphens (`-`) and
- * everything is prefixed with `--vscode-`.
+ * everything is prefixed with `--vectorcode-`.
  *
- * @sample `editor.fontSize` is `--vscode-editor-fontSize`.
+ * @sample `editor.fontSize` is `--vectorcode-editor-fontSize`.
  */
 export function asCssVariableName(sizeIdent: SizeIdentifier): string {
-	return `--vscode-${sizeIdent.replace(/\./g, '-')}`;
+	return `--vectorcode-${sizeIdent.replace(/\./g, '-')}`;
 }
 
 export function asCssVariable(size: SizeIdentifier): string {

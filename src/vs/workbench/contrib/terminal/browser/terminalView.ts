@@ -53,6 +53,7 @@ import { MicrotaskDelay } from '../../../../base/common/symbols.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { hasNativeContextMenu } from '../../../../platform/window/common/window.js';
 import { hasKey } from '../../../../base/common/types.js';
+import { IVectorCodeWorkbenchService } from '../../vectorCode/common/vectorCode.js';
 
 export class TerminalViewPane extends ViewPane {
 	private _parentDomElement: HTMLElement | undefined;
@@ -90,6 +91,7 @@ export class TerminalViewPane extends ViewPane {
 		@IMenuService private readonly _menuService: IMenuService,
 		@ITerminalProfileService private readonly _terminalProfileService: ITerminalProfileService,
 		@ITerminalProfileResolverService private readonly _terminalProfileResolverService: ITerminalProfileResolverService,
+		@IVectorCodeWorkbenchService private readonly _vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 	) {
 		super(options, keybindingService, contextMenuService, _configurationService, _contextKeyService, viewDescriptorService, _instantiationService, openerService, themeService, hoverService);
 		this._register(this._terminalService.onDidRegisterProcessSupport(() => {
@@ -143,6 +145,9 @@ export class TerminalViewPane extends ViewPane {
 
 	private _initializeTerminal(checkRestoredTerminals: boolean) {
 		if (this.isBodyVisible() && this._terminalService.isProcessSupportRegistered && this._terminalService.connectionState === TerminalConnectionState.Connected) {
+			if (this._vectorCodeWorkbenchService.isProjectSwitching()) {
+				return;
+			}
 			const wasInitialized = this._isInitialized;
 			this._isInitialized = true;
 
@@ -208,7 +213,7 @@ export class TerminalViewPane extends ViewPane {
 						label: nls.localize('terminal.useMonospace', "Use 'monospace'"),
 						run: () => this.configurationService.updateValue(TerminalSettingId.FontFamily, 'monospace'),
 					}];
-					this._notificationService.prompt(Severity.Warning, nls.localize('terminal.monospaceOnly', "The terminal only supports monospace fonts. Be sure to restart VS Code if this is a newly installed font."), choices);
+					this._notificationService.prompt(Severity.Warning, nls.localize('terminal.monospaceOnly', "The terminal only supports monospace fonts. Be sure to restart Vector Code if this is a newly installed font."), choices);
 				}
 			}
 		}));

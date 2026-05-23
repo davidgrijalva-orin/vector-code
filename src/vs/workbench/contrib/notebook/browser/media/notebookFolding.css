@@ -69,7 +69,7 @@
 }
 
 .monaco-workbench .notebookOverlay > .cell-list-container .folded-cell-run-section-button:hover {
-	background-color: var(--vscode-editorStickyScrollHover-background);
+	background-color: var(--vectorcode-editorStickyScrollHover-background);
 	cursor: pointer;
 }
 

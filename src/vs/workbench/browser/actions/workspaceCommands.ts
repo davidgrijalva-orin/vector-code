@@ -26,7 +26,7 @@ import { IPathService } from '../../services/path/common/pathService.js';
 import { ILocalizedString } from '../../../platform/action/common/action.js';
 
 export const ADD_ROOT_FOLDER_COMMAND_ID = 'addRootFolder';
-export const ADD_ROOT_FOLDER_LABEL: ILocalizedString = localize2('addFolderToWorkspace', 'Add Folder to Workspace...');
+export const ADD_ROOT_FOLDER_LABEL: ILocalizedString = localize2('addProjectToWorkspace', 'Add Project...');
 
 export const SET_ROOT_FOLDER_COMMAND_ID = 'setRootFolder';
 
@@ -94,7 +94,7 @@ async function selectWorkspaceFolders(accessor: ServicesAccessor): Promise<URI[]
 
 	const folders = await dialogsService.showOpenDialog({
 		openLabel: mnemonicButtonLabel(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")),
-		title: localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"),
+		title: localize('addProjectToWorkspaceTitle', "Add Project"),
 		canSelectFolders: true,
 		canSelectMany: true,
 		defaultUri: await dialogsService.defaultFolderPath(),
@@ -135,7 +135,7 @@ CommandsRegistry.registerCommand(PICK_WORKSPACE_FOLDER_COMMAND_ID, async functio
 	}
 
 	if (!options.placeHolder) {
-		options.placeHolder = localize('workspaceFolderPickerPlaceholder', "Select workspace folder");
+		options.placeHolder = localize('workspaceFolderPickerPlaceholder', "Select project");
 	}
 
 	if (typeof options.matchOnDescription !== 'boolean') {

@@ -329,11 +329,11 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 				">` : ''}
 				<style nonce="${this.nonce}">
 					::highlight(find-highlight) {
-						background-color: var(--vscode-editor-findMatchBackground, ${findMatchHighlight});
+						background-color: var(--vectorcode-editor-findMatchBackground, ${findMatchHighlight});
 					}
 
 					::highlight(current-find-highlight) {
-						background-color: var(--vscode-editor-findMatchHighlightBackground, ${currentHighlight});
+						background-color: var(--vectorcode-editor-findMatchHighlightBackground, ${currentHighlight});
 					}
 
 					#container .cell_container {
@@ -345,7 +345,7 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 					}
 
 					#container .cell_container.nb-insertHighlight div.output_container div.output {
-						background-color: var(--vscode-diffEditor-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground));
+						background-color: var(--vectorcode-diffEditor-insertedLineBackground, var(--vectorcode-diffEditor-insertedTextBackground));
 					}
 
 					#container > div > div > div.output {
@@ -406,7 +406,7 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 					}
 
 					#container .markup > div.nb-insertHighlight {
-						background-color: var(--vscode-diffEditor-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground));
+						background-color: var(--vectorcode-diffEditor-insertedLineBackground, var(--vectorcode-diffEditor-insertedTextBackground));
 					}
 
 					#container .nb-symbolHighlight .output_container .output {
@@ -422,7 +422,7 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 					}
 
 					#container .nb-chatGenerationHighlight .output_container .output {
-						background-color: var(--vscode-notebook-selectedCellBackground);
+						background-color: var(--vectorcode-notebook-selectedCellBackground);
 					}
 
 					#container > div.nb-cellDeleted .output_container {
@@ -438,7 +438,7 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 					}
 
 					#container .no-renderer-error {
-						color: var(--vscode-editorError-foreground);
+						color: var(--vectorcode-editorError-foreground);
 					}
 
 					body {
@@ -477,16 +477,16 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 					}
 
 					.find-match {
-						background-color: var(--vscode-editor-findMatchHighlightBackground);
+						background-color: var(--vectorcode-editor-findMatchHighlightBackground);
 					}
 
 					.current-find-match {
-						background-color: var(--vscode-editor-findMatchBackground);
+						background-color: var(--vectorcode-editor-findMatchBackground);
 					}
 
 					#_defaultColorPalatte {
-						color: var(--vscode-editor-findMatchHighlightBackground);
-						background-color: var(--vscode-editor-findMatchBackground);
+						color: var(--vectorcode-editor-findMatchHighlightBackground);
+						background-color: var(--vectorcode-editor-findMatchBackground);
 					}
 				</style>
 			</head>

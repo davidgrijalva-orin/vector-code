@@ -8,8 +8,8 @@
 		cursor: all-scroll;
 		position: absolute;
 		z-index: 1;
-		background-color: var(--vscode-editor-foreground, white);
-		border: 1px solid var(--vscode-editor-background, black);
+		background-color: var(--vectorcode-editor-foreground, white);
+		border: 1px solid var(--vectorcode-editor-background, black);
 		opacity: 0.5;
 		width: 5px;
 		height: 5px;

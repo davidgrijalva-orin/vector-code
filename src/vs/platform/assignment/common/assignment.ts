@@ -181,6 +181,6 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 export function getInternalOrg(organisations: string[] | undefined): 'vscode' | 'github' | 'microsoft' | undefined {
 	const isVSCodeInternal = organisations?.includes('Visual-Studio-Code');
 	const isGitHubInternal = organisations?.includes('github');
-	const isMicrosoftInternal = organisations?.includes('microsoft') || organisations?.includes('ms-copilot') || organisations?.includes('MicrosoftCopilot');
+	const isMicrosoftInternal = organisations?.includes('microsoft') || organisations?.includes('ms-vectorcode') || organisations?.includes('MicrosoftVectorCode');
 	return isVSCodeInternal ? 'vscode' : isGitHubInternal ? 'github' : isMicrosoftInternal ? 'microsoft' : undefined;
 }

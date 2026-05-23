@@ -183,6 +183,7 @@ export class ExplorerView extends ViewPane implements IExplorerView {
 
 	private dragHandler!: DelayedDragHandler;
 	private _autoReveal: boolean | 'force' | 'focusNoScroll' = false;
+	private activeRootResource: URI | undefined;
 	private decorationsProvider: ExplorerDecorationsProvider | undefined;
 	private readonly delegate: IExplorerViewContainerDelegate | undefined;
 
@@ -248,7 +249,7 @@ export class ExplorerView extends ViewPane implements IExplorerView {
 	}
 
 	get name(): string {
-		return this.labelService.getWorkspaceLabel(this.contextService.getWorkspace());
+		return nls.localize('filesTreeTitle', "Files");
 	}
 
 	override get title(): string {
@@ -736,6 +737,11 @@ export class ExplorerView extends ViewPane implements IExplorerView {
 		return DOM.getLargestChildWidth(parentNode, childNodes);
 	}
 
+	async setActiveProjectRoot(resource: URI | undefined): Promise<void> {
+		this.activeRootResource = resource;
+		await this.setTreeInput();
+	}
+
 	async setTreeInput(): Promise<void> {
 		if (!this.isBodyVisible()) {
 			return Promise.resolve(undefined);
@@ -751,8 +757,9 @@ export class ExplorerView extends ViewPane implements IExplorerView {
 			perf.mark('code/willResolveExplorer');
 		}
 		const roots = this.explorerService.roots;
-		let input: ExplorerItem | ExplorerItem[] = roots[0];
-		if (this.contextService.getWorkbenchState() !== WorkbenchState.FOLDER || roots[0].error) {
+		const activeRoot = this.getActiveRoot(roots);
+		let input: ExplorerItem | ExplorerItem[] = activeRoot ?? roots[0];
+		if (!activeRoot && (this.contextService.getWorkbenchState() !== WorkbenchState.FOLDER || roots[0].error)) {
 			// Display roots only when multi folder workspace
 			input = roots;
 		}
@@ -876,6 +883,24 @@ export class ExplorerView extends ViewPane implements IExplorerView {
 				return this.selectResource(resource, reveal, retry + 1);
 			}
 		}
+	}
+
+	private getActiveRoot(roots: readonly ExplorerItem[]): ExplorerItem | undefined {
+		if (!roots.length) {
+			this.activeRootResource = undefined;
+			return undefined;
+		}
+
+		if (this.activeRootResource) {
+			const activeRoot = roots.find(root => this.uriIdentityService.extUri.isEqual(root.resource, this.activeRootResource!));
+			if (activeRoot) {
+				return activeRoot;
+			}
+		}
+
+		const firstRoot = roots[0];
+		this.activeRootResource = firstRoot.resource;
+		return firstRoot;
 	}
 
 	itemsCopied(stats: ExplorerItem[], cut: boolean, previousCut: ExplorerItem[] | undefined): void {
@@ -1112,6 +1137,25 @@ registerAction2(class extends Action2 {
 		if (view !== null) {
 			const explorerView = view as ExplorerView;
 			explorerView.collapseAll();
+		}
+	}
+});
+
+registerAction2(class extends Action2 {
+	constructor() {
+		super({
+			id: 'workbench.files.action.setActiveProjectRoot',
+			title: nls.localize2('setActiveProjectRoot', "Set Active Project Root"),
+			f1: false
+		});
+	}
+
+	async run(accessor: ServicesAccessor, resource?: URI): Promise<void> {
+		const viewsService = accessor.get(IViewsService);
+		const view = await viewsService.openView(VIEW_ID, true);
+		if (view !== null) {
+			const explorerView = view as ExplorerView;
+			await explorerView.setActiveProjectRoot(resource);
 		}
 	}
 });

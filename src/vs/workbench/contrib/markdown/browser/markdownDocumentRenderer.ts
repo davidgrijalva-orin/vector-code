@@ -102,11 +102,11 @@ pre {
 }
 
 pre code {
-	font-family: var(--vscode-editor-font-family);
-	font-weight: var(--vscode-editor-font-weight);
-	font-size: var(--vscode-editor-font-size);
+	font-family: var(--vectorcode-editor-font-family);
+	font-weight: var(--vectorcode-editor-font-weight);
+	font-size: var(--vectorcode-editor-font-size);
 	line-height: 1.5;
-	color: var(--vscode-editor-foreground);
+	color: var(--vectorcode-editor-foreground);
 	tab-size: 4;
 }
 
@@ -117,30 +117,30 @@ pre code {
 /** Theming */
 
 .pre {
-	background-color: var(--vscode-textCodeBlock-background);
+	background-color: var(--vectorcode-textCodeBlock-background);
 }
 
-.vscode-high-contrast h1 {
+.vectorcode-high-contrast h1 {
 	border-color: rgb(0, 0, 0);
 }
 
-.vscode-light th {
+.vectorcode-light th {
 	border-color: rgba(0, 0, 0, 0.69);
 }
 
-.vscode-dark th {
+.vectorcode-dark th {
 	border-color: rgba(255, 255, 255, 0.69);
 }
 
-.vscode-light h1,
-.vscode-light hr,
-.vscode-light td {
+.vectorcode-light h1,
+.vectorcode-light hr,
+.vectorcode-light td {
 	border-color: rgba(0, 0, 0, 0.18);
 }
 
-.vscode-dark h1,
-.vscode-dark hr,
-.vscode-dark td {
+.vectorcode-dark h1,
+.vectorcode-dark hr,
+.vectorcode-dark td {
 	border-color: rgba(255, 255, 255, 0.18);
 }
 

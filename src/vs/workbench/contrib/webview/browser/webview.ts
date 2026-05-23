@@ -84,7 +84,6 @@ export const enum WebviewContentPurpose {
 	NotebookRenderer = 'notebookRenderer',
 	CustomEditor = 'customEditor',
 	WebviewView = 'webviewView',
-	ChatOutputItem = 'chatOutputItem',
 }
 
 export type WebviewStyles = { readonly [key: string]: string | number };

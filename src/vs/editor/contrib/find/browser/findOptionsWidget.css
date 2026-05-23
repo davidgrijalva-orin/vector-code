@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-editor .findOptionsWidget {
-	background-color: var(--vscode-editorWidget-background);
-	color: var(--vscode-editorWidget-foreground);
-	box-shadow: var(--vscode-shadow-lg);
-	border: 2px solid var(--vscode-contrastBorder);
+	background-color: var(--vectorcode-editorWidget-background);
+	color: var(--vectorcode-editorWidget-foreground);
+	box-shadow: var(--vectorcode-shadow-lg);
+	border: 2px solid var(--vectorcode-contrastBorder);
 }

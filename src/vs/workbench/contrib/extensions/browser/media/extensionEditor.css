@@ -98,7 +98,7 @@
 	margin-left: 10px;
 	padding: 0px 4px;
 	border-radius: 4px;
-	background-color: var(--vscode-extensionIcon-preReleaseForeground);
+	background-color: var(--vectorcode-extensionIcon-preReleaseForeground);
 	color: #ffffff;
 	display: flex;
 	align-items: center;
@@ -328,19 +328,19 @@
 .extension-editor > .body > .content > .details > .additional-details-container .more-info-container > .more-info > .more-info-entry > .link,
 .extension-editor > .header > .details > .pre-release-text a,
 .extension-editor > .header > .details > .actions-status-container > .status a {
-	color: var(--vscode-textLink-foreground)
+	color: var(--vectorcode-textLink-foreground)
 }
 
 .extension-editor > .body > .content > .details > .additional-details-container .more-info-container > .more-info > .more-info-entry .link:hover,
 .extension-editor > .header > .details > .pre-release-text a:hover,
 .extension-editor > .header > .details > .actions-status-container > .status a:hover {
 	text-decoration: underline;
-	color: var(--vscode-textLink-activeForeground)
+	color: var(--vectorcode-textLink-activeForeground)
 }
 
 .extension-editor > .header > .details > .pre-release-text a:active,
 .extension-editor > .header > .details > .actions-status-container > .status a:active {
-	color: var(--vscode-textLink-activeForeground)
+	color: var(--vectorcode-textLink-activeForeground)
 }
 
 .extension-editor > .header > .details > .pre-release-text:not(:empty) {
@@ -375,7 +375,7 @@
 	font-size: 14px;
 	line-height: 36px;
 	padding-left: 20px;
-	border-bottom: 1px solid var(--vscode-panelSection-border);
+	border-bottom: 1px solid var(--vectorcode-panelSection-border);
 }
 
 .extension-editor > .body > .navbar > .monaco-action-bar > .actions-container {
@@ -390,19 +390,19 @@
 	padding: 0 10px;
 	font-size: 11px;
 	font-weight: normal;
-	color: var(--vscode-panelTitle-inactiveForeground);
+	color: var(--vectorcode-panelTitle-inactiveForeground);
 	text-transform: uppercase;
 	background: none !important;
 	border-radius: 0px !important;
 }
 
 .extension-editor > .body > .navbar > .monaco-action-bar > .actions-container > .action-item > .action-label.checked {
-	border-bottom: 1px solid var(--vscode-panelTitle-activeBorder);
-	color: var(--vscode-panelTitle-activeForeground);
+	border-bottom: 1px solid var(--vectorcode-panelTitle-activeBorder);
+	color: var(--vectorcode-panelTitle-activeForeground);
 }
 
 .extension-editor > .body > .navbar > .monaco-action-bar > .actions-container > .action-item > .action-label:hover {
-	color: var(--vscode-panelTitle-activeForeground);
+	color: var(--vectorcode-panelTitle-activeForeground);
 }
 
 .extension-editor > .body > .content {
@@ -657,7 +657,7 @@
 .extension-editor code:not(:empty) {
 	font-family: var(--monaco-monospace-font);
 	font-size: 90%;
-	background-color: rgba(128, 128, 128, 0.17);
+	background-color: var(--vectorcode-keybindingLabel-background);
 	border-radius: 4px;
 	padding: 1px 4px;
 }
@@ -803,7 +803,7 @@
 }
 
 .monaco-workbench .extension-editor > .header > .details > .recommendation .codicon {
-	color: var(--vscode-extensionButton-prominentBackground);
+	color: var(--vectorcode-extensionButton-prominentBackground);
 }
 
 /* Features Tab */

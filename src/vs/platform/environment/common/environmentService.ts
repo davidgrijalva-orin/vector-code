@@ -16,7 +16,7 @@ import { IProductService } from '../../product/common/productService.js';
 
 export const EXTENSION_IDENTIFIER_WITH_LOG_REGEX = /^([^.]+\..+)[:=](.+)$/;
 
-const VECTOR_SKIPPED_BUILTIN_EXTENSIONS = ['GitHub.copilot', 'GitHub.copilot-chat'];
+const VECTOR_CODE_SKIPPED_BUILTIN_EXTENSIONS = ['GitHub.vectorcode'];
 
 export interface INativeEnvironmentPaths {
 
@@ -222,10 +222,10 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 		const value = env['VSCODE_SKIP_BUILTIN_EXTENSIONS'];
 		const configuredExtensions = value ? value.split(',').map(id => id.trim()).filter(id => id) : [];
 		if (!configuredExtensions.length) {
-			return VECTOR_SKIPPED_BUILTIN_EXTENSIONS;
+			return VECTOR_CODE_SKIPPED_BUILTIN_EXTENSIONS;
 		}
 
-		return Array.from(new Set([...configuredExtensions, ...VECTOR_SKIPPED_BUILTIN_EXTENSIONS]));
+		return Array.from(new Set([...configuredExtensions, ...VECTOR_CODE_SKIPPED_BUILTIN_EXTENSIONS]));
 	}
 
 	@memoize
@@ -278,11 +278,6 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 			return joinPath(this.userHome, this.productService.dataFolderName, 'policy.json');
 		}
 		return undefined;
-	}
-
-	@memoize
-	get agentSessionsWorkspace(): URI {
-		return joinPath(this.appSettingsHome, 'agent-sessions.code-workspace');
 	}
 
 	get editSessionId(): string | undefined { return this.args['editSessionId']; }

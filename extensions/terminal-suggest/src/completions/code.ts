@@ -146,14 +146,6 @@ export const commonOptions: Fig.Option[] = [
 		description: 'Print usage',
 	},
 	{
-		name: '--add-mcp',
-		description: 'Adds a Model Context Protocol server definition to the user profile. Accepts JSON input in the form {"name":"server-name","command":...}',
-		args: {
-			name: 'json',
-			description: 'JSON string for MCP server',
-		},
-	},
-	{
 		name: '--locate-shell-integration-path',
 		description:
 			'Print the path to the shell integration script for the provided shell',
@@ -802,51 +794,6 @@ export const codeTunnelSubcommands: Fig.Subcommand[] = [
 		],
 	},
 	{
-		name: 'chat',
-		description: 'Pass in a prompt to run in a chat session in the current working directory.',
-		args: {
-			name: 'prompt',
-			description: 'The prompt to use as chat',
-			isVariadic: true,
-			isOptional: true,
-		},
-		options: [
-			{
-				name: ['-m', '--mode'],
-				description: 'The mode to use for the chat session. Available options: \'ask\', \'edit\', \'agent\', or the identifier of a custom mode. Defaults to \'agent\'',
-				args: {
-					name: 'mode',
-					suggestions: ['agent', 'ask', 'edit'],
-				},
-			},
-			{
-				name: ['-a', '--add-file'],
-				description: 'Add files as context to the chat session',
-				isRepeatable: true,
-				args: {
-					name: 'file',
-					template: 'filepaths',
-				},
-			},
-			{
-				name: ['--maximize'],
-				description: 'Maximize the chat session view.',
-			},
-			{
-				name: ['-r', '--reuse-window'],
-				description: 'Force to use the last active window for the chat session',
-			},
-			{
-				name: ['-n', '--new-window'],
-				description: 'Force to open an empty window for the chat session',
-			},
-			{
-				name: ['-h', '--help'],
-				description: 'Print usage',
-			},
-		],
-	},
-	{
 		name: 'status',
 		description: 'Print process usage and diagnostics information',
 		options: [...globalTunnelOptions, ...tunnelHelpOptions],
@@ -1002,10 +949,6 @@ export const codeTunnelSubcommands: Fig.Subcommand[] = [
 					}
 				],
 			},
-			{
-				name: 'chat',
-				description: 'Pass in a prompt to run in a chat session in the current working directory.',
-			},
 			extTunnelSubcommand,
 			{
 				name: 'status',
@@ -1062,4 +1005,3 @@ const codeCompletionSpec: Fig.Spec = {
 };
 
 export default codeCompletionSpec;
-

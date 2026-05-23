@@ -16,12 +16,12 @@
 }
 
 .process-explorer .row .cell {
-	border-right: 1px solid var(--vscode-tree-tableColumnsBorder);
+	border-right: 1px solid var(--vectorcode-tree-tableColumnsBorder);
 }
 
 .process-explorer .row.header {
 	font-weight: 600;
-	border-bottom: 1px solid var(--vscode-tree-tableColumnsBorder);
+	border-bottom: 1px solid var(--vectorcode-tree-tableColumnsBorder);
 }
 
 .process-explorer .row.header .cell {
@@ -68,5 +68,5 @@
 }
 
 .process-explorer .monaco-list-row:first-of-type {
-	border-bottom: 1px solid var(--vscode-tree-tableColumnsBorder);
+	border-bottom: 1px solid var(--vectorcode-tree-tableColumnsBorder);
 }

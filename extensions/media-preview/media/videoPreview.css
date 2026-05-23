@@ -44,10 +44,10 @@ body {
 	margin: 1em;
 }
 
-.vscode-dark .loading-indicator {
+.vectorcode-dark .loading-indicator {
 	background-image: url('./loading-dark.svg');
 }
 
-.vscode-high-contrast .loading-indicator {
+.vectorcode-high-contrast .loading-indicator {
 	background-image: url('./loading-hc.svg');
 }

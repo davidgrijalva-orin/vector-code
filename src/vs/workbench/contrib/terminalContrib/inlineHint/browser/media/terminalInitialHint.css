@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-workbench .terminal-initial-hint {
-	color: var(--vscode-terminal-initialHintForeground);
+	color: var(--vectorcode-terminal-initialHintForeground);
 	container-type: inline-size;
 }
 
@@ -36,7 +36,7 @@
 
 .monaco-workbench .terminal-initial-hint a {
 	cursor: pointer;
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-workbench .terminal-initial-hint a,

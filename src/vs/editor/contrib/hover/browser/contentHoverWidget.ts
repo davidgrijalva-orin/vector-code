@@ -150,7 +150,7 @@ export class ContentHoverWidget extends ResizableContentWidget {
 		ContentHoverWidget._applyMaxDimensions(this._hover.contentsDomNode, width, height);
 		ContentHoverWidget._applyMaxDimensions(this._hover.scrollbar.getDomNode(), width, height);
 		ContentHoverWidget._applyMaxDimensions(this._hover.containerDomNode, width, height);
-		this._hover.containerDomNode.style.setProperty('--vscode-hover-maxWidth', typeof width === 'number' ? `${width}px` : width);
+		this._hover.containerDomNode.style.setProperty('--vectorcode-hover-maxWidth', typeof width === 'number' ? `${width}px` : width);
 		this._layoutContentWidget();
 	}
 
@@ -201,15 +201,15 @@ export class ContentHoverWidget extends ResizableContentWidget {
 
 	private _isHoverTextOverflowing(): boolean {
 		// To find out if the text is overflowing, we will disable wrapping, check the widths, and then re-enable wrapping
-		this._hover.containerDomNode.style.setProperty('--vscode-hover-whiteSpace', 'nowrap');
-		this._hover.containerDomNode.style.setProperty('--vscode-hover-sourceWhiteSpace', 'nowrap');
+		this._hover.containerDomNode.style.setProperty('--vectorcode-hover-whiteSpace', 'nowrap');
+		this._hover.containerDomNode.style.setProperty('--vectorcode-hover-sourceWhiteSpace', 'nowrap');
 
 		const overflowing = Array.from(this._hover.contentsDomNode.children).some((hoverElement) => {
 			return hoverElement.scrollWidth > hoverElement.clientWidth;
 		});
 
-		this._hover.containerDomNode.style.removeProperty('--vscode-hover-whiteSpace');
-		this._hover.containerDomNode.style.removeProperty('--vscode-hover-sourceWhiteSpace');
+		this._hover.containerDomNode.style.removeProperty('--vectorcode-hover-whiteSpace');
+		this._hover.containerDomNode.style.removeProperty('--vectorcode-hover-sourceWhiteSpace');
 
 		return overflowing;
 	}

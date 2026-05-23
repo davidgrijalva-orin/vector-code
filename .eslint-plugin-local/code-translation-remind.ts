@@ -49,7 +49,7 @@ export default new class TranslationRemind implements eslint.Rule.RuleModule {
 			return;
 		}
 		const parsed = JSON.parse(json);
-		const resources = [...parsed.workbench, ...parsed.sessions];
+		const resources = [...(parsed.workbench ?? []), ...(parsed.sessions ?? [])];
 
 		resources.forEach((existingResource: any) => {
 			if (existingResource.name === resource) {
@@ -67,4 +67,3 @@ export default new class TranslationRemind implements eslint.Rule.RuleModule {
 		}
 	}
 };
-

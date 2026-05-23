@@ -132,7 +132,6 @@ const shellIntegrationSupportedShellTypes: (PosixShellType | GeneralShellType | 
 const agentCliTitlePatterns: ReadonlyMap<GeneralShellType, RegExp> = new Map([
 	[GeneralShellType.Claude, /claude\s*code/i],
 	// [GeneralShellType.Codex, /\bcodex\b/i], // codex does not report osc title.
-	[GeneralShellType.Copilot, /\bcopilot\b/i],
 	[GeneralShellType.Gemini, /\bgemini\b/i],
 ]);
 
@@ -493,8 +492,8 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 						e.capability.promptInputModel.onDidFinishInput
 					)(refreshInfo));
 					store.add(e.capability.onCommandExecuted(async (command) => {
-						// Only generate ID if command doesn't already have one (i.e., it's a manual command, not Copilot-initiated)
-						// The tool terminal sets the command ID before command start, so this won't override it
+						// Only generate ID if command doesn't already have one.
+						// Tool-owned terminal flows set the command ID before command start, so this won't override it.
 						if (!command.id && command.command) {
 							const commandId = generateUuid();
 							this.xterm?.shellIntegration.setNextCommandId(command.command, commandId);
@@ -1718,8 +1717,7 @@ export class TerminalInstance extends Disposable implements ITerminalInstance {
 
 		// Fire onExit BEFORE running any disposition logic (in particular before
 		// `dispose()` below, which fires `onDisposed`). Consumers racing
-		// `onExit` against `onDisposed` (e.g. the chat agent run-in-terminal
-		// execute strategies) need to see the exit code event first so they can
+		// `onExit` against `onDisposed` need to see the exit code event first so they can
 		// return the captured exit code. Otherwise `onDisposed` wins the race
 		// and the strategy treats the exit as the terminal having been closed
 		// without an exit code, leaving commands like `exit 42` stuck in a
@@ -2700,7 +2698,6 @@ export class TerminalLabelComputer extends Disposable {
 	static readonly agentCliShellTypes: ReadonlySet<GeneralShellType> = new Set([
 		GeneralShellType.Claude,
 		GeneralShellType.Codex,
-		GeneralShellType.Copilot,
 		GeneralShellType.Gemini,
 	]);
 

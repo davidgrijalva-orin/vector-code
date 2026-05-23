@@ -29,16 +29,16 @@ textarea {
 	width: 100%;
 	border: none;
 	margin-right: 0.3em;
-	font-family: var(--vscode-font-family);
+	font-family: var(--vectorcode-font-family);
 	padding: var(--input-padding-vertical) var(--input-padding-horizontal);
-	color: var(--vscode-input-foreground);
-	outline-color: var(--vscode-input-border);
-	background-color: var(--vscode-input-background);
+	color: var(--vectorcode-input-foreground);
+	outline-color: var(--vectorcode-input-border);
+	background-color: var(--vectorcode-input-background);
 }
 
 input::placeholder,
 textarea::placeholder {
-	color: var(--vscode-input-placeholderForeground);
+	color: var(--vectorcode-input-placeholderForeground);
 }
 
 button {
@@ -46,15 +46,15 @@ button {
 	padding: 3px;
 	text-align: center;
 	outline: 1px solid transparent;
-	color: var(--vscode-icon-foreground);
+	color: var(--vectorcode-icon-foreground);
 	background: none;
 	border-radius: 5px;
 }
 
 button:hover:not(:disabled) {
 	cursor: pointer;
-	color: var(--vscode-toolbar-hoverForeground);
-	background: var(--vscode-toolbar-hoverBackground);
+	color: var(--vectorcode-toolbar-hoverForeground);
+	background: var(--vectorcode-toolbar-hoverBackground);
 }
 
 button:disabled {
@@ -63,7 +63,7 @@ button:disabled {
 
 input:focus,
 button:focus {
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .header {
@@ -102,8 +102,8 @@ iframe {
 	display: none;
 	position: absolute;
 	bottom: 1em;
-	background: var(--vscode-editorWidget-background);
-	color: var(--vscode-editorWidget-foreground);
+	background: var(--vectorcode-editorWidget-background);
+	color: var(--vectorcode-editorWidget-foreground);
 	padding: 0.2em 0.2em;
 	border-radius: 4px;
 

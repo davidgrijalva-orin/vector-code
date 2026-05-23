@@ -18,7 +18,7 @@
 	pointer-events: none;
 	z-index: 10;
 	box-shadow:
-		inset var(--vscode-shadow-depth-x),
+		inset var(--vectorcode-shadow-depth-x),
 		inset calc(-1 * 5px) 0 10px -4px rgba(0, 0, 0, 0.04),
 		inset 0 calc(-1 * 5px) 10px -4px rgba(0, 0, 0, 0.05);
 }
@@ -34,7 +34,7 @@
 /* Panel positions: strengthen the shadow on whichever edge faces the panel */
 .monaco-workbench.panel-position-left.vs .part.editor::after {
 	box-shadow:
-		inset var(--vscode-shadow-depth-x),
+		inset var(--vectorcode-shadow-depth-x),
 		inset calc(-1 * 5px) 0 10px -4px rgba(0, 0, 0, 0.04);
 }
 
@@ -46,9 +46,9 @@
 
 .monaco-workbench.panel-position-top.vs .part.editor::after {
 	box-shadow:
-		inset var(--vscode-shadow-depth-x),
+		inset var(--vectorcode-shadow-depth-x),
 		inset calc(-1 * 5px) 0 10px -4px rgba(0, 0, 0, 0.04),
-		inset 0 var(--vscode-shadow-depth-y);
+		inset 0 var(--vectorcode-shadow-depth-y);
 }
 
 /* Must appear after positional variants so source-order wins at equal specificity */
@@ -71,7 +71,7 @@
 
 .monaco-workbench .part.editor > .content:not(.empty) .editor-group-container.empty.active:focus {
 	outline-offset: -2px;
-	outline: 1px solid var(--vscode-editorGroup-focusedEmptyBorder);
+	outline: 1px solid var(--vectorcode-editorGroup-focusedEmptyBorder);
 }
 
 .monaco-workbench .part.editor > .content.empty .editor-group-container.empty.active:focus {
@@ -152,7 +152,7 @@
 	justify-content: space-between;
 	margin: 4px 0;
 	cursor: default;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .editor-group-watermark .shortcuts dl:first-of-type {

@@ -585,6 +585,28 @@ export function registerTerminalActions() {
 	});
 
 	registerTerminalAction({
+		id: TerminalCommandId.SendSelectedText,
+		title: localize2('workbench.action.terminal.sendSelectedText', 'Send Selected Text to Active Terminal'),
+		f1: false,
+		run: async (c, accessor) => {
+			const codeEditorService = accessor.get(ICodeEditorService);
+			const editor = codeEditorService.getActiveCodeEditor();
+			const selection = editor?.getSelection();
+			if (!editor || !editor.hasModel() || !selection || selection.isEmpty()) {
+				return;
+			}
+			const endOfLinePreference = isWindows ? EndOfLinePreference.LF : EndOfLinePreference.CRLF;
+			const text = editor.getModel().getValueInRange(selection, endOfLinePreference).replace(/(?:\r\n|\r|\n)+$/, '');
+			if (!text) {
+				return;
+			}
+			const instance = await c.service.getActiveOrCreateInstance({ acceptsInput: true });
+			await instance.sendText(text, false, true);
+			await c.service.revealActiveTerminal(true);
+		}
+	});
+
+	registerTerminalAction({
 		id: TerminalCommandId.RunActiveFile,
 		title: localize2('workbench.action.terminal.runActiveFile', 'Run Active File In Active Terminal'),
 		precondition: sharedWhenClause.terminalAvailable,

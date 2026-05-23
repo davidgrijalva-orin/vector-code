@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/exceptionWidget.css';
+import '../../vectorCode/browser/media/vectorExceptionWidget.css';
 import * as nls from '../../../../nls.js';
 import * as dom from '../../../../base/browser/dom.js';
 import { ZoneWidget } from '../../../../editor/contrib/zoneWidget/browser/zoneWidget.js';

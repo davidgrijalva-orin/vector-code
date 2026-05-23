@@ -64,7 +64,7 @@ export class WebviewThemeDataProvider extends Disposable {
 			const exportedColors = colorRegistry.getColorRegistry().getColors().reduce<Record<string, string>>((colors, entry) => {
 				const color = theme.getColor(entry.id);
 				if (color) {
-					colors['vscode-' + entry.id.replace('.', '-')] = color.toString();
+					colors['vectorcode-' + entry.id.replace('.', '-')] = color.toString();
 				}
 				return colors;
 			}, {});
@@ -73,22 +73,22 @@ export class WebviewThemeDataProvider extends Disposable {
 			const exportedSizes = sizeRegistry.getSizes().reduce<Record<string, string>>((sizes, entry) => {
 				const sizeValue = sizeRegistry.resolveDefaultSize(entry.id, theme);
 				if (sizeValue) {
-					sizes['vscode-' + entry.id.replace(/\./g, '-')] = sizeValueToCss(sizeValue);
+					sizes['vectorcode-' + entry.id.replace(/\./g, '-')] = sizeValueToCss(sizeValue);
 				}
 				return sizes;
 			}, {});
 
 			const styles = {
-				'vscode-font-family': DEFAULT_FONT_FAMILY,
-				'vscode-font-weight': 'normal',
-				'vscode-font-size': '13px',
-				'vscode-editor-font-family': editorFontFamily,
-				'vscode-editor-font-weight': editorFontWeight,
-				'vscode-editor-font-size': editorFontSize + 'px',
+				'vectorcode-font-family': DEFAULT_FONT_FAMILY,
+				'vectorcode-font-weight': 'normal',
+				'vectorcode-font-size': '13px',
+				'vectorcode-editor-font-family': editorFontFamily,
+				'vectorcode-editor-font-weight': editorFontWeight,
+				'vectorcode-editor-font-size': editorFontSize + 'px',
 				'text-link-decoration': linkUnderlines ? 'underline' : 'none',
 				...exportedColors,
 				...exportedSizes,
-				'vscode-editor-font-feature-settings': editorFontLigatures,
+				'vectorcode-editor-font-feature-settings': editorFontLigatures,
 			};
 
 			const activeTheme = ApiThemeClassName.fromTheme(theme);
@@ -105,10 +105,10 @@ export class WebviewThemeDataProvider extends Disposable {
 }
 
 enum ApiThemeClassName {
-	light = 'vscode-light',
-	dark = 'vscode-dark',
-	highContrast = 'vscode-high-contrast',
-	highContrastLight = 'vscode-high-contrast-light',
+	light = 'vectorcode-light',
+	dark = 'vectorcode-dark',
+	highContrast = 'vectorcode-high-contrast',
+	highContrastLight = 'vectorcode-high-contrast-light',
 }
 
 namespace ApiThemeClassName {

@@ -124,8 +124,8 @@ export class ParameterHintsWidget extends Disposable implements IContentWidget {
 			const element = this.domNodes.element;
 			element.style.fontSize = `${fontInfo.fontSize}px`;
 			element.style.lineHeight = `${fontInfo.lineHeight / fontInfo.fontSize}`;
-			element.style.setProperty('--vscode-parameterHintsWidget-editorFontFamily', fontInfo.fontFamily);
-			element.style.setProperty('--vscode-parameterHintsWidget-editorFontFamilyDefault', EDITOR_FONT_DEFAULTS.fontFamily);
+			element.style.setProperty('--vectorcode-parameterHintsWidget-editorFontFamily', fontInfo.fontFamily);
+			element.style.setProperty('--vectorcode-parameterHintsWidget-editorFontFamilyDefault', EDITOR_FONT_DEFAULTS.fontFamily);
 		};
 
 		updateFont();

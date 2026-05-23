@@ -65,16 +65,16 @@ export class DialogMainService implements IDialogMainService {
 		let optionsInternal: IInternalNativeOpenDialogOptions = {
 			...options,
 			pickFolders: true,
-			title: localize('openFolder', "Open Folder")
+			title: localize('openProject', "Open Project")
 		};
 
 		if (isWindows) {
-			// Due to Windows/Electron issue the labels on Open Folder dialog have no hot keys.
+			// Due to Windows/Electron issue the labels on Open Project dialog have no hot keys.
 			// We can fix this here for the button label, but some other labels remain inaccessible.
 			// See https://github.com/electron/electron/issues/48631 for more info.
 			optionsInternal = {
 				...optionsInternal,
-				buttonLabel: mnemonicButtonLabel(localize({ key: 'selectFolder', comment: ['&& denotes a mnemonic'] }, "&&Select folder")).withMnemonic
+				buttonLabel: mnemonicButtonLabel(localize({ key: 'selectFolder', comment: ['&& denotes a mnemonic'] }, "&&Select project")).withMnemonic
 			};
 		}
 

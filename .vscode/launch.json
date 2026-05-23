@@ -78,7 +78,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Emmet Tests",
+			"name": "Vector Code Emmet Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"${workspaceFolder}/extensions/emmet/test-workspace",
@@ -96,7 +96,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Configuration Editing Tests",
+			"name": "Vector Code Configuration Editing Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}/extensions/configuration-editing",
@@ -113,7 +113,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Git Tests",
+			"name": "Vector Code Git Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"/tmp/my4g9l",
@@ -131,7 +131,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Github Tests",
+			"name": "Vector Code Github Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"${workspaceFolder}/extensions/github/testWorkspace",
@@ -149,7 +149,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code API Tests (single folder)",
+			"name": "Vector Code API Tests (single folder)",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				// "${workspaceFolder}", // Uncomment for running out of sources.
@@ -169,7 +169,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code API Tests (workspace)",
+			"name": "Vector Code API Tests (workspace)",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"${workspaceFolder}/extensions/vscode-api-tests/testworkspace.code-workspace",
@@ -187,7 +187,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Tokenizer Tests",
+			"name": "Vector Code Tokenizer Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"${workspaceFolder}/extensions/vscode-colorize-tests/test",
@@ -205,7 +205,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "VS Code Tokenizer Performance Tests",
+			"name": "Vector Code Tokenizer Performance Tests",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"${workspaceFolder}/extensions/vscode-colorize-perf-tests/test",
@@ -223,7 +223,7 @@
 		{
 			"type": "chrome",
 			"request": "attach",
-			"name": "Attach to VS Code",
+			"name": "Attach to Vector Code",
 			"browserAttachLocation": "workspace",
 			"port": 9222,
 			"outFiles": [
@@ -237,7 +237,7 @@
 		{
 			"type": "chrome",
 			"request": "launch",
-			"name": "Launch VS Code Internal",
+			"name": "Launch Vector Code Internal",
 			"windows": {
 				"runtimeExecutable": "${workspaceFolder}/scripts/code.bat"
 			},
@@ -282,7 +282,7 @@
 			// To debug observables you also need the extension "ms-vscode.debug-value-editor"
 			"type": "chrome",
 			"request": "launch",
-			"name": "Launch VS Code Internal (Hot Reload)",
+			"name": "Launch Vector Code Internal (Hot Reload)",
 			"windows": {
 				"runtimeExecutable": "${workspaceFolder}/scripts/code.bat"
 			},
@@ -298,7 +298,7 @@
 				"VSCODE_EXTHOST_WILL_SEND_SOCKET": null,
 				"VSCODE_SKIP_PRELAUNCH": "1",
 				"VSCODE_DEV_DEBUG": "1",
-				"VSCODE_DEV_SERVER_URL": "http://localhost:5199/build/vite/workbench-vite-electron.html",
+				"VECTOR_CODE_DEV_SERVER_URL": "http://localhost:5199/build/vite/workbench-vite-electron.html",
 				"DEV_WINDOW_SRC": "http://localhost:5199/build/vite/workbench-vite-electron.html",
 				"VSCODE_DEV_DEBUG_OBSERVABLES": "1",
 				"VSCODE_DEV": "1"
@@ -330,7 +330,7 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "VS Code Server (Web)",
+			"name": "Vector Code Server (Web)",
 			"runtimeExecutable": "${workspaceFolder}/scripts/code-server.sh",
 			"windows": {
 				"runtimeExecutable": "${workspaceFolder}/scripts/code-server.bat",
@@ -339,7 +339,7 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 2
 			}
 		},
@@ -361,7 +361,7 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"presentation": {
-				"group": "1_vscode",
+				"group": "1_vectorcode",
 				"order": 1
 			}
 		},
@@ -370,11 +370,11 @@
 			"request": "launch",
 			"outFiles": [],
 			"perScriptSourcemaps": "yes",
-			"name": "VS Code Server (Web, Chrome)",
+			"name": "Vector Code Server (Web, Chrome)",
 			"url": "http://localhost:8080?tkn=dev-token",
 			"preLaunchTask": "Run code server",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 3
 			}
 		},
@@ -383,12 +383,12 @@
 			"request": "launch",
 			"outFiles": [],
 			"perScriptSourcemaps": "yes",
-			"name": "VS Code Server (Web, Edge)",
+			"name": "Vector Code Server (Web, Edge)",
 			"url": "http://localhost:8080?tkn=dev-token",
 			"pauseForSourceMap": false,
 			"preLaunchTask": "Run code server",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 3
 			}
 		},
@@ -397,11 +397,11 @@
 			"request": "launch",
 			"outFiles": [],
 			"perScriptSourcemaps": "yes",
-			"name": "VS Code Web (Chrome)",
+			"name": "Vector Code Web (Chrome)",
 			"url": "http://localhost:8080",
 			"preLaunchTask": "Run code web",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 3
 			}
 		},
@@ -410,12 +410,12 @@
 			"request": "launch",
 			"outFiles": [],
 			"perScriptSourcemaps": "yes",
-			"name": "VS Code Web (Edge)",
+			"name": "Vector Code Web (Edge)",
 			"url": "http://localhost:8080",
 			"pauseForSourceMap": false,
 			"preLaunchTask": "Run code web",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 3
 			}
 		},
@@ -505,9 +505,9 @@
 			"request": "launch",
 			"name": "Run Unit Tests",
 			"program": "${workspaceFolder}/test/unit/electron/index.js",
-			"runtimeExecutable": "${workspaceFolder}/.build/electron/Code - OSS.app/Contents/MacOS/Code - OSS",
+			"runtimeExecutable": "${workspaceFolder}/.build/electron/Vector Code.app/Contents/MacOS/Vector Code",
 			"windows": {
-				"runtimeExecutable": "${workspaceFolder}/.build/electron/Code - OSS.exe"
+				"runtimeExecutable": "${workspaceFolder}/.build/electron/Vector Code.exe"
 			},
 			"linux": {
 				"runtimeExecutable": "${workspaceFolder}/.build/electron/code-oss"
@@ -521,7 +521,7 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"cascadeTerminateToConfigurations": [
-				"Attach to VS Code"
+				"Attach to Vector Code"
 			],
 			"env": {
 				"MOCHA_COLORS": "true"
@@ -535,15 +535,15 @@
 			"request": "launch",
 			"name": "Run Unit Tests For Current File",
 			"program": "${workspaceFolder}/test/unit/electron/index.js",
-			"runtimeExecutable": "${workspaceFolder}/.build/electron/Code - OSS.app/Contents/MacOS/Code - OSS",
+			"runtimeExecutable": "${workspaceFolder}/.build/electron/Vector Code.app/Contents/MacOS/Vector Code",
 			"windows": {
-				"runtimeExecutable": "${workspaceFolder}/.build/electron/Code - OSS.exe"
+				"runtimeExecutable": "${workspaceFolder}/.build/electron/Vector Code.exe"
 			},
 			"linux": {
 				"runtimeExecutable": "${workspaceFolder}/.build/electron/code-oss"
 			},
 			"cascadeTerminateToConfigurations": [
-				"Attach to VS Code"
+				"Attach to Vector Code"
 			],
 			"outputCapture": "std",
 			"args": [
@@ -571,7 +571,7 @@
 			"timeout": 240000,
 			"args": [
 				"-l",
-				"${workspaceFolder}/.build/electron/Code - OSS.app/Contents/MacOS/Code - OSS"
+				"${workspaceFolder}/.build/electron/Vector Code.app/Contents/MacOS/Vector Code"
 			],
 			"outFiles": [
 				"${cwd}/out/**/*.js"
@@ -649,78 +649,78 @@
 	],
 	"compounds": [
 		{
-			"name": "VS Code",
+			"name": "Vector Code",
 			"stopAll": true,
 			"configurations": [
-				"Launch VS Code Internal",
+				"Launch Vector Code Internal",
 				"Attach to Main Process",
 				"Attach to Extension Host",
 				"Attach to Shared Process"
 			],
 			"preLaunchTask": "Ensure Prelaunch Dependencies",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 1
 			}
 		},
 		{
-			"name": "VS Code (Hot Reload)",
+			"name": "Vector Code (Hot Reload)",
 			"stopAll": true,
 			"configurations": [
-				"Launch VS Code Internal (Hot Reload)",
+				"Launch Vector Code Internal (Hot Reload)",
 				"Attach to Main Process",
 				"Attach to Extension Host",
 				"Attach to Shared Process",
 			],
 			"preLaunchTask": "Ensure Prelaunch Dependencies",
 			"presentation": {
-				"group": "0_vscode",
+				"group": "0_vectorcode",
 				"order": 1
 			}
 		},
 		{
 			"name": "Search, Renderer, and Main processes",
 			"configurations": [
-				"Launch VS Code Internal",
+				"Launch Vector Code Internal",
 				"Attach to Main Process",
 				"Attach to Search Process"
 			],
 			"presentation": {
-				"group": "1_vscode",
+				"group": "1_vectorcode",
 				"order": 4
 			}
 		},
 		{
 			"name": "Renderer, Extension Host, and Main processes",
 			"configurations": [
-				"Launch VS Code Internal",
+				"Launch Vector Code Internal",
 				"Attach to Main Process",
 				"Attach to Extension Host"
 			],
 			"presentation": {
-				"group": "1_vscode",
+				"group": "1_vectorcode",
 				"order": 3
 			}
 		},
 		{
 			"name": "Debug Unit Tests",
 			"configurations": [
-				"Attach to VS Code",
+				"Attach to Vector Code",
 				"Run Unit Tests"
 			],
 			"presentation": {
-				"group": "1_vscode",
+				"group": "1_vectorcode",
 				"order": 2
 			}
 		},
 		{
 			"name": "Debug Unit Tests (Current File)",
 			"configurations": [
-				"Attach to VS Code",
+				"Attach to Vector Code",
 				"Run Unit Tests For Current File"
 			],
 			"presentation": {
-				"group": "1_vscode",
+				"group": "1_vectorcode",
 				"order": 2
 			}
 		},
@@ -728,7 +728,7 @@
 			"name": "Renderer and Main processes",
 			"stopAll": true,
 			"configurations": [
-				"Launch VS Code Internal",
+				"Launch Vector Code Internal",
 				"Attach to Main Process"
 			],
 			"preLaunchTask": "Ensure Prelaunch Dependencies"

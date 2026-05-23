@@ -5,7 +5,7 @@
 import * as nls from '../../../../nls.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import * as Constants from '../common/constants.js';
-import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
+import { Action2, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { category } from './searchActionsBase.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { TEXT_SEARCH_QUICK_ACCESS_PREFIX } from './quickTextSearch/textSearchQuickAccess.js';
@@ -14,6 +14,7 @@ import { IEditor } from '../../../../editor/common/editorCommon.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { getSelectionTextFromEditor } from './searchView.js';
 import { RenderableMatch } from './searchTreeModel/searchTreeCommon.js';
+import { Codicon } from '../../../../base/common/codicons.js';
 
 registerAction2(class TextSearchQuickAccessAction extends Action2 {
 
@@ -22,14 +23,26 @@ registerAction2(class TextSearchQuickAccessAction extends Action2 {
 		super({
 			id: Constants.SearchCommandIds.QuickTextSearchActionId,
 			title: nls.localize2('quickTextSearch', "Quick Search"),
+			icon: Codicon.search,
 			category,
-			f1: true
+			f1: true,
+			menu: {
+				id: MenuId.TitleBar,
+				group: '0_leading',
+				order: 0
+			}
 		});
 
 	}
 
 	override async run(accessor: ServicesAccessor, match: RenderableMatch | undefined): Promise<any> {
 		const quickInputService = accessor.get(IQuickInputService);
+		const currentQuickInputValue = (quickInputService.currentQuickInput as { value?: string } | undefined)?.value;
+		if (currentQuickInputValue?.startsWith(TEXT_SEARCH_QUICK_ACCESS_PREFIX)) {
+			await quickInputService.cancel();
+			return;
+		}
+
 		const searchText = getSearchText(accessor) ?? '';
 		quickInputService.quickAccess.show(TEXT_SEARCH_QUICK_ACCESS_PREFIX + searchText, { preserveValue: !!searchText });
 	}

@@ -1913,10 +1913,10 @@ export class SearchView extends ViewPane {
 		this.searchWithoutFolderMessageElement = this.clearMessage();
 
 		const textEl = dom.append(this.searchWithoutFolderMessageElement,
-			$('p', undefined, nls.localize('searchWithoutFolder', "You have not opened or specified a folder. Only open files are currently searched - ")));
+			$('p', undefined, nls.localize('searchWithoutFolder', "You have not selected a project. Only open files are currently searched - ")));
 
 		const openFolderButton = this.messageDisposables.add(new SearchLinkButton(
-			nls.localize('openFolder', "Open Folder"),
+			nls.localize('openProject', "Open Project"),
 			() => {
 				this.commandService.executeCommand(OpenFolderAction.ID).catch(err => errors.onUnexpectedError(err));
 			}, this.hoverService));

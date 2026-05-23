@@ -50,7 +50,6 @@ const inheritIconFromLanguage = {
 	"blade": 'php',
 	"prompt": 'markdown',
 	"instructions": 'markdown',
-	"chatagent": 'markdown',
 	"skill": 'markdown'
 };
 

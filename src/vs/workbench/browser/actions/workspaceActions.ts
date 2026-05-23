@@ -86,7 +86,7 @@ export class OpenFolderViaWorkspaceAction extends Action2 {
 
 	// This action swaps the folders of a workspace with
 	// the selected folder and is a workaround for providing
-	// "Open Folder..." in environments that do not support
+	// "Open Project..." in environments that do not support
 	// this without having a workspace open (e.g. web serverless)
 
 	static readonly ID = 'workbench.action.files.openFolderViaWorkspace';

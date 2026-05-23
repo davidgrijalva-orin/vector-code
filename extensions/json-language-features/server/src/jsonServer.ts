@@ -412,7 +412,7 @@ export function startServer(connection: Connection, runtime: RuntimeEnvironment)
 	}
 
 	connection.onDidChangeWatchedFiles((change) => {
-		// Monitored files have changed in VSCode
+		// Monitored files have changed in Vector Code
 		let hasChanges = false;
 		for (const c of change.changes) {
 			if (languageService.resetSchema(c.uri)) {

@@ -92,7 +92,7 @@
 			}
 		},
 		{
-			"label": "VS Code - Build",
+			"label": "Vector Code - Build",
 			"dependsOn": [
 				"Core - Transpile",
 				"Core - Typecheck",
@@ -141,7 +141,7 @@
 			"problemMatcher": "$tsc"
 		},
 		{
-			"label": "Kill VS Code - Build",
+			"label": "Kill Vector Code - Build",
 			"dependsOn": [
 				"Kill Core - Transpile",
 				"Kill Core - Typecheck",
@@ -151,21 +151,21 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Restart VS Code - Build",
+			"label": "Restart Vector Code - Build",
 			"dependsOn": [
-				"Kill VS Code - Build",
-				"VS Code - Build"
+				"Kill Vector Code - Build",
+				"Vector Code - Build"
 			],
 			"group": "build",
 			"dependsOrder": "sequence",
 			"problemMatcher": []
 		},
 		{
-			"label": "Kill VS Code - Build, Npm, VS Code - Build",
+			"label": "Kill Vector Code - Build, Npm, Vector Code - Build",
 			"dependsOn": [
-				"Kill VS Code - Build",
+				"Kill Vector Code - Build",
 				"npm: install",
-				"VS Code - Build"
+				"Vector Code - Build"
 			],
 			"group": "build",
 			"dependsOrder": "sequence",
@@ -231,43 +231,18 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Run Dev Agents",
-			"type": "shell",
-			"command": "./scripts/code.sh",
-			"windows": {
-				"command": ".\\scripts\\code.bat"
-			},
-			"args": [
-				"--agents",
-				"--user-data-dir=${userHome}/.vscode-oss-dev",
-				"--extensions-dir=${userHome}/.vscode-oss-dev/extensions"
-			],
-			"problemMatcher": []
-		},
-		{
 			"label": "Transpile Client",
 			"type": "npm",
 			"script": "transpile-client",
 			"problemMatcher": []
 		},
 		{
-			"label": "Run and Compile Agents - OSS",
-			"dependsOn": [
-				"Transpile Client",
-				"Run Dev Agents"
-			],
-			"dependsOrder": "sequence",
-			"inAgents": true,
-			"problemMatcher": []
-		},
-		{
-			"label": "Run and Compile Code - OSS",
+			"label": "Run and Compile Vector Code",
 			"dependsOn": [
 				"Transpile Client",
 				"Run Dev"
 			],
 			"dependsOrder": "sequence",
-			"inAgents": true,
 			"problemMatcher": []
 		},
 		{
@@ -397,7 +372,6 @@
 			"type": "shell",
 			"command": "npx component-explorer serve -p ./test/componentFixtures/component-explorer.json -vv --kill-if-running",
 			"isBackground": true,
-			"inAgents": true,
 			"problemMatcher": {
 				"owner": "component-explorer",
 				"fileLocation": "absolute",
@@ -421,7 +395,6 @@
 			"windows": {
 				"command": "cmd /c \"npm ci && npm run watch\""
 			},
-			"inAgents": true,
 			"runOptions": {
 				"runOn": "worktreeCreated"
 			},

@@ -132,7 +132,7 @@ export class WorkbenchContextKeysHandler extends Disposable {
 		this.updateWorkspaceFolderCountContextKey();
 
 		// Opening folder support: support for opening a folder workspace
-		// (e.g. "Open Folder...") is limited in web when not connected
+		// (e.g. "Open Project...") is limited in web when not connected
 		// to a remote.
 		this.openFolderWorkspaceSupportContext = OpenFolderWorkspaceSupportContext.bindTo(this.contextKeyService);
 		this.openFolderWorkspaceSupportContext.set(isNative || typeof this.environmentService.remoteAuthority === 'string');

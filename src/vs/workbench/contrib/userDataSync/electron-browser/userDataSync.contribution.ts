@@ -73,7 +73,7 @@ registerAction2(class DownloadSyncActivityAction extends Action2 {
 		if (folder) {
 			notificationService.prompt(Severity.Info, localize('download sync activity complete', "Successfully downloaded Settings Sync activity."),
 				[{
-					label: localize('open', "Open Folder"),
+					label: localize('showInFinder', "Show in Finder"),
 					run: () => hostService.showItemInFolder(folder.fsPath)
 				}]);
 		}

@@ -13,7 +13,7 @@ suite('vscode API - Module Interception', () => {
 
 	test('import and require(vscode) return the same API instance in ESM', async function () {
 		// This file CANNOT be written to the OS temp directory.
-		// The VS Code API module interceptor looks up the extension by associating
+		// The Vector Code API module interceptor looks up the extension by associating
 		// the parent URL via path containment. If the file is placed outside the
 		// extension's directory, the interceptor will fail to provide the 'vscode' module.
 		const testFile = path.join(__dirname, 'esm-test.mjs');

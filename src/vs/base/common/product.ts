@@ -73,7 +73,6 @@ export interface IProductConfiguration {
 	readonly win32ContextMenu?: { readonly [arch: string]: { readonly clsid: string } };
 	readonly applicationName: string;
 	readonly embedderIdentifier?: string;
-	readonly agentsTelemetryAppName?: string;
 
 	readonly urlProtocol: string;
 	readonly dataFolderName: string; // location for extensions (e.g. ~/.vscode-insiders)
@@ -227,7 +226,7 @@ export interface IProductConfiguration {
 	readonly onboardingThemes?: readonly IProductOnboardingTheme[];
 
 	/**
-	 * When running as an embedded app, the parent VS Code's policy
+	 * When running as an embedded app, the parent Vector Code policy
 	 * identity (win32RegValueName / darwinBundleIdentifier) so that
 	 * enterprise policies deployed to the parent also apply here.
 	 */

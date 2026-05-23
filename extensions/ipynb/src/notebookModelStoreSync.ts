@@ -260,4 +260,3 @@ function generateCellId(notebook: NotebookDocument) {
 		}
 	}
 }
-

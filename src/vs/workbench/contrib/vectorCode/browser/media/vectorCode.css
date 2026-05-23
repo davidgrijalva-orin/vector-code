@@ -2564,7 +2564,7 @@ body,
 	color: #06100f !important;
 }
 
-/* Vector top-right rail: search, account, settings, terminal. */
+/* Vector titlebar chrome: keep only the right-side search/account/settings/terminal controls. */
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center,
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar,
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar,
@@ -2578,9 +2578,9 @@ body,
 	box-shadow: none !important;
 	height: 0 !important;
 	margin: 0 !important;
-	max-width: none !important;
+	max-width: 0 !important;
 	min-width: 0 !important;
-	overflow: visible !important;
+	overflow: hidden !important;
 	padding: 0 !important;
 	pointer-events: none !important;
 	width: 0 !important;
@@ -2590,8 +2590,25 @@ body,
 	display: none !important;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick,
-.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick {
+	display: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	max-width: 0 !important;
+	min-width: 0 !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+	pointer-events: none !important;
+	position: static !important;
+	right: auto !important;
+	top: auto !important;
+	width: 0 !important;
+}
+
 .monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
 	align-items: center !important;
 	background: rgba(238, 244, 242, 0.035) !important;
@@ -2609,10 +2626,10 @@ body,
 	overflow: hidden !important;
 	padding: 0 !important;
 	pointer-events: auto !important;
-	position: fixed !important;
-	top: 4px !important;
+	position: relative !important;
+	top: auto !important;
 	width: 30px !important;
-	z-index: 3200 !important;
+	z-index: auto !important;
 	-webkit-app-region: no-drag;
 }
 
@@ -2629,7 +2646,7 @@ body,
 }
 
 .monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
-	right: 16px !important;
+	right: auto !important;
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick:hover,
@@ -3664,4 +3681,246 @@ body,
 .monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.incoming-changes > .graph > circle:last-child,
 .monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.outgoing-changes > .graph > circle:last-child {
 	fill: rgba(9, 14, 14, 0.96) !important;
+}
+
+/* Unified quiet chrome and CTA pass. Keep search/account/settings/terminal as one titlebar group. */
+.monaco-workbench {
+	--vectorcode-shell-accent: #72aaa5;
+	--vectorcode-shell-accent-strong: #8fc8c3;
+	--vectorcode-focus-ring: rgba(114, 170, 165, 0.32);
+	--vectorcode-selection-active: rgba(238, 244, 242, 0.065);
+	--vectorcode-button-primary-bg: rgba(238, 244, 242, 0.065);
+	--vectorcode-button-primary-hover-bg: rgba(114, 170, 165, 0.12);
+	--vectorcode-button-primary-text: #dce7e4;
+	--vectorcode-button-background: var(--vectorcode-button-primary-bg);
+	--vectorcode-button-border: rgba(238, 244, 242, 0.12);
+	--vectorcode-button-foreground: #dce7e4;
+	--vectorcode-button-hoverBackground: var(--vectorcode-button-primary-hover-bg);
+	--vectorcode-extensionButton-background: var(--vectorcode-button-primary-bg);
+	--vectorcode-extensionButton-border: rgba(238, 244, 242, 0.12);
+	--vectorcode-extensionButton-foreground: #dce7e4;
+	--vectorcode-extensionButton-hoverBackground: var(--vectorcode-button-primary-hover-bg);
+	--vectorcode-extensionButton-prominentBackground: var(--vectorcode-button-primary-bg);
+	--vectorcode-extensionButton-prominentForeground: #dce7e4;
+	--vectorcode-extensionButton-prominentHoverBackground: var(--vectorcode-button-primary-hover-bg);
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center * {
+	display: none !important;
+	pointer-events: none !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar .codicon-accounts-view-bar-icon {
+	--vectorcode-icon-mask: var(--vectorcode-topbar-account);
+}
+
+.monaco-workbench .part.titlebar .codicon-settings-view-bar-icon {
+	--vectorcode-icon-mask: var(--vectorcode-topbar-settings);
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container {
+	box-sizing: border-box !important;
+	display: flex !important;
+	flex: 0 0 auto !important;
+	margin-left: auto !important;
+	min-width: max-content !important;
+	padding-right: 12px !important;
+	position: relative !important;
+	right: auto !important;
+	top: auto !important;
+	z-index: 3100 !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-toolbar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .actions-container {
+	align-items: center !important;
+	display: flex !important;
+	gap: 6px !important;
+	height: 34px !important;
+	justify-content: flex-end !important;
+	min-width: max-content !important;
+	overflow: visible !important;
+	width: auto !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-item,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
+	align-items: center !important;
+	background: rgba(238, 244, 242, 0.035) !important;
+	border: 1px solid rgba(238, 244, 242, 0.09) !important;
+	border-radius: 8px !important;
+	box-shadow: none !important;
+	box-sizing: border-box !important;
+	display: flex !important;
+	flex: 0 0 30px !important;
+	height: 30px !important;
+	justify-content: center !important;
+	left: auto !important;
+	margin: 0 !important;
+	max-width: 30px !important;
+	min-width: 30px !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+	position: relative !important;
+	right: auto !important;
+	top: auto !important;
+	width: 30px !important;
+	z-index: auto !important;
+	-webkit-app-region: no-drag;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-item:hover {
+	background: rgba(238, 244, 242, 0.07) !important;
+	border-color: rgba(114, 170, 165, 0.2) !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-label.codicon,
+.monaco-workbench .part.titlebar a.action-label.codicon-terminal {
+	align-items: center !important;
+	background: transparent !important;
+	border: 0 !important;
+	color: #aeb8b4 !important;
+	display: flex !important;
+	font-size: 15px !important;
+	height: 28px !important;
+	justify-content: center !important;
+	line-height: 28px !important;
+	margin: 0 !important;
+	opacity: 1 !important;
+	padding: 0 !important;
+	width: 28px !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-item:hover .action-label.codicon {
+	color: #e4ece9 !important;
+}
+
+.monaco-workbench .monaco-button,
+.monaco-workbench .monaco-button.default,
+.monaco-workbench .monaco-dialog-box .dialog-buttons-row .monaco-button.default,
+.monaco-workbench .notifications-list-container .notification-list-item .monaco-button.default {
+	background: rgba(238, 244, 242, 0.065) !important;
+	border: 1px solid rgba(238, 244, 242, 0.12) !important;
+	border-radius: 6px !important;
+	box-shadow: none !important;
+	color: #dce7e4 !important;
+	font-size: 11.5px !important;
+	font-weight: 610 !important;
+	height: 28px !important;
+	line-height: 26px !important;
+	min-height: 28px !important;
+	padding: 0 10px !important;
+}
+
+.monaco-workbench .monaco-button:hover,
+.monaco-workbench .monaco-button.default:hover,
+.monaco-workbench .monaco-dialog-box .dialog-buttons-row .monaco-button.default:hover,
+.monaco-workbench .notifications-list-container .notification-list-item .monaco-button.default:hover {
+	background: rgba(114, 170, 165, 0.12) !important;
+	border-color: rgba(114, 170, 165, 0.22) !important;
+}
+
+.monaco-workbench .vector-debug-card__mark,
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content::before {
+	background: rgba(238, 244, 242, 0.055) !important;
+	border-color: rgba(238, 244, 242, 0.11) !important;
+	color: #aeb8b4 !important;
+}
+
+.monaco-workbench .vector-debug-card__button,
+.monaco-workbench .vector-debug-card__button--primary,
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > .button-container > .monaco-button {
+	background: rgba(238, 244, 242, 0.055) !important;
+	border: 1px solid rgba(238, 244, 242, 0.11) !important;
+	border-radius: 6px !important;
+	color: #dce7e4 !important;
+	font-size: 11.5px !important;
+	font-weight: 610 !important;
+	height: 28px !important;
+	min-height: 28px !important;
+	max-width: 180px !important;
+	min-width: 0 !important;
+	padding: 0 10px !important;
+	width: fit-content !important;
+}
+
+.monaco-workbench .vector-debug-card__button:hover,
+.monaco-workbench .vector-debug-card__button--primary:hover,
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > .button-container > .monaco-button:hover {
+	background: rgba(114, 170, 165, 0.11) !important;
+	border-color: rgba(114, 170, 165, 0.2) !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-button.monaco-text-button,
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-dropdown-button {
+	background: rgba(238, 244, 242, 0.055) !important;
+	border-color: rgba(238, 244, 242, 0.11) !important;
+	color: #dce7e4 !important;
+	height: 26px !important;
+	min-height: 26px !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-button.monaco-text-button {
+	font-size: 11px !important;
+	font-weight: 590 !important;
+	line-height: 24px !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown:hover > .monaco-button.monaco-text-button,
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown:hover > .monaco-dropdown-button {
+	background: rgba(114, 170, 165, 0.11) !important;
+	border-color: rgba(114, 170, 165, 0.2) !important;
+}
+
+.monaco-workbench .scm-view .button-container .codicon {
+	color: #aeb8b4 !important;
+}
+
+.monaco-workbench .part.titlebar,
+.monaco-workbench .part.activitybar,
+.monaco-workbench .part.sidebar,
+.monaco-workbench .part.panel,
+.monaco-workbench .part.basepanel,
+.monaco-workbench .pane-composite-part {
+	border-color: rgba(238, 244, 242, 0.08) !important;
+}
+
+.monaco-workbench .part.activitybar {
+	border-right: 1px solid rgba(238, 244, 242, 0.08) !important;
+}
+
+.monaco-workbench .part.panel,
+.monaco-workbench .part.basepanel {
+	border-top: 1px solid rgba(238, 244, 242, 0.08) !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-configure-layout-icon),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-left),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-left-off),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-right),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-right-off),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-layout-icon),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-layout-icon-off),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-auxiliarybar-right-layout-icon),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-auxiliarybar-right-off-layout-icon),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-left),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-left-off),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-right),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-right-off),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-panel),
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-panel-off) {
+	display: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	max-width: 0 !important;
+	min-width: 0 !important;
+	padding: 0 !important;
+	pointer-events: none !important;
+	width: 0 !important;
 }

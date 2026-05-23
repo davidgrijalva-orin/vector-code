@@ -3,7 +3,7 @@
 Vector Code uses the native workbench update service. A packaged build checks:
 
 ```text
-GET https://updates.vectorcode.com/api/update/:platform/:quality/:commit
+GET https://update-feed-production.up.railway.app/api/update/:platform/:quality/:commit
 ```
 
 The `product.json` release fields are:
@@ -12,7 +12,7 @@ The `product.json` release fields are:
 {
 	"quality": "stable",
 	"downloadUrl": "https://vectorcode.com/download",
-	"updateUrl": "https://updates.vectorcode.com"
+	"updateUrl": "https://update-feed-production.up.railway.app"
 }
 ```
 
@@ -63,3 +63,35 @@ npm run vector-update-feed -- --manifest .build/vector-update-feed.json --platfo
 ```
 
 The command prints the JSON body expected by the update service, or `204` when the app is already current.
+
+## Railway Feed Service
+
+The deployable Railway service lives in `services/update-feed`. It serves:
+
+```text
+GET /healthz
+GET /api/update/:platform/:quality/:commit
+```
+
+The service reads release data from one of these sources, in order:
+
+1. `VECTOR_UPDATE_FEED_JSON`: inline manifest JSON.
+2. `VECTOR_UPDATE_FEED_URL`: remote JSON manifest URL.
+3. `VECTOR_UPDATE_FEED_PATH`: local manifest path.
+4. `services/update-feed/manifest.example.json`: local fallback for development.
+
+For the first Railway deployment, set `VECTOR_UPDATE_FEED_JSON` to:
+
+```json
+{"schemaVersion":1,"releases":[]}
+```
+
+That makes the endpoint live while safely returning `204` until the first signed release asset is published.
+
+Production is currently deployed on Railway at:
+
+```text
+https://update-feed-production.up.railway.app
+```
+
+The intended branded domain is `updates.vectorcode.com`; Railway is returning `Unauthorized` for the custom-domain mutation from the current CLI/MCP session, so the packaged app uses the verified Railway URL until that domain can be added.

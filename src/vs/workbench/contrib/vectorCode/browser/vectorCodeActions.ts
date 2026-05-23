@@ -32,9 +32,9 @@ registerAction2(class OpenVectorCodeTerminalPanelAction extends Action2 {
 			category: vectorCodeCategory,
 			f1: true,
 			menu: {
-				id: MenuId.LayoutControlMenu,
+				id: MenuId.TitleBar,
 				group: 'navigation',
-				order: -100
+				order: 9000
 			}
 		});
 	}

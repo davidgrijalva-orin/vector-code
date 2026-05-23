@@ -2048,19 +2048,6 @@ body,
 	width: 0 !important;
 }
 
-.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Secondary Side Bar"],
-.monaco-workbench .part.titlebar a.action-label.codicon-auxiliarybar-right-off-layout-icon,
-.monaco-workbench .part.titlebar a.action-label.codicon-auxiliarybar-right-layout-icon,
-.monaco-workbench .part.titlebar .action-item:has(a.action-label[aria-label^="Toggle Secondary Side Bar"]),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-auxiliarybar-right-off-layout-icon),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-auxiliarybar-right-layout-icon),
-.monaco-workbench .part.titlebar button[aria-label^="Toggle Secondary Side Bar"],
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-dock) {
-	display: none !important;
-}
-
 .monaco-workbench .part.activitybar {
 	background: #0b0f0f !important;
 	border-right-color: rgba(238, 244, 242, 0.08) !important;
@@ -2146,48 +2133,6 @@ body,
 	background: rgba(238, 244, 242, 0.065);
 	border-color: rgba(114, 170, 165, 0.24);
 	color: #e6efed;
-}
-
-/* Final workbench cleanup: keep terminal controls terminal-specific and keep overflow usable. */
-.monaco-workbench .part.titlebar .action-item:has(.codicon-configure-layout-icon),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-left),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-left-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-off),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-panel),
-.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-panel-off),
-.monaco-workbench .part.titlebar a.action-label[aria-label^="Configure Layout"],
-.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Primary Side Bar"],
-.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Panel"] {
-	display: none !important;
-}
-
-.monaco-workbench .part.titlebar a.action-label.codicon-configure-layout-icon,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-left,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-left-off,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-right,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-right-off,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-layout-icon,
-.monaco-workbench .part.titlebar a.action-label.codicon-panel-layout-icon-off,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-configure-layout-icon) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left-off) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right-off) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon) *,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon-off) * {
-	display: none !important;
-}
-
-.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal),
-.monaco-workbench .part.titlebar a.action-label.codicon-terminal {
-	display: flex !important;
 }
 
 .monaco-workbench .part.panel .composite.title {
@@ -3898,29 +3843,4 @@ body,
 .monaco-workbench .part.panel,
 .monaco-workbench .part.basepanel {
 	border-top: 1px solid rgba(238, 244, 242, 0.08) !important;
-}
-
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-configure-layout-icon),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-left),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-left-off),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-right),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-right-off),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-layout-icon),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-panel-layout-icon-off),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-auxiliarybar-right-layout-icon),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-auxiliarybar-right-off-layout-icon),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-left),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-left-off),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-right),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-sidebar-right-off),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-panel),
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .monaco-action-bar .action-item:has(.codicon-layout-panel-off) {
-	display: none !important;
-	height: 0 !important;
-	margin: 0 !important;
-	max-width: 0 !important;
-	min-width: 0 !important;
-	padding: 0 !important;
-	pointer-events: none !important;
-	width: 0 !important;
 }

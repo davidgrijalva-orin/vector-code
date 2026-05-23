@@ -277,11 +277,9 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 	private readonly centerAdjacentToolBarDisposable = this._register(new DisposableStore());
 
 	private globalToolbarMenu: IMenu | undefined;
-	private layoutToolbarMenu: IMenu | undefined;
 
 	private readonly globalToolbarMenuDisposables = this._register(new DisposableStore());
 	private readonly editorToolbarMenuDisposables = this._register(new DisposableStore());
-	private readonly layoutToolbarMenuDisposables = this._register(new DisposableStore());
 	private readonly activityToolbarDisposables = this._register(new DisposableStore());
 
 	private readonly hoverDelegate: IHoverDelegate;
@@ -385,11 +383,10 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 
 		// Actions
 		if (hasCustomTitlebar(this.configurationService, this.titleBarStyle) && this.actionToolBar) {
-			const affectsLayoutControl = event.affectsConfiguration(LayoutSettings.LAYOUT_ACTIONS);
 			const affectsActivityControl = event.affectsConfiguration(LayoutSettings.ACTIVITY_BAR_LOCATION);
 
-			if (affectsLayoutControl || affectsActivityControl) {
-				this.createActionToolBarMenus({ layoutActions: affectsLayoutControl, activityActions: affectsActivityControl });
+			if (affectsActivityControl) {
+				this.createActionToolBarMenus({ activityActions: affectsActivityControl });
 
 				this._onDidChange.fire(undefined);
 			}
@@ -614,7 +611,7 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 	private actionViewItemProvider(action: IAction, options: IBaseActionViewItemOptions): IActionViewItem | undefined {
 
 		// --- Custom view items registered via IActionViewItemService
-		for (const menuId of [MenuId.TitleBar, MenuId.LayoutControlMenu]) {
+		for (const menuId of [MenuId.TitleBar]) {
 			const customViewItem = this.actionViewItemService.lookUp(menuId, action.id);
 			if (customViewItem) {
 				const result = customViewItem(action, options, this.instantiationService, getWindowId(this.element ? getWindow(this.element) : mainWindow));
@@ -679,15 +676,15 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 		}
 	}
 
-	private createActionToolBarMenus(update: true | { editorActions?: boolean; layoutActions?: boolean; globalActions?: boolean; activityActions?: boolean } = true): void {
+	private createActionToolBarMenus(update: true | { editorActions?: boolean; globalActions?: boolean; activityActions?: boolean } = true): void {
 		if (update === true) {
-			update = { editorActions: true, layoutActions: true, globalActions: true, activityActions: true };
+			update = { editorActions: true, globalActions: true, activityActions: true };
 		}
 
 		const updateToolBarActions = () => {
 			const actions: IToolbarActions = { primary: [], secondary: [] };
 
-			// --- Leading Global Actions (rendered before layout controls; opt-in via TitleBarLeadingActionsGroup).
+			// --- Leading Global Actions (rendered before activity controls; opt-in via TitleBarLeadingActionsGroup).
 			// Use a scratch bucket so non-leading actions don't leak into the shared `secondary` (overflow) list here;
 			// they are added by the trailing global-actions pass below.
 			if (this.globalToolbarMenu) {
@@ -728,16 +725,7 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 				actions.primary.push(GLOBAL_ACTIVITY_TITLE_ACTION);
 			}
 
-			// --- Layout Actions
-			if (this.layoutToolbarMenu) {
-				fillInActionBarActions(
-					this.layoutToolbarMenu.getActions(),
-					actions,
-					(group) => group === 'navigation'
-				);
-			}
-
-			// --- Global Actions (after layout so e.g. notification bell appears to the right of layout controls).
+			// --- Global Actions
 			// Filter out the leading group up front so it isn't duplicated into the overflow `secondary` bucket.
 			if (this.globalToolbarMenu) {
 				const trailingGroups = this.globalToolbarMenu.getActions().filter(([group]) => group !== TitleBarLeadingActionsGroup);
@@ -765,19 +753,6 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 			} else {
 				this.actionToolBar.actionRunner = this.editorToolbarMenuDisposables.add(new ActionRunner());
 				this.actionToolBar.context = undefined;
-			}
-		}
-
-		if (update.layoutActions) {
-			this.layoutToolbarMenuDisposables.clear();
-
-			if (this.layoutControlEnabled) {
-				this.layoutToolbarMenu = this.menuService.createMenu(MenuId.LayoutControlMenu, this.contextKeyService);
-
-				this.layoutToolbarMenuDisposables.add(this.layoutToolbarMenu);
-				this.layoutToolbarMenuDisposables.add(this.layoutToolbarMenu.onDidChange(() => updateToolBarActions()));
-			} else {
-				this.layoutToolbarMenu = undefined;
 			}
 		}
 
@@ -862,10 +837,6 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 		return getMenuBarVisibility(this.configurationService);
 	}
 
-	private get layoutControlEnabled(): boolean {
-		return this.configurationService.getValue<boolean>(LayoutSettings.LAYOUT_ACTIONS) !== false;
-	}
-
 	protected get isCommandCenterVisible() {
 		return !this.isCompact && this.configurationService.getValue<boolean>(LayoutSettings.COMMAND_CENTER) !== false;
 	}
@@ -889,7 +860,7 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 	get hasZoomableElements(): boolean {
 		const hasMenubar = !(this.currentMenubarVisibility === 'hidden' || this.currentMenubarVisibility === 'compact' || (!isWeb && isMacintosh));
 		const hasCommandCenter = this.isCommandCenterVisible;
-		const hasToolBarActions = this.globalActionsEnabled || this.layoutControlEnabled || this.editorActionsEnabled || this.activityActionsEnabled;
+		const hasToolBarActions = this.globalActionsEnabled || this.editorActionsEnabled || this.activityActionsEnabled;
 		return hasMenubar || hasCommandCenter || hasToolBarActions;
 	}
 

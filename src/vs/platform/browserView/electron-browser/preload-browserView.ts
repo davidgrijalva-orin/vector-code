@@ -275,7 +275,7 @@ function findCommonVisibleAncestor(candidates: readonly (Node | null | undefined
 }
 
 /**
- * Element-pick controller used by the "Add Element to Chat" flow.
+ * Element-pick controller used by browser element selection.
  *
  * `start({ theme })` mounts a transparent overlay on the page that
  * highlights the element under the pointer (click) or finds the deepest
@@ -715,8 +715,8 @@ class ElementPicker {
 			}
 			.highlight {
 				position: absolute; box-sizing: border-box;
-				border: 2px solid var(--vscode-focusBorder, #0078d4);
-				background: color-mix(in srgb, var(--vscode-focusBorder, #0078d4) 12%, transparent);
+				border: 2px solid var(--vectorcode-focusBorder, #0078d4);
+				background: color-mix(in srgb, var(--vectorcode-focusBorder, #0078d4) 12%, transparent);
 				border-radius: 2px;
 			}
 			.overlay {
@@ -728,8 +728,8 @@ class ElementPicker {
 				position: fixed; box-sizing: border-box;
 				display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 6px;
 				max-width: min(100%, 320px);
-				background: var(--vscode-button-background, #0078d4);
-				color: var(--vscode-button-foreground, white);
+				background: var(--vectorcode-button-background, #0078d4);
+				color: var(--vectorcode-button-foreground, white);
 				font-family: inherit;
 				font-size: 11px; line-height: 20px;
 				white-space: nowrap;
@@ -748,7 +748,7 @@ class ElementPicker {
 			}
 			.dragbox {
 				position: fixed; box-sizing: border-box;
-				border: 1px dotted var(--vscode-focusBorder, #a0aabe);
+				border: 1px dotted var(--vectorcode-focusBorder, #a0aabe);
 				background: transparent;
 				z-index: 2;
 			}
@@ -757,9 +757,9 @@ class ElementPicker {
 	}
 
 	private static _applyTheme(host: HTMLElement, theme: IBrowserViewTheme | undefined): void {
-		host.style.setProperty('--vscode-focusBorder', theme?.focusBorder ?? null);
-		host.style.setProperty('--vscode-button-background', theme?.buttonBackground ?? null);
-		host.style.setProperty('--vscode-button-foreground', theme?.buttonForeground ?? null);
+		host.style.setProperty('--vectorcode-focusBorder', theme?.focusBorder ?? null);
+		host.style.setProperty('--vectorcode-button-background', theme?.buttonBackground ?? null);
+		host.style.setProperty('--vectorcode-button-foreground', theme?.buttonForeground ?? null);
 		host.style.setProperty('--pick-font', theme?.font ?? null);
 	}
 }

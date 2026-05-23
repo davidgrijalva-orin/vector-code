@@ -97,7 +97,6 @@ export interface IShellLaunchConfigResolveOptions {
 	remoteAuthority: string | undefined;
 	os: OperatingSystem;
 	allowAutomationShell?: boolean;
-	allowAgentHostShell?: boolean;
 }
 
 export type FontWeight = 'normal' | 'bold' | number;
@@ -459,6 +458,7 @@ export const enum TerminalCommandId {
 	PastePwsh = 'workbench.action.terminal.pastePwsh',
 	PasteSelection = 'workbench.action.terminal.pasteSelection',
 	SelectDefaultProfile = 'workbench.action.terminal.selectDefaultShell',
+	SendSelectedText = 'workbench.action.terminal.sendSelectedText',
 	RunSelectedText = 'workbench.action.terminal.runSelectedText',
 	RunActiveFile = 'workbench.action.terminal.runActiveFile',
 	SwitchTerminal = 'workbench.action.terminal.switchTerminal',
@@ -535,6 +535,7 @@ export const DEFAULT_COMMANDS_TO_SKIP_SHELL: string[] = [
 	TerminalCommandId.ResizePaneUp,
 	TerminalCommandId.RunActiveFile,
 	TerminalCommandId.RunSelectedText,
+	TerminalCommandId.SendSelectedText,
 	TerminalCommandId.ScrollDownLine,
 	TerminalCommandId.ScrollDownPage,
 	TerminalCommandId.ScrollToBottom,
@@ -634,17 +635,6 @@ export const DEFAULT_COMMANDS_TO_SKIP_SHELL: string[] = [
 	'workbench.action.zoomReset',
 	'notification.acceptPrimaryAction',
 	'runCommands',
-	'workbench.action.terminal.chat.start',
-	'workbench.action.terminal.chat.close',
-	'workbench.action.terminal.chat.discard',
-	'workbench.action.terminal.chat.makeRequest',
-	'workbench.action.terminal.chat.cancel',
-	'workbench.action.terminal.chat.feedbackHelpful',
-	'workbench.action.terminal.chat.feedbackUnhelpful',
-	'workbench.action.terminal.chat.feedbackReportIssue',
-	'workbench.action.terminal.chat.runCommand',
-	'workbench.action.terminal.chat.insertCommand',
-	'workbench.action.terminal.chat.viewInChat',
 	...defaultTerminalContribCommandsToSkipShell,
 ];
 

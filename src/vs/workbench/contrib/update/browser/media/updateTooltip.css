@@ -10,8 +10,8 @@
 	padding: 6px 6px;
 	min-width: 300px;
 	max-width: 350px;
-	color: var(--vscode-descriptionForeground);
-	font-size: var(--vscode-bodyFontSize-small);
+	color: var(--vectorcode-descriptionForeground);
+	font-size: var(--vectorcode-bodyFontSize-small);
 }
 
 /* Header */
@@ -23,8 +23,8 @@
 
 .update-tooltip .header .title {
 	font-weight: 600;
-	font-size: var(--vscode-bodyFontSize);
-	color: var(--vscode-foreground);
+	font-size: var(--vectorcode-bodyFontSize);
+	color: var(--vectorcode-foreground);
 }
 
 /* Product info */
@@ -36,7 +36,7 @@
 .update-tooltip .product-logo {
 	width: 48px;
 	height: 48px;
-	border-radius: var(--vscode-cornerRadius-large);
+	border-radius: var(--vectorcode-cornerRadius-large);
 	padding: 5px;
 	flex-shrink: 0;
 	background: url('../../../../browser/media/code-icon.svg') center / contain no-repeat;
@@ -50,7 +50,7 @@
 
 .update-tooltip .product-name {
 	font-weight: 600;
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 	margin-bottom: 4px;
 }
 
@@ -63,7 +63,7 @@
 .update-tooltip .copy-version-button {
 	cursor: pointer;
 	opacity: 0;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	transition: opacity 0.1s;
 	margin-top: -2px;
 }
@@ -75,7 +75,7 @@
 
 .update-tooltip .copy-version-button:hover,
 .update-tooltip .copy-version-button:focus-visible {
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 }
 
 /* Button bar */
@@ -88,44 +88,44 @@
 
 .update-tooltip .button-bar button {
 	padding: 4px 12px;
-	border-radius: var(--vscode-cornerRadius-small);
-	font-size: var(--vscode-bodyFontSize-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
+	font-size: var(--vectorcode-bodyFontSize-small);
 	cursor: pointer;
 	white-space: nowrap;
 }
 
 .update-tooltip .release-notes-button {
-	background-color: var(--vscode-button-secondaryBackground);
-	color: var(--vscode-button-secondaryForeground);
-	border: 1px solid var(--vscode-button-border, transparent);
+	background-color: var(--vectorcode-button-secondaryBackground);
+	color: var(--vectorcode-button-secondaryForeground);
+	border: 1px solid var(--vectorcode-button-border, transparent);
 }
 
 .update-tooltip .release-notes-button:hover {
-	background-color: var(--vscode-button-secondaryHoverBackground);
+	background-color: var(--vectorcode-button-secondaryHoverBackground);
 }
 
 .update-tooltip .action-button {
-	background-color: var(--vscode-button-background);
-	color: var(--vscode-button-foreground);
-	border: 1px solid var(--vscode-button-border, transparent);
+	background-color: var(--vectorcode-button-background);
+	color: var(--vectorcode-button-foreground);
+	border: 1px solid var(--vectorcode-button-border, transparent);
 }
 
 .update-tooltip .action-button:hover {
-	background-color: var(--vscode-button-hoverBackground);
+	background-color: var(--vectorcode-button-hoverBackground);
 }
 
 /* Progress bar */
 .update-tooltip .progress-bar {
 	height: 4px;
-	background-color: color-mix(in srgb, var(--vscode-progressBar-background) 30%, transparent);
-	border-radius: var(--vscode-cornerRadius-small);
+	background-color: color-mix(in srgb, var(--vectorcode-progressBar-background) 30%, transparent);
+	border-radius: var(--vectorcode-cornerRadius-small);
 	overflow: hidden;
 }
 
 .update-tooltip .progress-fill {
 	height: 100%;
-	background-color: var(--vscode-progressBar-background);
-	border-radius: var(--vscode-cornerRadius-small);
+	background-color: var(--vectorcode-progressBar-background);
+	border-radius: var(--vectorcode-cornerRadius-small);
 	transition: width 0.3s ease;
 }
 
@@ -146,7 +146,7 @@
 .update-tooltip .state-message {
 	display: flex;
 	align-items: flex-start;
-	font-size: var(--vscode-bodyFontSize);
+	font-size: var(--vectorcode-bodyFontSize);
 	gap: 4px;
 }
 
@@ -157,9 +157,9 @@
 }
 
 .update-tooltip .state-message-icon.codicon.codicon-warning {
-	color: var(--vscode-editorWarning-foreground);
+	color: var(--vectorcode-editorWarning-foreground);
 }
 
 .update-tooltip .state-message-icon.codicon.codicon-error {
-	color: var(--vscode-editorError-foreground);
+	color: var(--vectorcode-editorError-foreground);
 }

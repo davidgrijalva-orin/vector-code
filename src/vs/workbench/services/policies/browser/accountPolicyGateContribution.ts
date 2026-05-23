@@ -17,8 +17,7 @@ import { IStorageService, StorageScope } from '../../../../platform/storage/comm
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { DEFAULT_ACCOUNT_SIGN_IN_COMMAND } from '../../accounts/browser/defaultAccount.js';
-import { IChatEntitlementService } from '../../chat/common/chatEntitlementService.js';
-import { AccountPolicyGateState, AccountPolicyGateUnsatisfiedReason, ChatAccountPolicyGateActiveContext, IAccountPolicyGateInfo, IAccountPolicyGateService } from '../common/accountPolicyService.js';
+import { AccountPolicyGateActiveContext, AccountPolicyGateState, AccountPolicyGateUnsatisfiedReason, IAccountPolicyGateInfo, IAccountPolicyGateService } from '../common/accountPolicyService.js';
 
 const NOTIFICATION_DISMISSED_KEY = 'accountPolicy.gateNotificationDismissed';
 
@@ -56,7 +55,6 @@ export class AccountPolicyGateContribution extends Disposable implements IWorkbe
 	constructor(
 		@IAccountPolicyGateService private readonly gateService: IAccountPolicyGateService,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService,
 		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
 		@ILogService private readonly logService: ILogService,
 		@INotificationService private readonly notificationService: INotificationService,
@@ -66,7 +64,7 @@ export class AccountPolicyGateContribution extends Disposable implements IWorkbe
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
-		this.contextKey = ChatAccountPolicyGateActiveContext.bindTo(contextKeyService);
+		this.contextKey = AccountPolicyGateActiveContext.bindTo(contextKeyService);
 		this.lastInfo = this.gateService.gateInfo;
 
 		// Apply context key + setForceHidden immediately (fail-closed), but defer the
@@ -96,7 +94,6 @@ export class AccountPolicyGateContribution extends Disposable implements IWorkbe
 		const isRestricted = info.state === AccountPolicyGateState.Restricted
 			&& info.reason !== AccountPolicyGateUnsatisfiedReason.PolicyNotResolved;
 		this.contextKey.set(isRestricted);
-		this.chatEntitlementService.setForceHidden(isRestricted);
 		this.logService.info(`[AccountPolicyGate] apply: state=${info.state}, reason=${info.reason}, isRestricted=${isRestricted}`);
 
 		if (stateChanged) {
@@ -155,26 +152,26 @@ export class AccountPolicyGateContribution extends Disposable implements IWorkbe
 		if (accountName && hasConcreteOrgs) {
 			message = localize(
 				'accountPolicy.notification.orgWithAccount',
-				"Your administrator restricts AI features to GitHub accounts in the following organizations: {0}. The account \"{1}\" is not a member of any of these.",
+				"Your administrator requires a GitHub account in one of the following organizations: {0}. The account \"{1}\" is not a member of any of these.",
 				orgList,
 				accountName
 			);
 		} else if (accountName) {
 			message = localize(
 				'accountPolicy.notification.orgWithAccountNoList',
-				"Your administrator restricts AI features to specific GitHub accounts. The account \"{0}\" does not qualify.",
+				"Your administrator requires a specific GitHub account. The account \"{0}\" does not qualify.",
 				accountName
 			);
 		} else if (hasConcreteOrgs) {
 			message = localize(
 				'accountPolicy.notification.signinWithOrgs',
-				"Your administrator restricts AI features to GitHub accounts in the following organizations: {0}.",
+				"Your administrator requires a GitHub account in one of the following organizations: {0}.",
 				orgList
 			);
 		} else {
 			message = localize(
 				'accountPolicy.notification.signin',
-				"Your administrator restricts AI features to specific GitHub accounts."
+				"Your administrator requires a specific GitHub account."
 			);
 		}
 

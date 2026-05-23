@@ -54,10 +54,10 @@ suite('ToolBar', () => {
 
 	test('keeps the last primary action shrinkable when overflow is inserted', () => {
 		const widths = new Map<string, number>([
-			['workbench.action.chat.attachContext', 22],
-			['workbench.action.chat.openModePicker', 75],
-			['workbench.action.chat.openModelPicker', 271],
-			['workbench.action.chat.configureTools', 22],
+			['test.action.attachContext', 22],
+			['test.action.openModePicker', 75],
+			['test.action.openModelPicker', 271],
+			['test.action.configureTools', 22],
 			[ToggleMenuAction.ID, 22],
 		]);
 
@@ -97,18 +97,18 @@ suite('ToolBar', () => {
 		});
 
 		const actions = [
-			store.add(new Action('workbench.action.chat.attachContext', 'Add Context...')),
-			store.add(new Action('workbench.action.chat.openModePicker', 'Open Agent Picker')),
-			store.add(new Action('workbench.action.chat.openModelPicker', 'Open Model Picker')),
-			store.add(new Action('workbench.action.chat.configureTools', 'Configure Tools...')),
+			store.add(new Action('test.action.attachContext', 'Add Context...')),
+			store.add(new Action('test.action.openModePicker', 'Open Mode Picker')),
+			store.add(new Action('test.action.openModelPicker', 'Open Model Picker')),
+			store.add(new Action('test.action.configureTools', 'Configure Tools...')),
 		];
 
 		toolbar.setActions(actions);
 
 		assert.strictEqual(toolbar.getItemsLength(), 4);
-		assert.strictEqual(toolbar.getItemAction(0)?.id, 'workbench.action.chat.attachContext');
-		assert.strictEqual(toolbar.getItemAction(1)?.id, 'workbench.action.chat.openModePicker');
-		assert.strictEqual(toolbar.getItemAction(2)?.id, 'workbench.action.chat.openModelPicker');
+		assert.strictEqual(toolbar.getItemAction(0)?.id, 'test.action.attachContext');
+		assert.strictEqual(toolbar.getItemAction(1)?.id, 'test.action.openModePicker');
+		assert.strictEqual(toolbar.getItemAction(2)?.id, 'test.action.openModelPicker');
 		assert.strictEqual(toolbar.getItemAction(3)?.id, ToggleMenuAction.ID);
 		assert.strictEqual(toolbar.getElement().querySelector('.monaco-action-bar')?.classList.contains('has-overflow'), true);
 	});
@@ -120,27 +120,27 @@ suite('ToolBar', () => {
 				kind: 'last',
 				minItems: 1,
 				actionMinWidth: 22,
-				getActionMinWidth: action => action.id === 'workbench.action.chat.openModelPicker' ? 28 : undefined,
+				getActionMinWidth: action => action.id === 'test.action.openModelPicker' ? 28 : undefined,
 			},
 			actionViewItemProvider: action => new FixedWidthActionViewItem(action, 22)
 		}));
 
 		const actions = [
-			store.add(new Action('workbench.action.chat.attachContext', 'Add Context...')),
-			store.add(new Action('workbench.action.chat.openModePicker', 'Open Agent Picker')),
-			store.add(new Action('workbench.action.chat.openModelPicker', 'Open Model Picker')),
+			store.add(new Action('test.action.attachContext', 'Add Context...')),
+			store.add(new Action('test.action.openModePicker', 'Open Mode Picker')),
+			store.add(new Action('test.action.openModelPicker', 'Open Model Picker')),
 		];
 
 		toolbar.setActions(actions);
 
-		assert.strictEqual(toolbar.getElement().style.getPropertyValue('--vscode-toolbar-action-min-width'), '28px');
+		assert.strictEqual(toolbar.getElement().style.getPropertyValue('--vectorcode-toolbar-action-min-width'), '28px');
 	});
 
 	test('relayout re-evaluates responsive overflow after action width changes', () => {
 		const widths = new Map<string, number>([
-			['workbench.action.chat.attachContext', 22],
-			['workbench.action.chat.openModePicker', 22],
-			['workbench.action.chat.openModelPicker', 50],
+			['test.action.attachContext', 22],
+			['test.action.openModePicker', 22],
+			['test.action.openModelPicker', 50],
 			[ToggleMenuAction.ID, 22],
 		]);
 
@@ -180,23 +180,23 @@ suite('ToolBar', () => {
 		});
 
 		const actions = [
-			store.add(new Action('workbench.action.chat.attachContext', 'Add Context...')),
-			store.add(new Action('workbench.action.chat.openModePicker', 'Open Mode Picker')),
-			store.add(new Action('workbench.action.chat.openModelPicker', 'Open Model Picker')),
+			store.add(new Action('test.action.attachContext', 'Add Context...')),
+			store.add(new Action('test.action.openModePicker', 'Open Mode Picker')),
+			store.add(new Action('test.action.openModelPicker', 'Open Model Picker')),
 		];
 
 		toolbar.setActions(actions);
 
 		assert.strictEqual(toolbar.getItemsLength(), 3);
-		assert.strictEqual(toolbar.getItemAction(2)?.id, 'workbench.action.chat.openModelPicker');
+		assert.strictEqual(toolbar.getItemAction(2)?.id, 'test.action.openModelPicker');
 		assert.strictEqual(toolbar.getElement().querySelector('.monaco-action-bar')?.classList.contains('has-overflow'), false);
 
-		widths.set('workbench.action.chat.openModePicker', 80);
+		widths.set('test.action.openModePicker', 80);
 		toolbar.relayout();
 
 		assert.strictEqual(toolbar.getItemsLength(), 3);
-		assert.strictEqual(toolbar.getItemAction(0)?.id, 'workbench.action.chat.attachContext');
-		assert.strictEqual(toolbar.getItemAction(1)?.id, 'workbench.action.chat.openModePicker');
+		assert.strictEqual(toolbar.getItemAction(0)?.id, 'test.action.attachContext');
+		assert.strictEqual(toolbar.getItemAction(1)?.id, 'test.action.openModePicker');
 		assert.strictEqual(toolbar.getItemAction(2)?.id, ToggleMenuAction.ID);
 		assert.strictEqual(toolbar.getElement().querySelector('.monaco-action-bar')?.classList.contains('has-overflow'), true);
 	});

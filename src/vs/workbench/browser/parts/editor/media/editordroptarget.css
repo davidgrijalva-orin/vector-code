@@ -43,10 +43,10 @@
 
 #monaco-workbench-editor-drop-overlay .editor-group-overlay-drop-into-prompt i /* Style keybinding */ {
 	padding: 0 8px;
-	border: 1px solid hsla(0,0%,80%,.4);
+	border: 1px solid var(--vectorcode-keybindingLabel-border);
 	margin: 0 1px;
 	border-radius: 5px;
-	background-color: rgba(255, 255, 255, 0.05);
+	background-color: var(--vectorcode-keybindingLabel-background);
 	font-style: normal;
 }
 

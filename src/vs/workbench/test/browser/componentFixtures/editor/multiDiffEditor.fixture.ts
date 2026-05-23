@@ -114,7 +114,7 @@ export function createServer(config: Config) {
 function renderMultiDiffEditor({ container, disposableStore, disposableStackStore, theme }: ComponentFixtureContext): void {
 	container.style.width = '800px';
 	container.style.height = '600px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createCommonServices(disposableStore, theme, new TestDiffProviderFactoryService());
 
@@ -210,7 +210,7 @@ function renderMultiDiffEditorIncrementalUpdate() {
 	return ({ container, disposableStore, disposableStackStore, theme }: ComponentFixtureContext) => {
 		container.style.width = '800px';
 		container.style.height = '600px';
-		container.style.border = '1px solid var(--vscode-editorWidget-border)';
+		container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 		// First file: sync diffs (already resolved). Files 2+3: 800ms delay.
 		const delayedFactory = new DelayedDiffProviderFactoryService(800);
@@ -241,7 +241,7 @@ function renderMultiDiffEditorDocumentSwap() {
 	return ({ container, disposableStore, disposableStackStore, theme }: ComponentFixtureContext) => {
 		container.style.width = '800px';
 		container.style.height = '600px';
-		container.style.border = '1px solid var(--vscode-editorWidget-border)';
+		container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 		const delayedFactory = new DelayedDiffProviderFactoryService(800);
 		const instantiationService = createCommonServices(disposableStore, theme, delayedFactory);

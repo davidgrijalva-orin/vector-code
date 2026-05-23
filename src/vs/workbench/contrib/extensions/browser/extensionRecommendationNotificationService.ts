@@ -147,8 +147,7 @@ export class ExtensionRecommendationNotificationService extends Disposable imple
 	}
 
 	hasToIgnoreRecommendationNotifications(): boolean {
-		const config = this.configurationService.getValue<{ ignoreRecommendations: boolean; showRecommendationsOnlyOnDemand?: boolean }>('extensions');
-		return config.ignoreRecommendations || !!config.showRecommendationsOnlyOnDemand;
+		return true;
 	}
 
 	async promptImportantExtensionsInstallNotification(extensionRecommendations: IExtensionRecommendations): Promise<RecommendationsNotificationResult> {
@@ -183,6 +182,10 @@ export class ExtensionRecommendationNotificationService extends Disposable imple
 	}
 
 	async promptWorkspaceRecommendations(recommendations: Array<string | URI>): Promise<void> {
+		if (this.hasToIgnoreRecommendationNotifications()) {
+			return;
+		}
+
 		if (this.storageService.getBoolean(donotShowWorkspaceRecommendationsStorageKey, StorageScope.WORKSPACE, false)) {
 			return;
 		}

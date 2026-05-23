@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-editor .unicode-highlight {
-	border: 1px solid var(--vscode-editorUnicodeHighlight-border);
-	background-color: var(--vscode-editorUnicodeHighlight-background);
+	border: 1px solid var(--vectorcode-editorUnicodeHighlight-border);
+	background-color: var(--vectorcode-editorUnicodeHighlight-background);
 	box-sizing: border-box;
 }

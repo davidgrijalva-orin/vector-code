@@ -15,11 +15,11 @@
 	margin-top: 4px;
 	box-sizing: border-box;
 	transform: translateY(calc(-100% - 10px)); /* shadow (10px) */
-	box-shadow: var(--vscode-shadow-lg);
-	color: var(--vscode-editorWidget-foreground);
-	border: 1px solid var(--vscode-widget-border);
-	border-radius: var(--vscode-cornerRadius-large);
-	background-color: var(--vscode-editorWidget-background);
+	box-shadow: var(--vectorcode-shadow-lg);
+	color: var(--vectorcode-editorWidget-foreground);
+	border: 1px solid var(--vectorcode-widget-border);
+	border-radius: var(--vectorcode-cornerRadius-large);
+	background-color: var(--vectorcode-editorWidget-background);
 }
 
 .monaco-reduce-motion .monaco-editor .find-widget {
@@ -47,7 +47,7 @@
 .monaco-editor .find-widget .monaco-inputbox.synthetic-focus {
 	outline: 1px solid -webkit-focus-ring-color;
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .monaco-editor .find-widget .monaco-inputbox .input {
@@ -164,7 +164,7 @@
 	left: 0;
 	width: 18px;
 	height: -webkit-fill-available;
-	border-radius: var(--vscode-cornerRadius-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
 	box-sizing: border-box;
 }
 
@@ -173,7 +173,7 @@
 }
 
 .monaco-editor .find-widget .disabled {
-	color: var(--vscode-disabledForeground);
+	color: var(--vectorcode-disabledForeground);
 	cursor: default;
 }
 
@@ -220,29 +220,29 @@
 }
 
 .monaco-editor .find-widget.no-results .matchesCount {
-	color: var(--vscode-errorForeground);
+	color: var(--vectorcode-errorForeground);
 }
 
 .monaco-editor .findMatch {
 	animation-duration: 0;
 	animation-name: inherit !important;
-	background-color: var(--vscode-editor-findMatchHighlightBackground);
+	background-color: var(--vectorcode-editor-findMatchHighlightBackground);
 }
 
 .monaco-editor .currentFindMatch {
-	background-color: var(--vscode-editor-findMatchBackground);
-	border: 2px solid var(--vscode-editor-findMatchBorder);
+	background-color: var(--vectorcode-editor-findMatchBackground);
+	border: 2px solid var(--vectorcode-editor-findMatchBorder);
 	padding: 1px;
 	box-sizing: border-box;
 }
 
 .monaco-editor .findScope {
-	background-color: var(--vscode-editor-findRangeHighlightBackground);
+	background-color: var(--vectorcode-editor-findRangeHighlightBackground);
 }
 
 .monaco-editor .find-widget .monaco-sash {
 	left: 0 !important;
-	background-color: var(--vscode-editorWidget-resizeBorder, var(--vscode-editorWidget-border));
+	background-color: var(--vectorcode-editorWidget-resizeBorder, var(--vectorcode-editorWidget-border));
 }
 
 .monaco-editor.hc-black .find-widget .button:before {
@@ -254,23 +254,23 @@
 /* Action bars */
 .monaco-editor .find-widget .button:not(.disabled):hover,
 .monaco-editor .find-widget .codicon-find-selection:hover {
-	background-color: var(--vscode-toolbar-hoverBackground) !important;
+	background-color: var(--vectorcode-toolbar-hoverBackground) !important;
 }
 
 .monaco-editor.findMatch {
-	background-color: var(--vscode-editor-findMatchHighlightBackground);
+	background-color: var(--vectorcode-editor-findMatchHighlightBackground);
 }
 
 .monaco-editor.currentFindMatch {
-	background-color: var(--vscode-editor-findMatchBackground);
+	background-color: var(--vectorcode-editor-findMatchBackground);
 }
 
 .monaco-editor.findScope {
-	background-color: var(--vscode-editor-findRangeHighlightBackground);
+	background-color: var(--vectorcode-editor-findRangeHighlightBackground);
 }
 
 .monaco-editor.findMatch {
-	background-color: var(--vscode-editorWidget-background);
+	background-color: var(--vectorcode-editorWidget-background);
 }
 
 /* Close button position. */

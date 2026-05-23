@@ -32,13 +32,13 @@
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.built-in-status {
-	border-color: var(--vscode-foreground);
+	border-color: var(--vectorcode-foreground);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.label,
 .monaco-action-bar .action-item.action-dropdown-item > .action-dropdown-item-separator {
-	background-color: var(--vscode-extensionButton-background);
-	border: 1px solid var(--vscode-extensionButton-border, transparent);
+	background-color: var(--vectorcode-extensionButton-background);
+	border: 1px solid var(--vectorcode-extensionButton-border, transparent);
 }
 
 .monaco-action-bar .action-item.action-dropdown-item > .action-label.extension-action.label {
@@ -65,44 +65,44 @@
 .monaco-list-row.focused .extension-list-item .monaco-action-bar .action-item .action-label.extension-action.label,
 .monaco-list-row.selected .extension-list-item .monaco-action-bar .action-item .action-label.extension-action.label,
 .monaco-action-bar .action-item .action-label.extension-action.label {
-	color: var(--vscode-extensionButton-foreground);
+	color: var(--vectorcode-extensionButton-foreground);
 }
 
 .monaco-action-bar .action-item:not(.disabled) .action-label.extension-action.label:hover {
-	background-color: var(--vscode-extensionButton-hoverBackground);
+	background-color: var(--vectorcode-extensionButton-hoverBackground);
 }
 
 .monaco-action-bar .action-item.action-dropdown-item > .action-dropdown-item-separator > div {
-	background-color: var(--vscode-extensionButton-border, var(--vscode-extensionButton-separator));
+	background-color: var(--vectorcode-extensionButton-border, var(--vectorcode-extensionButton-separator));
 }
 
-.vscode-high-contrast .monaco-action-bar .action-item.action-dropdown-item > .action-dropdown-item-separator > div {
-	background-color: var(--vscode-button-border);
+.vectorcode-high-contrast .monaco-action-bar .action-item.action-dropdown-item > .action-dropdown-item-separator > div {
+	background-color: var(--vectorcode-button-border);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.label.prominent,
 .monaco-action-bar .action-item.action-dropdown-item > .action-dropdown-item-separator.prominent {
-	background-color: var(--vscode-extensionButton-prominentBackground);
+	background-color: var(--vectorcode-extensionButton-prominentBackground);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.label.prominent {
-	color: var(--vscode-extensionButton-prominentForeground) !important;
+	color: var(--vectorcode-extensionButton-prominentForeground) !important;
 }
 
 .monaco-action-bar .action-item.action-item:not(.disabled) .action-label.extension-action.label.prominent:hover {
-	background-color: var(--vscode-extensionButton-prominentHoverBackground);
+	background-color: var(--vectorcode-extensionButton-prominentHoverBackground);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.extension-status-error::before {
-	color: var(--vscode-editorError-foreground);
+	color: var(--vectorcode-editorError-foreground);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.extension-status-warning::before {
-	color: var(--vscode-editorWarning-foreground);
+	color: var(--vectorcode-editorWarning-foreground);
 }
 
 .monaco-action-bar .action-item .action-label.extension-action.extension-status-info::before {
-	color: var(--vscode-editorInfo-foreground);
+	color: var(--vectorcode-editorInfo-foreground);
 }
 
 .monaco-action-bar .action-item:not(.disabled) .action-label.extension-action.text,

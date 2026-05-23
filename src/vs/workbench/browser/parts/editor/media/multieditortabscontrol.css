@@ -10,9 +10,9 @@
 	- scrollbar should be above all
 	- sticky (compact, shrink) tabs need to be above non-sticky tabs for scroll under effect
 	including non-sticky tabs-top borders, otherwise these borders would not scroll under
-	(https://github.com/microsoft/vscode/issues/111641)
+	(https://github.com/microsoft/vector/issues/111641)
 	- bottom-border needs to be above tabs bottom border to win but also support sticky tabs
-	(https://github.com/microsoft/vscode/issues/99084) <- this currently cannot be done and
+	(https://github.com/microsoft/vector/issues/99084) <- this currently cannot be done and
 	is still broken. putting sticky-tabs above tabs bottom border would not render this
 	border at all for sticky tabs.
 
@@ -109,35 +109,35 @@
 
 /* Tab Background Color in/active group/tab */
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab {
-	background-color: var(--vscode-tab-unfocusedInactiveBackground);
+	background-color: var(--vectorcode-tab-unfocusedInactiveBackground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab {
-	background-color: var(--vscode-tab-inactiveBackground);
+	background-color: var(--vectorcode-tab-inactiveBackground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.active {
-	background-color: var(--vscode-tab-unfocusedActiveBackground);
+	background-color: var(--vectorcode-tab-unfocusedActiveBackground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab.active {
-	background-color: var(--vscode-tab-activeBackground);
+	background-color: var(--vectorcode-tab-activeBackground);
 }
 
 /* Tab Foreground Color in/active group/tab */
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab {
-	color: var(--vscode-tab-unfocusedInactiveForeground);
+	color: var(--vectorcode-tab-unfocusedInactiveForeground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab {
-	color: var(--vscode-tab-inactiveForeground);
+	color: var(--vectorcode-tab-inactiveForeground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.active {
-	color: var(--vscode-tab-unfocusedActiveForeground);
+	color: var(--vectorcode-tab-unfocusedActiveForeground);
 }
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab.active {
-	color: var(--vscode-tab-activeForeground);
+	color: var(--vectorcode-tab-activeForeground);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab.selected:not(.active) {
-	background-color: var(--vscode-tab-selectedBackground);
-	color: var(--vscode-tab-selectedForeground);
+	background-color: var(--vectorcode-tab-selectedBackground);
+	color: var(--vectorcode-tab-selectedForeground);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab:not(.active) {
@@ -145,11 +145,11 @@
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.active {
-	box-shadow: inset var(--vscode-shadow-active-tab);
+	box-shadow: inset var(--vectorcode-shadow-active-tab);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab:hover:not(.active) {
-	box-shadow: var(--vscode-shadow-sm);
+	box-shadow: var(--vectorcode-shadow-sm);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title > .tabs-and-actions-container.wrapping .tabs-container > .tab:last-child {
@@ -260,7 +260,7 @@
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-fixed.close-action-off .tab-fade-hider {
 	display: flex;
 	flex: 0;
-	width: 5px; /* reserve space to hide tab fade when close button is left or off (fixes https://github.com/microsoft/vscode/issues/45728) */
+	width: 5px; /* reserve space to hide tab fade when close button is left or off (fixes https://github.com/microsoft/vector/issues/45728) */
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-shrink.tab-actions-left,
@@ -337,7 +337,7 @@
 	width: 5px;
 	opacity: 1;
 	padding: 0;
-	/* the rules below ensure that the gradient does not impact top/bottom borders (https://github.com/microsoft/vscode/issues/115129) */
+	/* the rules below ensure that the gradient does not impact top/bottom borders (https://github.com/microsoft/vector/issues/115129) */
 	top: 1px;
 	bottom: 1px;
 	height: calc(100% - 2px);
@@ -345,16 +345,16 @@
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-shrink:focus > .tab-label > .monaco-icon-label-container::after,
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-fixed:focus > .tab-label > .monaco-icon-label-container::after {
-	opacity: 0; /* when tab has the focus this shade breaks the tab border (fixes https://github.com/microsoft/vscode/issues/57819) */
+	opacity: 0; /* when tab has the focus this shade breaks the tab border (fixes https://github.com/microsoft/vector/issues/57819) */
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-shrink > .tab-label.tab-label-has-badge::after,
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-fixed > .tab-label.tab-label-has-badge::after {
-	margin-right: 5px; /* with tab sizing shrink/fixed and badges, we want a right-margin because the close button is hidden. Use margin instead of padding to support animating the badge (https://github.com/microsoft/vscode/issues/242661) */
+	margin-right: 5px; /* with tab sizing shrink/fixed and badges, we want a right-margin because the close button is hidden. Use margin instead of padding to support animating the badge (https://github.com/microsoft/vector/issues/242661) */
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-shrink:not(.tab-actions-left):not(.close-action-off) .tab-label {
-	padding-right: 5px; /* ensure that the gradient does not show when tab actions show https://github.com/microsoft/vscode/issues/189625*/
+	padding-right: 5px; /* ensure that the gradient does not show when tab actions show https://github.com/microsoft/vector/issues/189625*/
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sticky-compact:not(.has-icon) .monaco-icon-label {
@@ -363,7 +363,7 @@
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-fit .monaco-icon-label,
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sizing-fit .monaco-icon-label > .monaco-icon-label-container {
-	overflow-x: visible; /* fixes https://github.com/microsoft/vscode/issues/20182 by ensuring the horizontal overflow is visible */
+	overflow-x: visible; /* fixes https://github.com/microsoft/vector/issues/20182 by ensuring the horizontal overflow is visible */
 
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* Internet Explorer 10+ */
@@ -392,7 +392,7 @@
 	 * and/or `flex: none`. We added those styles to fix other issues so a pragmatic
 	 * solution is to give the label container a bit more room to fully render.
 	 *
-	 * Refs: https://github.com/microsoft/vscode/issues/207409
+	 * Refs: https://github.com/microsoft/vector/issues/207409
 	 */
 	padding-right: 1px;
 }
@@ -455,15 +455,15 @@
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab.sticky.dirty > .tab-actions .action-label:not(:hover)::before,
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.sticky.dirty > .tab-actions .action-label:not(:hover)::before {
 	/* use `pinned-dirty` icon unicode for sticky-dirty indication */
-	content: var(--vscode-icon-pinned-dirty-content);
-	font-family: var(--vscode-icon-pinned-dirty-font-family);
+	content: var(--vectorcode-icon-pinned-dirty-content);
+	font-family: var(--vectorcode-icon-pinned-dirty-font-family);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container.active > .title .tabs-container > .tab.dirty > .tab-actions .action-label:not(:hover)::before,
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.dirty > .tab-actions .action-label:not(:hover)::before {
 	/* use `circle-filled` icon unicode for dirty indication */
-	content: var(--vscode-icon-circle-filled-content);
-	font-family: var(--vscode-icon-circle-filled-font-family);
+	content: var(--vectorcode-icon-circle-filled-content);
+	font-family: var(--vectorcode-icon-circle-filled-font-family);
 }
 
 .monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.active > .tab-actions .action-label,
@@ -549,7 +549,7 @@
 	top: 0;
 	height: 100%;
 	width: 1px;
-	background-color: var(--vscode-tab-dragAndDropBorder);
+	background-color: var(--vectorcode-tab-dragAndDropBorder);
 	pointer-events: none;
 	z-index: 11;
 }

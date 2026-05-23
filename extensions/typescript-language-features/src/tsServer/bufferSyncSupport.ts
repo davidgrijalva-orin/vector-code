@@ -211,7 +211,7 @@ class SyncedBuffer {
 			return tsRoot?.startsWith(inMemoryResourcePrefix) ? undefined : tsRoot;
 		}
 
-		return fileSchemes.isOfScheme(resource, fileSchemes.officeScript, fileSchemes.chatCodeBlock) ? '/' : undefined;
+		return fileSchemes.isOfScheme(resource, fileSchemes.officeScript, fileSchemes.generatedCodeBlock) ? '/' : undefined;
 	}
 
 	public get resource(): vscode.Uri {
@@ -758,7 +758,7 @@ export default class BufferSyncSupport extends Disposable {
 	}
 
 	private shouldValidate(buffer: SyncedBuffer): boolean {
-		if (fileSchemes.isOfScheme(buffer.resource, fileSchemes.chatCodeBlock)) {
+		if (fileSchemes.isOfScheme(buffer.resource, fileSchemes.generatedCodeBlock)) {
 			return false;
 		}
 

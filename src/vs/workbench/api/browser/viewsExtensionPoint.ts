@@ -41,7 +41,7 @@ const viewsContainerSchema: IJSONSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			description: localize({ key: 'vscode.extension.contributes.views.containers.id', comment: ['Contribution refers to those that an extension contributes to VS Code through an extension/contribution point. '] }, "Unique id used to identify the container in which views can be contributed using 'views' contribution point"),
+			description: localize({ key: 'vscode.extension.contributes.views.containers.id', comment: ['Contribution refers to those that an extension contributes to Vector Code through an extension/contribution point. '] }, "Unique id used to identify the container in which views can be contributed using 'views' contribution point"),
 			type: 'string',
 			pattern: '^[a-zA-Z0-9_-]+$'
 		},
@@ -453,11 +453,6 @@ class ViewsExtensionHandler implements IWorkbenchContribution {
 
 				if (key === 'remote' && !isProposedApiEnabled(extension.description, 'contribViewsRemote')) {
 					collector.warn(localize('ViewContainerRequiresProposedAPI', "View container '{0}' requires 'enabledApiProposals: [\"contribViewsRemote\"]' to be added to 'Remote'.", key));
-					return;
-				}
-
-				if (key === 'agentSessions' && !isProposedApiEnabled(extension.description, 'chatSessionsProvider')) {
-					collector.warn(localize('RequiresChatSessionsProposedAPI', "View container '{0}' requires 'enabledApiProposals: [\"chatSessionsProvider\"]'.", key));
 					return;
 				}
 

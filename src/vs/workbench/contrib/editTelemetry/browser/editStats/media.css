@@ -17,7 +17,7 @@
 	div.header {
 		display: flex;
 		align-items: center;
-		color: var(--vscode-descriptionForeground);
+		color: var(--vectorcode-descriptionForeground);
 		margin-bottom: 4px;
 		font-size: 12px;
 		font-weight: 600;
@@ -25,7 +25,7 @@
 
 	div.description {
 		font-size: 11px;
-		color: var(--vscode-descriptionForeground);
+		color: var(--vectorcode-descriptionForeground);
 	}
 
 	.monaco-button {
@@ -49,12 +49,12 @@
 
 	.chart-toggle-button:hover {
 		opacity: 1;
-		background-color: var(--vscode-toolbar-hoverBackground);
+		background-color: var(--vectorcode-toolbar-hoverBackground);
 	}
 
 	.chart-toggle-button.active {
 		opacity: 1;
-		background-color: var(--vscode-toolbar-activeBackground);
+		background-color: var(--vectorcode-toolbar-activeBackground);
 	}
 
 	/* Chart container */
@@ -64,15 +64,6 @@
 
 	.ai-stats-chart-container svg {
 		overflow: visible;
-	}
-
-	/* Setup for New User */
-
-	.setup .chat-feature-container {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		padding: 4px;
 	}
 
 	/* Settings */
@@ -99,7 +90,7 @@
 	}
 
 	.settings .setting.disabled .setting-label {
-		color: var(--vscode-disabledForeground);
+		color: var(--vectorcode-disabledForeground);
 	}
 
 
@@ -121,7 +112,7 @@
 		.detail-item,
 		.detail-item a {
 			margin-left: auto;
-			color: var(--vscode-descriptionForeground);
+			color: var(--vectorcode-descriptionForeground);
 		}
 	}
 }

@@ -81,7 +81,7 @@
 
 .workspace-trust-editor .workspace-trust-features .workspace-trust-limitations {
 	border: 1px solid var(--workspace-trust-unselected-color);
-	border-radius: var(--vscode-cornerRadius-medium);
+	border-radius: var(--vectorcode-cornerRadius-medium);
 	display: flex;
 	flex-direction: column;
 	padding: 8px 36px;
@@ -98,7 +98,7 @@
 }
 
 .workspace-trust-editor .workspace-trust-features .workspace-trust-limitations:focus-visible {
-	outline: 1px solid var(--vscode-focusBorder);
+	outline: 1px solid var(--vectorcode-focusBorder);
 	outline-offset: -1px;
 }
 
@@ -161,7 +161,7 @@
 
 .workspace-trust-editor .workspace-trust-features .workspace-trust-untrusted-description {
 	font-style: italic;
-	color: var(--vscode-descriptionForeground);
+	color: var(--vectorcode-descriptionForeground);
 	padding-bottom: 8px;
 }
 
@@ -233,7 +233,7 @@
 
 .workspace-trust-editor .workspace-trust-settings {
 	padding: 24px 36px;
-	border-top: 1px solid var(--vscode-editorWidget-border);
+	border-top: 1px solid var(--vectorcode-editorWidget-border);
 	margin-top: 8px;
 }
 

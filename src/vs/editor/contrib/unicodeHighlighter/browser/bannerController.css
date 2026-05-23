@@ -13,7 +13,7 @@
 
 	height: 26px;
 
-	background: var(--vscode-banner-background);
+	background: var(--vectorcode-banner-background);
 }
 
 
@@ -71,15 +71,15 @@
 }
 
 .editor-banner {
-	background-color: var(--vscode-banner-background);
+	background-color: var(--vectorcode-banner-background);
 }
 
 .editor-banner,
 .editor-banner .action-container .codicon,
 .editor-banner .message-actions-container .monaco-link {
-	color: var(--vscode-banner-foreground);
+	color: var(--vectorcode-banner-foreground);
 }
 
 .editor-banner .icon-container .codicon {
-	color: var(--vscode-banner-iconForeground);
+	color: var(--vectorcode-banner-iconForeground);
 }

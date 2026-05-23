@@ -10,8 +10,8 @@
 	z-index: 40;
 	display: flex;
 	flex-direction: column;
-	border-radius: var(--vscode-cornerRadius-large);
-	box-shadow: var(--vscode-shadow-lg);
+	border-radius: var(--vectorcode-cornerRadius-large);
+	box-shadow: var(--vectorcode-shadow-lg);
 }
 
 .monaco-editor .suggest-widget.message {
@@ -25,8 +25,8 @@
 	width: 100%;
 	border-style: solid;
 	border-width: 1px;
-	border-color: var(--vscode-editorSuggestWidget-border);
-	background-color: var(--vscode-editorSuggestWidget-background);
+	border-color: var(--vectorcode-editorSuggestWidget-border);
+	background-color: var(--vectorcode-editorSuggestWidget-background);
 }
 
 .monaco-editor.hc-black .suggest-widget,
@@ -47,7 +47,7 @@
 	width: 100%;
 	font-size: 80%;
 	padding: 0 4px 0 4px;
-	border-top: 1px solid var(--vscode-editorSuggestWidget-border);
+	border-top: 1px solid var(--vectorcode-editorSuggestWidget-border);
 	overflow: hidden;
 }
 
@@ -60,7 +60,7 @@
 }
 
 .monaco-editor .suggest-widget.with-status-bar .suggest-status-bar .action-label {
-	color: var(--vscode-editorSuggestWidgetStatus-foreground);
+	color: var(--vectorcode-editorSuggestWidgetStatus-foreground);
 }
 
 .monaco-editor .suggest-widget.with-status-bar .suggest-status-bar .action-item:not(:last-of-type) .action-label {
@@ -97,7 +97,7 @@
 .monaco-editor .suggest-widget .monaco-list {
 	user-select: none;
 	-webkit-user-select: none;
-	border-radius: var(--vscode-cornerRadius-large);
+	border-radius: var(--vectorcode-cornerRadius-large);
 }
 
 /** Styles for each row in the list element **/
@@ -115,11 +115,11 @@
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
-	color: var(--vscode-editorSuggestWidget-selectedForeground);
+	color: var(--vectorcode-editorSuggestWidget-selectedForeground);
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .codicon {
-	color: var(--vscode-editorSuggestWidget-selectedIconForeground);
+	color: var(--vectorcode-editorSuggestWidget-selectedIconForeground);
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents {
@@ -143,7 +143,7 @@
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.focused) > .contents > .main .monaco-icon-label {
-	color: var(--vscode-editorSuggestWidget-foreground);
+	color: var(--vectorcode-editorSuggestWidget-foreground);
 }
 
 .monaco-editor .suggest-widget:not(.frozen) .monaco-highlighted-label .highlight {
@@ -151,11 +151,11 @@
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main .monaco-highlighted-label .highlight {
-	color: var(--vscode-editorSuggestWidget-highlightForeground);
+	color: var(--vectorcode-editorSuggestWidget-highlightForeground);
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused > .contents > .main .monaco-highlighted-label .highlight {
-	color: var(--vscode-editorSuggestWidget-focusHighlightForeground);
+	color: var(--vectorcode-editorSuggestWidget-focusHighlightForeground);
 }
 
 /** ReadMore Icon styles **/
@@ -335,7 +335,7 @@
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row .icon.customcolor .colorspan {
 	margin: 0 0 0 0.3em;
-	border: 0.1em solid #000;
+	border: 0.1em solid var(--vectorcode-editorWidget-border);
 	width: 0.7em;
 	height: 0.7em;
 	display: inline-block;
@@ -351,23 +351,23 @@
 	display: flex;
 	flex-direction: column;
 	cursor: default;
-	color: var(--vscode-editorSuggestWidget-foreground);
+	color: var(--vectorcode-editorSuggestWidget-foreground);
 }
 
 .monaco-editor .suggest-details:focus {
-	border-color: var(--vscode-focusBorder);
+	border-color: var(--vectorcode-focusBorder);
 }
 
 .monaco-editor .suggest-details a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-editor .suggest-details a:hover {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .monaco-editor .suggest-details code {
-	background-color: var(--vscode-textCodeBlock-background);
+	background-color: var(--vectorcode-textCodeBlock-background);
 }
 
 .monaco-editor .suggest-details.no-docs {

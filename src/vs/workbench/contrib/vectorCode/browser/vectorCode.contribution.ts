@@ -5,9 +5,11 @@
 
 import { $, addDisposableListener, append, clearNode, EventType } from '../../../../base/browser/dom.js';
 import { Codicon } from '../../../../base/common/codicons.js';
+import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
+import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -16,6 +18,7 @@ import { IHoverService } from '../../../../platform/hover/browser/hover.js';
 import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
+import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
@@ -24,42 +27,155 @@ import { IWorkspaceContextService } from '../../../../platform/workspace/common/
 import { ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContainer.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
+import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions, ViewContainerLocation } from '../../../common/views.js';
+import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import {
+	IVectorCodeMobileConnectionStatus,
+	IVectorCodeMobileRelayService,
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
-	VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID,
 	VECTOR_CODE_CONTROL_VIEW_ID,
-	VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID,
-	VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
-	VECTOR_CODE_VIEW_CONTAINER_ID
+	VECTOR_CODE_PROJECTS_VIEW_ID,
+	VECTOR_CODE_VIEW_CONTAINER_ID,
+	VectorCodeMobileConnectionState
 } from '../common/vectorCode.js';
 import './vectorCodeActions.js';
 import './vectorCodeMobileRelayService.js';
 import './vectorCodeService.js';
 import './media/vectorCode.css';
 
-const vectorCodeIcon = registerIcon('vector-code-view-icon', Codicon.sparkle, localize('vectorCodeViewIcon', 'View icon of the Vector Code view.'));
-
-interface IVectorCodeControlAction {
-	readonly label: string;
-	readonly commandId: string;
-	readonly icon?: ThemeIcon;
-}
+const vectorCodeIcon = registerIcon('vector-code-view-icon', Codicon.deviceMobile, localize('vectorCodeViewIcon', 'View icon of the phone connection view.'));
 
 interface IVectorCodeStatusCard {
 	readonly card: HTMLElement;
 	readonly status: HTMLElement;
 }
 
-class VectorCodeControlView extends ViewPane {
+class VectorCodeProjectsView extends ViewPane {
 
 	constructor(
 		options: IViewletViewOptions,
 		@ICommandService private readonly commandService: ICommandService,
 		@IVectorCodeWorkbenchService private readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@IKeybindingService keybindingService: IKeybindingService,
+		@IContextMenuService contextMenuService: IContextMenuService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IContextKeyService contextKeyService: IContextKeyService,
+		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
+		@IInstantiationService instantiationService: IInstantiationService,
+		@IOpenerService openerService: IOpenerService,
+		@IThemeService themeService: IThemeService,
+		@IHoverService hoverService: IHoverService,
+	) {
+		super({ ...options, titleMenuId: MenuId.ViewTitle, minimumBodySize: 76, maximumBodySize: 124 }, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, hoverService);
+		this.collapsible = false;
+	}
+
+	protected override renderBody(container: HTMLElement): void {
+		super.renderBody(container);
+		container.classList.add('vector-code-projects-view');
+
+		const root = append(container, $('.vector-code-project-switcher'));
+		const header = append(root, $('.vector-code-project-switcher__header'));
+		const status = append(header, $('.vector-code-project-switcher__status'));
+		const addButton = this.renderIconButton(header, localize('vectorCodeAddProject', 'Add Project'), Codicon.add);
+		this._register(addDisposableListener(addButton, EventType.CLICK, () => {
+			void this.commandService.executeCommand(VECTOR_CODE_ADD_PROJECT_COMMAND_ID);
+		}));
+
+		const projectList = append(root, $('.vector-code-project-switcher__list'));
+		const projectListDisposables = this._register(new DisposableStore());
+		const updateProjects = () => {
+			status.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
+			this.renderProjectList(projectList, projectListDisposables);
+		};
+		updateProjects();
+		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
+		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(updateProjects));
+	}
+
+	private renderProjectList(container: HTMLElement, disposables: DisposableStore): void {
+		disposables.clear();
+		clearNode(container);
+		const projects = this.vectorCodeWorkbenchService.getProjectSummaries();
+		if (!projects.length) {
+			void this.vectorCodeWorkbenchService.switchProject(undefined);
+			const empty = append(container, $('.vector-code-project-switcher__empty'));
+			empty.textContent = localize('vectorCodeProjectsListEmpty', 'Add a project to populate the file tree.');
+			return;
+		}
+
+		let activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri()?.toString();
+		if (!activeProjectUri || !projects.some(project => project.uri.toString() === activeProjectUri)) {
+			activeProjectUri = projects[0].uri.toString();
+			void this.vectorCodeWorkbenchService.switchProject(projects[0].uri);
+		}
+
+		for (const project of projects) {
+			const projectUri = project.uri.toString();
+			const item = document.createElement('button');
+			item.className = 'vector-code-project-switcher__project';
+			item.classList.toggle('vector-code-project-switcher__project--active', projectUri === activeProjectUri);
+			item.type = 'button';
+			const name = append(item, $('.vector-code-project-switcher__project-name'));
+			name.textContent = project.name;
+			const path = append(item, $('.vector-code-project-switcher__project-path'));
+			path.textContent = project.uriLabel;
+			path.title = project.uriLabel;
+			container.appendChild(item);
+
+			disposables.add(addDisposableListener(item, EventType.CLICK, () => {
+				void this.vectorCodeWorkbenchService.switchProject(project.uri);
+			}));
+		}
+	}
+
+	private renderIconButton(container: HTMLElement, title: string, icon: ThemeIcon): HTMLButtonElement {
+		const button = document.createElement('button');
+		button.className = 'vector-code-project-switcher__icon-button';
+		button.type = 'button';
+		button.title = title;
+		button.setAttribute('aria-label', title);
+		const iconNode = append(button, $('.vector-code-project-switcher__icon'));
+		iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
+		container.appendChild(button);
+		return button;
+	}
+}
+
+class VectorCodeLayoutContribution extends Disposable implements IWorkbenchContribution {
+
+	static readonly ID = 'workbench.contrib.vectorCodeLayout';
+
+	constructor(
+		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
+	) {
+		super();
+		this.hideAuxiliaryBar();
+		this._register(this.layoutService.onDidChangePartVisibility(event => {
+			if (event.partId === Parts.AUXILIARYBAR_PART && event.visible) {
+				this.hideAuxiliaryBar();
+			}
+		}));
+	}
+
+	private hideAuxiliaryBar(): void {
+		if (this.layoutService.isVisible(Parts.AUXILIARYBAR_PART)) {
+			this.layoutService.setPartHidden(true, Parts.AUXILIARYBAR_PART);
+		}
+	}
+}
+
+class VectorCodeControlView extends ViewPane {
+
+	constructor(
+		options: IViewletViewOptions,
+		@IClipboardService private readonly clipboardService: IClipboardService,
+		@IVectorCodeMobileRelayService private readonly mobileRelayService: IVectorCodeMobileRelayService,
+		@INotificationService private readonly notificationService: INotificationService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService configurationService: IConfigurationService,
@@ -78,60 +194,115 @@ class VectorCodeControlView extends ViewPane {
 		container.classList.add('vector-code-control-view');
 
 		const root = append(container, $('.vector-code-control'));
-		const header = append(root, $('.vector-code-control__header'));
-		const mark = append(header, $('.vector-code-control__mark'));
-		mark.classList.add(...ThemeIcon.asClassNameArray(Codicon.sparkle));
-		const headerText = append(header, $('.vector-code-control__header-text'));
-		const heading = append(headerText, $('.vector-code-control__heading'));
-		heading.textContent = localize('vectorCodeControlHeading', 'Vector Code');
-		const headerStatus = append(headerText, $('.vector-code-control__header-status'));
-		headerStatus.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
-
 		const grid = append(root, $('.vector-code-control__grid'));
-		const projects = this.renderStatusCard(grid, Codicon.repo, localize('vectorCodeProjects', 'Projects'), this.vectorCodeWorkbenchService.getProjectStatusLabel(), [
-			{ label: localize('vectorCodeAddProject', 'Add Project'), commandId: VECTOR_CODE_ADD_PROJECT_COMMAND_ID, icon: Codicon.add },
-			{ label: localize('vectorCodeOpenExplorer', 'Open Explorer'), commandId: EXPLORER_VIEWLET_ID, icon: Codicon.files }
-		]);
-		const projectList = append(projects.card, $('.vector-code-control__project-list'));
-		const updateProjects = () => {
-			projects.status.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
-			headerStatus.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
-			this.renderProjectList(projectList);
+		this.renderMobileCard(grid);
+	}
+
+	private renderMobileCard(container: HTMLElement): void {
+		const mobileStatus = this.mobileRelayService.getStatus();
+		const mobile = this.renderStatusCard(container, Codicon.deviceMobile, localize('vectorCodeMobile', 'Phone Bridge'), mobileStatus.label);
+		mobile.card.classList.add('vector-code-control__mobile');
+		const fields = append(mobile.card, $('.vector-code-control__fields'));
+		const relayHostInput = this.renderInputField(fields, 'vector-code-mobile-relay-host', localize('vectorCodeMobileRelayHost', 'Relay Host'), localize('vectorCodeMobileRelayHostPlaceholder', 'relay.example.com or 192.168.1.10:8787'), mobileStatus.relayHost);
+		const relayIssuerTokenInput = this.renderInputField(fields, 'vector-code-mobile-relay-issuer-token', localize('vectorCodeMobileRelayIssuerToken', 'Relay Issuer Token'), localize('vectorCodeMobileRelayIssuerTokenPlaceholder', 'Required for the Railway relay'), undefined, 'password');
+		const detail = append(mobile.card, $('.vector-code-control__mobile-detail'));
+		const actions = append(mobile.card, $('.vector-code-control__card-actions'));
+		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Refresh QR'), Codicon.refresh);
+		const pairingContainer = append(mobile.card, $('.vector-code-control__pairing'));
+		const pairingDisposables = this._register(new DisposableStore());
+
+		const renderStatus = (status: IVectorCodeMobileConnectionStatus): void => {
+			pairingDisposables.clear();
+			mobile.status.textContent = status.label;
+			detail.textContent = status.detail;
+			clearNode(pairingContainer);
+			pairingContainer.classList.toggle('vector-code-control__pairing--locked', status.state !== VectorCodeMobileConnectionState.Pairing);
+
+			if (!status.pairing) {
+				return;
+			}
+
+			const pairing = status.pairing;
+			const pairingState = append(pairingContainer, $('.vector-code-control__pairing-state'));
+			pairingState.textContent = status.state === VectorCodeMobileConnectionState.Pairing
+				? localize('vectorCodeMobilePairingScanReady', 'Ready for phone scan')
+				: localize('vectorCodeMobilePairingIssuerNeeded', 'Issuer token needed');
+
+			const qr = document.createElement('img');
+			qr.className = 'vector-code-control__qr';
+			qr.src = pairing.qrDataUrl;
+			qr.alt = localize('vectorCodeMobilePairingQrAlt', 'Mobile Pairing QR Code');
+			pairingContainer.appendChild(qr);
+
+			const meta = append(pairingContainer, $('.vector-code-control__pairing-meta'));
+			const expiresAt = append(meta, $('.vector-code-control__pairing-expires'));
+			expiresAt.textContent = localize('vectorCodeMobilePairingExpires', 'Expires: {0}', new Date(pairing.payload.expiresAt).toLocaleTimeString());
+			const tokenState = append(meta, $('.vector-code-control__pairing-token-state'));
+			tokenState.textContent = pairing.payload.relayToken
+				? localize('vectorCodeMobilePairingRelayTokenMinted', 'Phone relay token: signed')
+				: localize('vectorCodeMobilePairingRelayTokenMissing', 'Phone relay token: not minted');
+
+			const pairingCode = append(pairingContainer, $('.vector-code-control__pairing-code'));
+			pairingCode.textContent = pairing.pairingCode;
+			pairingCode.title = localize('vectorCodeMobilePairingCodeTitle', 'Pairing code');
+
+			const pairingActions = append(pairingContainer, $('.vector-code-control__card-actions'));
+			const copyPayloadButton = this.renderButton(pairingActions, localize('vectorCodeMobileCopyPayload', 'Copy Pairing Data'), Codicon.copy);
+			copyPayloadButton.title = localize('vectorCodeMobileCopyPayloadTitle', 'Copy the raw pairing data for support or debugging.');
+			pairingDisposables.add(addDisposableListener(copyPayloadButton, EventType.CLICK, () => {
+				void this.clipboardService.writeText(pairing.payloadJson);
+			}));
 		};
-		updateProjects();
-		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 
-		this.renderStatusCard(grid, Codicon.terminal, localize('vectorCodeTerminalRouting', 'Terminal'), localize('vectorCodeTerminalRoutingState', 'Ready'), [
-			{ label: localize('vectorCodeSendSelection', 'Send Selection or Line'), commandId: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID, icon: Codicon.run },
-			{ label: localize('vectorCodeOpenProjectTerminal', 'Project Terminal'), commandId: VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID, icon: Codicon.terminal }
-		]);
-		this.renderStatusCard(grid, Codicon.deviceMobile, localize('vectorCodeMobile', 'Mobile'), this.vectorCodeWorkbenchService.getMobileStatusLabel(), [
-			{ label: localize('vectorCodeConnectMobile', 'Connect Mobile'), commandId: VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID, icon: Codicon.plug }
-		]);
-		this.renderStatusCard(grid, Codicon.pulse, localize('vectorCodeRuntime', 'Vector Runtime'), localize('vectorCodeRuntimeState', 'Adapter pending'));
-		this.renderStatusCard(grid, Codicon.checklist, localize('vectorCodeVerification', 'Verification'), localize('vectorCodeVerificationState', 'Check ledger pending'));
+		const renderBusy = () => {
+			pairingDisposables.clear();
+			mobile.status.textContent = localize('vectorCodeMobilePairingCreating', 'Creating QR...');
+			detail.textContent = localize('vectorCodeMobilePairingCreatingDetail', 'Checking the Railway relay and minting a short-lived pairing token when authorized.');
+			clearNode(pairingContainer);
+			pairingContainer.classList.remove('vector-code-control__pairing--locked');
+			const pending = append(pairingContainer, $('.vector-code-control__qr-pending'));
+			pending.textContent = localize('vectorCodeMobilePairingQrPending', 'QR');
+		};
+
+		const refreshPairing = async (notifyOnError: boolean): Promise<void> => {
+			startButton.disabled = true;
+			renderBusy();
+			try {
+				renderStatus(await this.mobileRelayService.startPairing(relayHostInput.value, relayIssuerTokenInput.value));
+			} catch (error) {
+				const message = error instanceof Error ? error.message : localize('vectorCodeMobilePairingFailed', 'Unable to create a QR pairing session.');
+				mobile.status.textContent = localize('vectorCodeMobilePairingFailedShort', 'QR creation failed');
+				detail.textContent = message;
+				clearNode(pairingContainer);
+				if (notifyOnError) {
+					this.notificationService.error(message);
+				}
+			} finally {
+				startButton.disabled = false;
+			}
+		};
+
+		renderStatus(mobileStatus);
+		void refreshPairing(false);
+		this._register(addDisposableListener(startButton, EventType.CLICK, () => {
+			void refreshPairing(true);
+		}));
 	}
 
-	private renderProjectList(container: HTMLElement): void {
-		clearNode(container);
-		const projects = this.vectorCodeWorkbenchService.getProjectSummaries();
-		if (!projects.length) {
-			const empty = append(container, $('.vector-code-control__project-empty'));
-			empty.textContent = localize('vectorCodeProjectsListEmpty', 'Explorer will show projects after folders are added.');
-			return;
-		}
-
-		for (const project of projects) {
-			const item = append(container, $('.vector-code-control__project'));
-			const name = append(item, $('.vector-code-control__project-name'));
-			name.textContent = project.name;
-			const path = append(item, $('.vector-code-control__project-path'));
-			path.textContent = project.uriLabel;
-			path.title = project.uriLabel;
-		}
+	private renderInputField(container: HTMLElement, id: string, labelText: string, placeholder: string, value?: string, type = 'text'): HTMLInputElement {
+		const field = append(container, $('.vector-code-control__field'));
+		const label = append(field, $('label.vector-code-control__label')) as HTMLLabelElement;
+		label.htmlFor = id;
+		label.textContent = labelText;
+		const input = append(field, $('input.vector-code-control__input')) as HTMLInputElement;
+		input.id = id;
+		input.type = type;
+		input.placeholder = placeholder;
+		input.value = value ?? '';
+		return input;
 	}
 
-	private renderStatusCard(container: HTMLElement, icon: ThemeIcon, title: string, status: string, actions: readonly IVectorCodeControlAction[] = []): IVectorCodeStatusCard {
+	private renderStatusCard(container: HTMLElement, icon: ThemeIcon, title: string, status: string): IVectorCodeStatusCard {
 		const card = append(container, $('.vector-code-control__card'));
 		const cardHeader = append(card, $('.vector-code-control__card-header'));
 		const cardIcon = append(cardHeader, $('.vector-code-control__card-icon'));
@@ -141,54 +312,64 @@ class VectorCodeControlView extends ViewPane {
 		const cardStatus = append(card, $('.vector-code-control__card-status'));
 		cardStatus.textContent = status;
 
-		if (actions.length) {
-			const cardActions = append(card, $('.vector-code-control__card-actions'));
-			for (const action of actions) {
-				this.renderCommandButton(cardActions, action);
-			}
-		}
-
 		return { card, status: cardStatus };
 	}
 
-	private renderCommandButton(container: HTMLElement, action: IVectorCodeControlAction): void {
+	private renderButton(container: HTMLElement, labelText: string, icon?: ThemeIcon): HTMLButtonElement {
 		const button = document.createElement('button');
 		button.className = 'vector-code-control__button';
 		button.type = 'button';
-		if (action.icon) {
-			const icon = append(button, $('.vector-code-control__button-icon'));
-			icon.classList.add(...ThemeIcon.asClassNameArray(action.icon));
+		if (icon) {
+			const iconNode = append(button, $('.vector-code-control__button-icon'));
+			iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
 		}
 		const label = append(button, $('.vector-code-control__button-label'));
-		label.textContent = action.label;
+		label.textContent = labelText;
 		container.appendChild(button);
-
-		this._register(addDisposableListener(button, EventType.CLICK, () => {
-			void this.commandService.executeCommand(action.commandId);
-		}));
+		return button;
 	}
 }
 
 const vectorCodeViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
 	id: VECTOR_CODE_VIEW_CONTAINER_ID,
-	title: localize2('vectorCode', 'Vector Code'),
+	title: localize2('vectorCode', 'Phone Connection'),
 	icon: vectorCodeIcon,
 	ctorDescriptor: new SyncDescriptor(ViewPaneContainer, [VECTOR_CODE_VIEW_CONTAINER_ID, { mergeViewWithContainerWhenSingleView: true }]),
 	storageId: VECTOR_CODE_VIEW_CONTAINER_ID,
 	order: 1,
 	openCommandActionDescriptor: {
 		id: VECTOR_CODE_VIEW_CONTAINER_ID,
-		mnemonicTitle: localize({ key: 'miViewVectorCode', comment: ['&& denotes a mnemonic'] }, '&&Vector Code'),
+		mnemonicTitle: localize({ key: 'miViewVectorCode', comment: ['&& denotes a mnemonic'] }, '&&Phone Connection'),
 		order: 1,
 	},
 }, ViewContainerLocation.Sidebar);
 
-Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([{
+const viewContainersRegistry = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry);
+const viewsRegistry = Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry);
+const explorerViewContainer = viewContainersRegistry.get(EXPLORER_VIEWLET_ID);
+
+viewsRegistry.registerViews([{
 	id: VECTOR_CODE_CONTROL_VIEW_ID,
-	name: localize2('vectorCodeControl', 'Control'),
+	name: localize2('vectorCodeControl', 'Phone Connection'),
 	containerIcon: vectorCodeIcon,
 	canToggleVisibility: false,
 	canMoveView: false,
 	ctorDescriptor: new SyncDescriptor(VectorCodeControlView),
 	order: 1,
 }], vectorCodeViewContainer);
+
+if (explorerViewContainer) {
+	viewsRegistry.registerViews([{
+		id: VECTOR_CODE_PROJECTS_VIEW_ID,
+		name: localize2('vectorCodeProjects', 'Projects'),
+		containerIcon: vectorCodeIcon,
+		canToggleVisibility: false,
+		canMoveView: false,
+		ctorDescriptor: new SyncDescriptor(VectorCodeProjectsView),
+		order: -10,
+		weight: 4,
+		collapsed: false,
+	}], explorerViewContainer);
+}
+
+registerWorkbenchContribution2(VectorCodeLayoutContribution.ID, VectorCodeLayoutContribution, WorkbenchPhase.AfterRestored);

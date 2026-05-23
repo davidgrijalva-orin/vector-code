@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-@import '@vscode/codicons/dist/codicon.css';
+@import 'codicon';
 
 .mermaid-zoom-controls {
 	position: absolute;
@@ -13,8 +13,8 @@
 	width: auto;
 	gap: 2px;
 	z-index: 100;
-	background: var(--vscode-editorWidget-background);
-	border: 1px solid var(--vscode-editorWidget-border, transparent);
+	background: var(--vectorcode-editorWidget-background);
+	border: 1px solid var(--vectorcode-editorWidget-border, transparent);
 	border-radius: 6px;
 	padding: 2px;
 }
@@ -37,19 +37,19 @@
 	width: 22px;
 	height: 22px;
 	background: transparent;
-	color: var(--vscode-icon-foreground);
+	color: var(--vectorcode-icon-foreground);
 	border: none;
 	border-radius: 4px;
 	cursor: pointer;
 }
 
 .mermaid-zoom-controls button:hover {
-	background: var(--vscode-toolbar-hoverBackground);
+	background: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .mermaid-zoom-controls button.active {
-	background: var(--vscode-toolbar-activeBackground);
-	color: var(--vscode-focusBorder);
+	background: var(--vectorcode-toolbar-activeBackground);
+	color: var(--vectorcode-focusBorder);
 }
 
 .mermaid-wrapper {
@@ -65,7 +65,7 @@
 .mermaid-wrapper:hover,
 .mermaid-wrapper:focus,
 .mermaid-wrapper:focus-within {
-	border-color: var(--vscode-editorWidget-border);
+	border-color: var(--vectorcode-editorWidget-border);
 }
 
 .mermaid-content {
@@ -91,7 +91,7 @@
 	transform: translateX(-50%);
 	width: 40px;
 	height: 3px;
-	background: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.4));
+	background: var(--vectorcode-editorWidget-border, rgba(128, 128, 128, 0.4));
 	border-radius: 2px;
 	opacity: 0;
 	transition: opacity 0.15s ease-in-out;

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="VectorCode">
+  <g transform="translate(2,8) scale(0.8)">
+    <path fill-rule="evenodd" fill="#0f8f8c" d="M29 13 Q32 7 35 13 L54 47 Q57 53 50 53 L14 53 Q7 53 10 47 Z M30 30 Q32 26 34 30 L44 47 Q46 50 42 50 L22 50 Q18 50 20 47 Z"/>
+  </g>
+  <text x="52" y="43" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="31" letter-spacing="-1.1">
+    <tspan font-weight="700" fill="#101615">Vector</tspan><tspan font-weight="600" fill="#0f8f8c">Code</tspan>
+  </text>
+</svg>

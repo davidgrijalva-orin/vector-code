@@ -19,9 +19,9 @@
 	flex-direction: column;
 	min-width: 320px;
 	max-width: 420px;
-	color: var(--vscode-descriptionForeground);
-	font-size: var(--vscode-bodyFontSize-small);
-	border-radius: var(--vscode-cornerRadius-medium);
+	color: var(--vectorcode-descriptionForeground);
+	font-size: var(--vectorcode-bodyFontSize-small);
+	border-radius: var(--vectorcode-cornerRadius-medium);
 	overflow: hidden;
 }
 
@@ -33,14 +33,13 @@
 	background-position: center;
 	background-size: cover;
 	background-repeat: no-repeat;
-	/* Default: VS Code "copilot free" gradient (recreated with layered radial gradients) */
-	background-color: #0b1020;
+	background-color: var(--vectorcode-shell-bg);
 	background-image:
-		radial-gradient(ellipse 60% 80% at 12% 90%, rgba(132, 204, 22, 0.55), transparent 60%),
-		radial-gradient(ellipse 70% 90% at 25% 30%, rgba(56, 189, 248, 0.45), transparent 65%),
-		radial-gradient(ellipse 90% 100% at 75% 60%, rgba(99, 102, 241, 0.55), transparent 70%),
-		radial-gradient(ellipse 60% 80% at 100% 100%, rgba(30, 27, 75, 0.7), transparent 70%),
-		linear-gradient(135deg, #0b1020 0%, #1e1b4b 100%);
+		linear-gradient(135deg, rgba(55, 214, 194, 0.18), rgba(11, 15, 18, 0) 48%),
+		linear-gradient(90deg, rgba(244, 239, 230, 0.06) 1px, transparent 1px),
+		linear-gradient(0deg, rgba(244, 239, 230, 0.05) 1px, transparent 1px);
+	background-size: auto, 28px 28px, 28px 28px;
+	border-bottom: 1px solid var(--vectorcode-shell-line);
 }
 
 .post-update-widget .banner-close {
@@ -53,16 +52,16 @@
 	align-items: center;
 	justify-content: center;
 	background: transparent;
-	color: var(--vscode-icon-foreground);
+	color: var(--vectorcode-icon-foreground);
 	border: none;
-	border-radius: var(--vscode-cornerRadius-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
 	cursor: pointer;
 	padding: 0;
 	z-index: 1;
 }
 
 .post-update-widget .banner-close:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 /* Body */
@@ -77,9 +76,9 @@
 .post-update-widget .badge {
 	align-self: flex-start;
 	padding: 2px 8px;
-	border-radius: var(--vscode-cornerRadius-small);
-	background-color: var(--vscode-extensionBadge-remoteBackground, var(--vscode-badge-background));
-	color: var(--vscode-extensionBadge-remoteForeground, var(--vscode-badge-foreground));
+	border-radius: var(--vectorcode-cornerRadius-small);
+	background-color: var(--vectorcode-extensionBadge-remoteBackground, var(--vectorcode-badge-background));
+	color: var(--vectorcode-extensionBadge-remoteForeground, var(--vectorcode-badge-foreground));
 	font-size: 11px;
 	font-weight: 600;
 	line-height: 1.4;
@@ -91,7 +90,7 @@
 	font-weight: 600;
 	font-size: 16px;
 	line-height: 1.3;
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 }
 
 /* Features */
@@ -112,7 +111,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 	margin-top: 2px;
 	font-size: 16px;
 }
@@ -125,19 +124,19 @@
 
 .post-update-widget .feature-title {
 	font-weight: 600;
-	color: var(--vscode-foreground);
-	font-size: var(--vscode-bodyFontSize-small);
+	color: var(--vectorcode-foreground);
+	font-size: var(--vectorcode-bodyFontSize-small);
 }
 
 .post-update-widget .feature-description {
-	color: var(--vscode-descriptionForeground);
-	font-size: var(--vscode-bodyFontSize-small);
+	color: var(--vectorcode-descriptionForeground);
+	font-size: var(--vectorcode-bodyFontSize-small);
 	line-height: 1.4;
 }
 
 /* Markdown fallback */
 .post-update-widget .update-markdown {
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 }
 
 /* Button bar */
@@ -151,21 +150,21 @@
 
 .post-update-widget .button-bar button {
 	padding: 8px 16px;
-	border-radius: var(--vscode-cornerRadius-small);
-	font-size: var(--vscode-bodyFontSize-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
+	font-size: var(--vectorcode-bodyFontSize-small);
 	font-weight: 600;
 	cursor: pointer;
 	white-space: nowrap;
 }
 
 .post-update-widget .update-button-secondary {
-	background-color: var(--vscode-button-secondaryBackground);
-	color: var(--vscode-button-secondaryForeground);
-	border: 1px solid var(--vscode-button-border, transparent);
+	background-color: var(--vectorcode-button-secondaryBackground);
+	color: var(--vectorcode-button-secondaryForeground);
+	border: 1px solid var(--vectorcode-button-border, transparent);
 }
 
 .post-update-widget .update-button-secondary:hover {
-	background-color: var(--vscode-button-secondaryHoverBackground);
+	background-color: var(--vectorcode-button-secondaryHoverBackground);
 }
 
 .post-update-widget .update-button-leading-secondary {
@@ -173,13 +172,13 @@
 }
 
 .post-update-widget .update-button-primary {
-	background-color: var(--vscode-button-background);
-	color: var(--vscode-button-foreground);
-	border: 1px solid var(--vscode-button-border, transparent);
+	background-color: var(--vectorcode-button-background);
+	color: var(--vectorcode-button-foreground);
+	border: 1px solid var(--vectorcode-button-border, transparent);
 }
 
 .post-update-widget .update-button-primary:hover {
-	background-color: var(--vscode-button-hoverBackground);
+	background-color: var(--vectorcode-button-hoverBackground);
 }
 
 .post-update-widget .update-button-full-width {

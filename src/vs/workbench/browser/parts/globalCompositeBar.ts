@@ -69,8 +69,8 @@ export class GlobalCompositeBar extends Disposable {
 
 		this.element = $('div');
 		const contextMenuAlignmentOptions = () => ({
-			anchorAlignment: configurationService.getValue('workbench.sideBar.location') === 'left' ? AnchorAlignment.RIGHT : AnchorAlignment.LEFT,
-			anchorAxisAlignment: AnchorAxisAlignment.HORIZONTAL
+			anchorAlignment: AnchorAlignment.RIGHT,
+			anchorAxisAlignment: AnchorAxisAlignment.VERTICAL
 		});
 		this.globalActivityActionBar = this._register(new ActionBar(this.element, {
 			actionViewItemProvider: (action, options) => {
@@ -240,7 +240,10 @@ abstract class AbstractGlobalActivityActionViewItem extends CompositeBarActionVi
 		const { anchorAlignment, anchorAxisAlignment } = this.contextMenuAlignmentOptions() ?? { anchorAlignment: undefined, anchorAxisAlignment: undefined };
 
 		this.contextMenuService.showContextMenu({
-			getAnchor: () => this.label,
+			getAnchor: () => {
+				const anchor = this.label.getBoundingClientRect();
+				return { x: anchor.left, y: anchor.bottom + 7, width: anchor.width, height: 1 };
+			},
 			anchorAlignment,
 			anchorAxisAlignment,
 			getActions: () => actions,
@@ -386,7 +389,6 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 					continue;
 				}
 
-				const canUseMcp = !!provider.authorizationServers?.length;
 				for (const account of accounts) {
 					const manageExtensionsAction = toAction({
 						id: `configureSessions${account.label}`,
@@ -397,15 +399,6 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 
 
 					const providerSubMenuActions: IAction[] = [manageExtensionsAction];
-					if (canUseMcp) {
-						const manageMCPAction = toAction({
-							id: `configureSessions${account.label}`,
-							label: localize('manageTrustedMCPServers', "Manage Trusted MCP Servers"),
-							enabled: true,
-							run: () => this.commandService.executeCommand('_manageTrustedMCPServersForAccount', { providerId, accountLabel: account.label })
-						});
-						providerSubMenuActions.push(manageMCPAction);
-					}
 					if (account.canSignOut) {
 						providerSubMenuActions.push(toAction({
 							id: 'signOut',
@@ -460,15 +453,7 @@ export class AccountsActivityActionViewItem extends AbstractGlobalActivityAction
 					// 	run: () => this.commandService.executeCommand('_manageTrustedExtensionsForAccount', { providerId, accountLabel: account.label })
 					// });
 
-					const providerSubMenuActions: IAction[] = [];
-					const manageMCPAction = toAction({
-						id: `configureSessions${account.label}`,
-						label: localize('manageTrustedMCPServers', "Manage Trusted MCP Servers"),
-						enabled: true,
-						run: () => this.commandService.executeCommand('_manageTrustedMCPServersForAccount', { providerId, accountLabel: account.label })
-					});
-					providerSubMenuActions.push(manageMCPAction);
-					providerSubMenuActions.push(manageDynamicAuthProvidersAction);
+					const providerSubMenuActions: IAction[] = [manageDynamicAuthProvidersAction];
 					if (account.canSignOut) {
 						providerSubMenuActions.push(toAction({
 							id: 'signOut',

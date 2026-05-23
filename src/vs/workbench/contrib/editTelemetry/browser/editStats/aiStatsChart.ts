@@ -13,7 +13,6 @@ export interface ISessionData {
 	typedCharacters: number;
 	aiCharacters: number;
 	acceptedInlineSuggestions: number | undefined;
-	chatEditCount: number | undefined;
 }
 
 export interface IDailyAggregate {
@@ -23,7 +22,6 @@ export interface IDailyAggregate {
 	totalAiChars: number;
 	totalTypedChars: number;
 	inlineSuggestions: number;
-	chatEdits: number;
 	sessionCount: number;
 }
 
@@ -46,7 +44,6 @@ export function aggregateSessionsByDay(sessions: readonly ISessionData[]): IDail
 				totalAiChars: 0,
 				totalTypedChars: 0,
 				inlineSuggestions: 0,
-				chatEdits: 0,
 				sessionCount: 0,
 			};
 			dayMap.set(isoDate, aggregate);
@@ -55,7 +52,6 @@ export function aggregateSessionsByDay(sessions: readonly ISessionData[]): IDail
 		aggregate.totalAiChars += session.aiCharacters;
 		aggregate.totalTypedChars += session.typedCharacters;
 		aggregate.inlineSuggestions += session.acceptedInlineSuggestions ?? 0;
-		aggregate.chatEdits += session.chatEditCount ?? 0;
 		aggregate.sessionCount += 1;
 	}
 

@@ -23,18 +23,14 @@ export interface IEditTelemetryBaseData {
 	suggestionId: EditSuggestionId | undefined;
 
 	feature:
-	/** Code suggestions generated in the sidebar chat panel */
-	| 'sideBarChat'
-	/** Code suggestions generated through inline chat within the editor */
-	| 'inlineChat'
 	/** Inline code completion suggestions */
 	| 'inlineSuggestion'
 	| undefined;
 
 	presentation:
-	/** Code displayed in a code block within chat responses. Only possible when feature is `sideBarChat` or `inlineChat`. */
+	/** Code displayed in a suggested edit block. */
 	| 'codeBlock'
-	/** Code already applied to the editor and highlighted with diff-style formatting. Only possible when feature is `sideBarChat` or `inlineChat`. */
+	/** Code already applied to the editor and highlighted with diff-style formatting. */
 	| 'highlightedEdit'
 	/** Code suggested inline as completion text. Only possible when feature is `inlineSuggestion`. */
 	| 'inlineCompletion'
@@ -52,8 +48,6 @@ export interface IEditTelemetryBaseData {
 	| 'ask'
 	/** User requesting direct code edits or modifications */
 	| 'edit'
-	/** AI agent mode for autonomous task completion and multi-file edits */
-	| 'agent'
 	/** Custom mode defined by extensions or user settings */
 	| 'custom'
 	/** Applying a previously suggested code block */
@@ -63,7 +57,7 @@ export interface IEditTelemetryBaseData {
 
 	modelId: string | undefined; // e.g. 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'
 
-	/** Source controlled id. For agent edits (sideBarChat/highlightedEdit) this is the chat request id. */
+	/** Source-controlled id for edit attribution. */
 	sourceRequestId: string | undefined;
 }
 

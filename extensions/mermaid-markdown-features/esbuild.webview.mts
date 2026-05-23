@@ -8,7 +8,7 @@ import { run } from '../esbuild-webview-common.mts';
 
 const rootDir = import.meta.dirname;
 const previewSrcDir = path.join(rootDir, 'preview-src');
-const chatSrcDir = path.join(previewSrcDir, 'chat');
+const webviewSrcDir = path.join(previewSrcDir, 'webview');
 
 const cssTextPlugin: Plugin = {
 	name: 'css-text',
@@ -19,6 +19,9 @@ const cssTextPlugin: Plugin = {
 				bundle: true,
 				minify: true,
 				write: false,
+				alias: {
+					codicon: path.join(rootDir, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css'),
+				},
 				loader: {
 					'.ttf': 'dataurl',
 					'.woff': 'dataurl',
@@ -43,15 +46,15 @@ const mermaidMarkdownBuildOptions: Partial<esbuild.BuildOptions> = {
 };
 
 await Promise.all([
-	// Chat
+	// Editor webview
 	run({
 		entryPoints: {
-			'index': path.join(chatSrcDir, 'index.ts'),
-			'index-editor': path.join(chatSrcDir, 'index-editor.ts'),
+			'index': path.join(webviewSrcDir, 'index.ts'),
+			'index-editor': path.join(webviewSrcDir, 'index-editor.ts'),
 			'codicon': path.join(rootDir, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css'),
 		},
-		srcDir: chatSrcDir,
-		outdir: path.join(rootDir, 'chat-webview-out'),
+		srcDir: webviewSrcDir,
+		outdir: path.join(rootDir, 'webview-out'),
 		additionalOptions: {
 			loader: {
 				'.ttf': 'dataurl',

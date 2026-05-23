@@ -22,13 +22,13 @@
 }
 
 .icon-select-box .icon-select-icons-container > .icon-container.focused {
-	background-color: var(--vscode-quickInputList-focusBackground);
-	color: var(--vscode-quickInputList-focusForeground);
+	background-color: var(--vectorcode-quickInputList-focusBackground);
+	color: var(--vectorcode-quickInputList-focusForeground);
 }
 
 .icon-select-box .icon-select-icons-container > .icon-container:hover:not(.focused) {
-	background-color: var(--vscode-toolbar-hoverBackground);
-	color: var(--vscode-list-hoverForeground)
+	background-color: var(--vectorcode-toolbar-hoverBackground);
+	color: var(--vectorcode-list-hoverForeground)
 }
 
 .icon-select-box .icon-select-id-container .icon-select-id-label {
@@ -38,6 +38,6 @@
 }
 
 .icon-select-box .icon-select-id-container .icon-select-id-label .highlight {
-	color: var(--vscode-list-highlightForeground);
+	color: var(--vectorcode-list-highlightForeground);
 	font-weight: bold;
 }

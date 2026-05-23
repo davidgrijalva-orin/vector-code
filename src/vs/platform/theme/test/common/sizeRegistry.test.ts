@@ -33,14 +33,14 @@ suite('Size Registry', () => {
 	});
 
 	test('asCssVariableName should convert identifier to CSS variable name', () => {
-		assert.strictEqual(asCssVariableName('fontSize'), '--vscode-fontSize');
-		assert.strictEqual(asCssVariableName('corner.radius'), '--vscode-corner-radius');
-		assert.strictEqual(asCssVariableName('font.size.large'), '--vscode-font-size-large');
+		assert.strictEqual(asCssVariableName('fontSize'), '--vectorcode-fontSize');
+		assert.strictEqual(asCssVariableName('corner.radius'), '--vectorcode-corner-radius');
+		assert.strictEqual(asCssVariableName('font.size.large'), '--vectorcode-font-size-large');
 	});
 
 	test('asCssVariable should create CSS variable reference', () => {
-		assert.strictEqual(asCssVariable('fontSize'), 'var(--vscode-fontSize)');
-		assert.strictEqual(asCssVariable('cornerRadius'), 'var(--vscode-cornerRadius)');
+		assert.strictEqual(asCssVariable('fontSize'), 'var(--vectorcode-fontSize)');
+		assert.strictEqual(asCssVariable('cornerRadius'), 'var(--vectorcode-cornerRadius)');
 	});
 
 	test('deregisterSize should remove a size token', () => {

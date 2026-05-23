@@ -9,7 +9,7 @@ import { ISessionData } from '../../../contrib/editTelemetry/browser/editStats/a
 import { Random } from '../../../../editor/test/common/core/random.js';
 import { ComponentFixtureContext, defineComponentFixture, defineThemedFixtureGroup } from './fixtureUtils.js';
 
-export default defineThemedFixtureGroup({ path: 'chat/' }, {
+export default defineThemedFixtureGroup({ path: 'aiStats/' }, {
 	AiStatsHover: defineComponentFixture({
 		labels: { kind: 'screenshot' },
 		render: (context) => renderAiStatsHover({ ...context, data: createSampleDataWithSessions() }),
@@ -41,7 +41,6 @@ function createSampleDataWithSessions(): IAiStatsHoverData {
 				typedCharacters: random.nextIntRange(100, 600),
 				aiCharacters: random.nextIntRange(200, 1000),
 				acceptedInlineSuggestions: random.nextIntRange(1, 16),
-				chatEditCount: random.nextIntRange(0, 5),
 			});
 		}
 	}
@@ -77,10 +76,10 @@ interface RenderAiStatsOptions extends ComponentFixtureContext {
 function renderAiStatsHover({ container, disposableStore, data }: RenderAiStatsOptions): void {
 	container.style.width = '320px';
 	container.style.padding = '8px';
-	container.style.backgroundColor = 'var(--vscode-editorHoverWidget-background)';
-	container.style.border = '1px solid var(--vscode-editorHoverWidget-border)';
+	container.style.backgroundColor = 'var(--vectorcode-editorHoverWidget-background)';
+	container.style.border = '1px solid var(--vectorcode-editorHoverWidget-border)';
 	container.style.borderRadius = '4px';
-	container.style.color = 'var(--vscode-editorHoverWidget-foreground)';
+	container.style.color = 'var(--vectorcode-editorHoverWidget-foreground)';
 
 	const hover = createAiStatsHover({
 		data,

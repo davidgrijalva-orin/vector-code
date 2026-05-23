@@ -33,8 +33,8 @@ class DefaultAccountProvider implements IDefaultAccountProvider {
 
 	readonly onDidChangeDefaultAccount = Event.None;
 	readonly onDidChangePolicyData = Event.None;
-	readonly copilotTokenInfo = null;
-	readonly onDidChangeCopilotTokenInfo = Event.None;
+	readonly accountTokenInfo = null;
+	readonly onDidChangeAccountTokenInfo = Event.None;
 
 	constructor(
 		readonly defaultAccount: IDefaultAccount,
@@ -220,7 +220,7 @@ suite('AccountPolicyService', () => {
 			chat_enabled: true,
 			assigned_date: '',
 			can_signup_for_limited: false,
-			copilot_plan: 'pro',
+			plan: 'pro',
 			organization_login_list: ['ApprovedOrg'],
 			analytics_tracking_id: '',
 		},
@@ -233,7 +233,7 @@ suite('AccountPolicyService', () => {
 			chat_enabled: true,
 			assigned_date: '',
 			can_signup_for_limited: false,
-			copilot_plan: 'pro',
+			plan: 'pro',
 			organization_login_list: ['SomeOtherOrg'],
 			analytics_tracking_id: '',
 		},

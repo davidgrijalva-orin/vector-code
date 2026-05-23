@@ -203,7 +203,7 @@ class CodeMain {
 		services.set(IStateService, stateService);
 
 		// User Data Profiles
-		const userDataProfilesMainService = new UserDataProfilesMainService(stateService, uriIdentityService, environmentMainService, fileService, logService, productService);
+		const userDataProfilesMainService = new UserDataProfilesMainService(stateService, uriIdentityService, environmentMainService, fileService, logService);
 		services.set(IUserDataProfilesMainService, userDataProfilesMainService);
 
 		// Use FileUserDataProvider for user data to
@@ -555,24 +555,6 @@ class CodeMain {
 			if (waitMarkerFilePath) {
 				addArg(process.argv, '--waitMarkerFilePath', waitMarkerFilePath);
 				args.waitMarkerFilePath = waitMarkerFilePath;
-			}
-		}
-
-		if (args.chat) {
-			if (args.chat['new-window']) {
-				// Apply `--new-window` flag to the main arguments
-				args['new-window'] = true;
-			} else if (args.chat['reuse-window']) {
-				// Apply `--reuse-window` flag to the main arguments
-				args['reuse-window'] = true;
-			} else if (args.chat['profile']) {
-				// Apply `--profile` flag to the main arguments
-				args['profile'] = args.chat['profile'];
-			} else {
-				// Unless we are started with specific instructions about
-				// new windows or reusing existing ones, always take the
-				// current working directory as workspace to open.
-				args._ = [cwd()];
 			}
 		}
 

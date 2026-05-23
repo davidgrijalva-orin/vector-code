@@ -22,7 +22,7 @@ import { createInstantHoverDelegate } from '../hover/hoverDelegateFactory.js';
 const ACTION_MIN_WIDTH = 20; /* 20px codicon */
 const ACTION_PADDING = 4; /* 4px padding */
 
-const ACTION_MIN_WIDTH_VAR = '--vscode-toolbar-action-min-width';
+const ACTION_MIN_WIDTH_VAR = '--vectorcode-toolbar-action-min-width';
 
 export interface IToolBarResponsiveBehaviorOptions {
 	readonly enabled: boolean;

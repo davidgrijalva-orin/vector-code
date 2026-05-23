@@ -19,7 +19,7 @@ import { ThemeIcon } from '../../../../base/common/themables.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { debugStackframe, debugStackframeFocused } from './debugIcons.js';
 import { IDebugService, IStackFrame } from '../common/debug.js';
-import './media/callStackEditorContribution.css';
+import '../../vectorCode/browser/media/vectorCallStackEditorContribution.css';
 
 export const topStackFrameColor = registerColor('editor.stackFrameHighlightBackground', { dark: '#ffff0033', light: '#ffff6673', hcDark: '#ffff0033', hcLight: '#ffff6673' }, localize('topStackFrameLineHighlight', 'Background color for the highlight of line at the top stack frame position.'));
 export const focusedStackFrameColor = registerColor('editor.focusedStackFrameHighlightBackground', { dark: '#7abd7a4d', light: '#cee7ce73', hcDark: '#7abd7a4d', hcLight: '#cee7ce73' }, localize('focusedStackFrameLineHighlight', 'Background color for the highlight of line at focused stack frame position.'));

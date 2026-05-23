@@ -5,13 +5,12 @@
 
 import { observableValue } from '../../../../../base/common/observable.js';
 import { mock } from '../../../../../base/test/common/mock.js';
-// eslint-disable-next-line local/code-import-patterns
-import { CodeReviewStateKind, ICodeReviewService, ICodeReviewState, IPRReviewState, PRReviewStateKind } from '../../../../../sessions/contrib/codeReview/browser/codeReviewService.js';
+import { CodeReviewStateKind, ICodeReviewService, PRReviewStateKind } from '../fixtureUtils.js';
 
 export function createMockCodeReviewService(): ICodeReviewService {
 	return new class extends mock<ICodeReviewService>() {
-		private readonly _reviewState = observableValue<ICodeReviewState>('fixture.reviewState', { kind: CodeReviewStateKind.Idle });
-		private readonly _prReviewState = observableValue<IPRReviewState>('fixture.prReviewState', { kind: PRReviewStateKind.None });
+		private readonly _reviewState = observableValue('fixture.reviewState', { kind: CodeReviewStateKind.Idle });
+		private readonly _prReviewState = observableValue('fixture.prReviewState', { kind: PRReviewStateKind.None });
 
 		override getReviewState() {
 			return this._reviewState;

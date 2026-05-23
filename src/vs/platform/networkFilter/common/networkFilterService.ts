@@ -20,10 +20,10 @@ export const IAgentNetworkFilterService = createDecorator<IAgentNetworkFilterSer
 export const AgentNetworkFilterFetchWebToolName = 'fetchWebTool';
 
 /**
- * Service that filters network requests made by agent tools (fetch tool,
+ * Service that filters network requests made by workbench tools (fetch tool,
  * integrated browser) based on the configured allowed/denied domain lists.
  *
- * Filtering is active for all callers when the `chat.agent.networkFilter` setting
+ * Filtering is active for all callers when the `vectorcode.networkFilter` setting
  * is enabled. When only sandboxing is enabled, filtering is active for fetch web
  * page tool requests. This has to be revisited for integrated browser requests.
  * When both domain lists are empty, all domains are denied.
@@ -83,10 +83,7 @@ export class AgentNetworkFilterService extends Disposable implements IAgentNetwo
 			) {
 				this.readConfiguration();
 				this.onDidChangeEmitter.fire();
-			} else if (
-				e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxEnabled) ||
-				e.affectsConfiguration(AgentSandboxSettingId.DeprecatedAgentSandboxEnabled)
-			) {
+			} else if (e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxEnabled)) {
 				void this.updateTerminalSandboxEnabled();
 			}
 		}));

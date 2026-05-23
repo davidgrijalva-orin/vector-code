@@ -38,14 +38,14 @@ export interface ITerminalSandboxRuntimeInfo {
 	 * When true the engine prefixes the wrapped command with `ELECTRON_RUN_AS_NODE=1`
 	 * so the Electron binary acts as a Node.js executable. Set by hosts that resolve
 	 * an Electron-based exec path (the local workbench); leave undefined / false when
-	 * `execPath` already points at a real `node` binary (remote, agent host).
+	 * `execPath` already points at a real `node` binary in a remote environment.
 	 */
 	runAsNode?: boolean;
 }
 
 /**
  * Host adapter that supplies the engine with environment/workspace data the
- * platform layer cannot resolve on its own. Hosts (workbench, agent host)
+ * platform layer cannot resolve on its own. Hosts construct this adapter
  * implement this to bridge their per-environment services (`IRemoteAgentService`,
  * `IWorkspaceContextService`, `IEnvironmentService`, `IProductService`,
  * `ISandboxHelperService`, …) into the engine.
@@ -78,7 +78,7 @@ export interface ITerminalSandboxEngineHost {
  * commands in a sandbox runtime: enabledness checks, command-line wrapping,
  * sandbox-config generation, network-domain extraction and prerequisite checks.
  *
- * Hosts (workbench / agent host) construct an engine with a host adapter that
+ * Hosts construct an engine with a host adapter that
  * supplies workspace/remote-specific data, then forward their public service
  * methods to the engine and add their own host-specific concerns
  * (chat elicitation, lifecycle hooks, …) on top.
@@ -146,8 +146,8 @@ export class TerminalSandboxEngine extends Disposable {
 	}
 
 	getResolvedNetworkDomains(): ITerminalSandboxResolvedNetworkDomains {
-		const allowedDomains = this._getSettingValue<string[]>(AgentNetworkDomainSettingId.AllowedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedSandboxAllowedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedOldAllowedNetworkDomains) ?? [];
-		const deniedDomains = this._getSettingValue<string[]>(AgentNetworkDomainSettingId.DeniedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedSandboxDeniedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedOldDeniedNetworkDomains) ?? [];
+		const allowedDomains = this._getSettingValue<string[]>(AgentNetworkDomainSettingId.AllowedNetworkDomains) ?? [];
+		const deniedDomains = this._getSettingValue<string[]>(AgentNetworkDomainSettingId.DeniedNetworkDomains) ?? [];
 		return { allowedDomains, deniedDomains };
 	}
 
@@ -216,7 +216,7 @@ export class TerminalSandboxEngine extends Disposable {
 			: sandboxRuntimeCommand;
 		// On workbench Electron builds the exec path points at the Electron binary, so we
 		// prefix `ELECTRON_RUN_AS_NODE=1` to make it behave as Node.js. Remote workbench and
-		// the agent host already resolve a real `node` binary and the host clears the flag.
+		// Remote environments already resolve a real `node` binary and the host clears the flag.
 		if (this._runAsNode) {
 			return {
 				command: `ELECTRON_RUN_AS_NODE=1 ${wrappedCommand}`,
@@ -319,17 +319,10 @@ export class TerminalSandboxEngine extends Disposable {
 			return true; // initial run-and-subscribe
 		}
 		return e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxEnabled)
-			|| e.affectsConfiguration(AgentSandboxSettingId.DeprecatedAgentSandboxEnabled)
 			|| e.affectsConfiguration(AgentNetworkDomainSettingId.AllowedNetworkDomains)
-			|| e.affectsConfiguration(AgentNetworkDomainSettingId.DeprecatedSandboxAllowedNetworkDomains)
-			|| e.affectsConfiguration(AgentNetworkDomainSettingId.DeprecatedOldAllowedNetworkDomains)
 			|| e.affectsConfiguration(AgentNetworkDomainSettingId.DeniedNetworkDomains)
-			|| e.affectsConfiguration(AgentNetworkDomainSettingId.DeprecatedSandboxDeniedNetworkDomains)
-			|| e.affectsConfiguration(AgentNetworkDomainSettingId.DeprecatedOldDeniedNetworkDomains)
 			|| e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxLinuxFileSystem)
-			|| e.affectsConfiguration(AgentSandboxSettingId.DeprecatedAgentSandboxLinuxFileSystem)
 			|| e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxMacFileSystem)
-			|| e.affectsConfiguration(AgentSandboxSettingId.DeprecatedAgentSandboxMacFileSystem)
 			|| e.affectsConfiguration(AgentSandboxSettingId.AgentSandboxAdvancedRuntime);
 	}
 
@@ -505,10 +498,10 @@ export class TerminalSandboxEngine extends Disposable {
 
 		const allowNetwork = await this.isSandboxAllowNetworkEnabled();
 		const linuxFileSystemSetting = this._os === OperatingSystem.Linux
-			? this._getSettingValue<ITerminalSandboxFileSystemSetting>(AgentSandboxSettingId.AgentSandboxLinuxFileSystem, AgentSandboxSettingId.DeprecatedAgentSandboxLinuxFileSystem) ?? {}
+			? this._getSettingValue<ITerminalSandboxFileSystemSetting>(AgentSandboxSettingId.AgentSandboxLinuxFileSystem) ?? {}
 			: {};
 		const macFileSystemSetting = this._os === OperatingSystem.Macintosh
-			? this._getSettingValue<ITerminalSandboxFileSystemSetting>(AgentSandboxSettingId.AgentSandboxMacFileSystem, AgentSandboxSettingId.DeprecatedAgentSandboxMacFileSystem) ?? {}
+			? this._getSettingValue<ITerminalSandboxFileSystemSetting>(AgentSandboxSettingId.AgentSandboxMacFileSystem) ?? {}
 			: {};
 		const runtimeSetting = this._getSettingValue<Record<string, unknown>>(AgentSandboxSettingId.AgentSandboxAdvancedRuntime) ?? {};
 		const commandRuntimeSetting = getTerminalSandboxRuntimeConfigurationForCommands(this._os, this._commandAllowListCommandDetails);
@@ -663,7 +656,7 @@ export class TerminalSandboxEngine extends Disposable {
 	}
 
 	private _getSandboxConfiguredEnabledValue(): AgentSandboxEnabledValue | boolean {
-		return this._getSettingValue<AgentSandboxEnabledValue | boolean>(AgentSandboxSettingId.AgentSandboxEnabled, AgentSandboxSettingId.DeprecatedAgentSandboxEnabled) ?? AgentSandboxEnabledValue.Off;
+		return this._getSettingValue<AgentSandboxEnabledValue | boolean>(AgentSandboxSettingId.AgentSandboxEnabled) ?? AgentSandboxEnabledValue.Off;
 	}
 
 	private _isSandboxAllowNetworkConfigured(): boolean {
@@ -674,25 +667,8 @@ export class TerminalSandboxEngine extends Disposable {
 		return this._getSettingValue<boolean>(AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands) === true;
 	}
 
-	private _getSettingValue<T>(settingId: AgentSandboxSettingId | AgentNetworkDomainSettingId, ...deprecatedSettingIds: (AgentSandboxSettingId | AgentNetworkDomainSettingId)[]): T | undefined {
+	private _getSettingValue<T>(settingId: AgentSandboxSettingId | AgentNetworkDomainSettingId): T | undefined {
 		const setting = this._configurationService.inspect<T>(settingId);
-		if (setting.userValue !== undefined) {
-			return setting.value;
-		}
-		if (deprecatedSettingIds.length > 0) {
-			const userConfiguredKeys = this._configurationService.keys().user;
-			for (const deprecatedId of deprecatedSettingIds) {
-				const deprecated = this._configurationService.inspect<T>(deprecatedId);
-				// Some deprecated settings are parent keys of newer settings, for example
-				// `chat.agent.sandbox` and `chat.agent.sandbox.fileSystem.linux`. Inspecting the
-				// parent key can return the namespace object even when the deprecated key itself
-				// was not configured, so only fall back when the exact deprecated key exists.
-				if (deprecated.userValue !== undefined && userConfiguredKeys.includes(deprecatedId)) {
-					this._logService.warn(`TerminalSandboxEngine: Using deprecated setting ${deprecatedId} because ${settingId} is not set. Please update your settings to use ${settingId} instead.`);
-					return deprecated.value;
-				}
-			}
-		}
 		return setting.value;
 	}
 }

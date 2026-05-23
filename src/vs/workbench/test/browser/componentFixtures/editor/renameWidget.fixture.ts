@@ -38,7 +38,7 @@ function renderRenameWidget(options: RenameFixtureOptions): void {
 	const { container, disposableStore, theme } = options;
 	container.style.width = '500px';
 	container.style.height = '280px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
 

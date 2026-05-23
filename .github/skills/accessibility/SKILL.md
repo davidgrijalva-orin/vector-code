@@ -58,7 +58,7 @@ An accessibility help dialog tells the user what the feature does, which keyboar
 
 ### Example skeleton
 
-The simplest approach is to return an `AccessibleContentProvider` directly from `getProvider()`. This is the most common pattern in the codebase (used by chat, inline chat, quick chat, etc.):
+The simplest approach is to return an `AccessibleContentProvider` directly from `getProvider()`. This is the most common pattern in the codebase for focused help surfaces:
 
 ```ts
 import { AccessibleViewType, AccessibleContentProvider, AccessibleViewProviderId } from '../../../../platform/accessibility/browser/accessibleView.js';
@@ -300,4 +300,3 @@ All interactive UI elements must have appropriate ARIA attributes so screen read
 - `src/vs/workbench/contrib/accessibility/browser/accessibilityConfiguration.ts` — `AccessibilityVerbositySettingId`, verbosity setting registration
 - `src/vs/platform/accessibilitySignal/browser/accessibilitySignalService.ts` — `IAccessibilitySignalService`, `AccessibilitySignal`
 - `src/vs/base/browser/ui/aria/aria.ts` — `alert()`, `status()` for ARIA live region announcements
-

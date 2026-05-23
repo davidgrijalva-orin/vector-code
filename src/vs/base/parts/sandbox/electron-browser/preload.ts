@@ -38,9 +38,9 @@
 	let configuration: ISandboxConfiguration | undefined = undefined;
 
 	const resolveConfiguration: Promise<ISandboxConfiguration> = (async () => {
-		const windowConfigIpcChannel = parseArgv('vscode-window-config');
+		const windowConfigIpcChannel = parseArgv('vectorcode-window-config');
 		if (!windowConfigIpcChannel) {
-			throw new Error('Preload: did not find expected vscode-window-config in renderer process arguments list.');
+			throw new Error('Preload: did not find expected vectorcode-window-config in renderer process arguments list.');
 		}
 
 		try {
@@ -62,7 +62,7 @@
 
 			return resolvedConfiguration;
 		} catch (error) {
-			throw new Error(`Preload: unable to fetch vscode-window-config: ${error}`);
+			throw new Error(`Preload: unable to fetch vectorcode-window-config: ${error}`);
 		}
 	})();
 

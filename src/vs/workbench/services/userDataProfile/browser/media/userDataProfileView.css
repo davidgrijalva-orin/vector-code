@@ -19,16 +19,16 @@
 }
 
 .monaco-workbench .pane > .pane-body > .profile-view-message-container a {
-	color: var(--vscode-textLink-foreground)
+	color: var(--vectorcode-textLink-foreground)
 }
 
 .monaco-workbench .pane > .pane-body > .profile-view-message-container a:hover {
 	text-decoration: underline;
-	color: var(--vscode-textLink-activeForeground)
+	color: var(--vectorcode-textLink-activeForeground)
 }
 
 .monaco-workbench .pane > .pane-body > .profile-view-message-container a:active {
-	color: var(--vscode-textLink-activeForeground)
+	color: var(--vectorcode-textLink-activeForeground)
 }
 
 .monaco-workbench .pane > .pane-body > .profile-view-message-container.hide {
@@ -82,9 +82,9 @@
 }
 
 .profile-edit-widget > .profile-icon-container > .profile-icon:hover {
-	outline: 1px dashed var(--vscode-toolbar-hoverOutline);
+	outline: 1px dashed var(--vectorcode-toolbar-hoverOutline);
 	outline-offset: -1px;
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .profile-edit-widget > .profile-type-container {

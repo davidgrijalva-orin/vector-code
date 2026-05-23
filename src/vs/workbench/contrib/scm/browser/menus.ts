@@ -7,7 +7,7 @@ import { IAction } from '../../../../base/common/actions.js';
 import { equals } from '../../../../base/common/arrays.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { DisposableStore, IDisposable, dispose } from '../../../../base/common/lifecycle.js';
-import './media/scm.css';
+import '../../vectorCode/browser/media/vectorScm.css';
 import { localize } from '../../../../nls.js';
 import { getActionBarActions } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { IMenu, IMenuService, MenuId, MenuRegistry } from '../../../../platform/actions/common/actions.js';

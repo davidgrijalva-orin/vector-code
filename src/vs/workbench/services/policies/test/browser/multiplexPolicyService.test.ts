@@ -39,8 +39,8 @@ class DefaultAccountProvider implements IDefaultAccountProvider {
 
 	readonly onDidChangeDefaultAccount = Event.None;
 	readonly onDidChangePolicyData = Event.None;
-	readonly copilotTokenInfo = null;
-	readonly onDidChangeCopilotTokenInfo = Event.None;
+	readonly accountTokenInfo = null;
+	readonly onDidChangeAccountTokenInfo = Event.None;
 
 	constructor(
 		readonly defaultAccount: IDefaultAccount,

@@ -4,36 +4,1073 @@
  *--------------------------------------------------------------------------------------------*/
 
 .vector-code-control-view {
+	background: #0b0f12;
+	color: #f4efe6;
 	height: 100%;
-	overflow: auto;
+	min-height: 0;
+	overflow-x: hidden !important;
+	overflow-y: auto !important;
+	scrollbar-gutter: stable;
+}
+
+:root,
+body,
+.monaco-workbench {
+	--vectorcode-shell-bg: #0b0f12;
+	--vectorcode-shell-panel: #111719;
+	--vectorcode-shell-raised: #171d21;
+	--vectorcode-shell-line: rgba(244, 239, 230, 0.12);
+	--vectorcode-shell-text: #f4efe6;
+	--vectorcode-shell-muted: #aeb8b4;
+	--vectorcode-shell-accent: #37d6c2;
+	--vectorcode-shell-warn: #0f8f8c;
+	--vectorcode-focus-ring: rgba(55, 214, 194, 0.86);
+	--vectorcode-contrast-border: rgba(244, 239, 230, 0.24);
+	--vectorcode-hover-bg: rgba(244, 239, 230, 0.07);
+	--vectorcode-selection-active: rgba(55, 214, 194, 0.22);
+	--vectorcode-selection-inactive: rgba(244, 239, 230, 0.11);
+	--vectorcode-overlayBackground: rgba(11, 15, 18, 0.78);
+	--vectorcode-input-bg: #0d1214;
+	--vectorcode-input-border: rgba(244, 239, 230, 0.16);
+	--vectorcode-input-text: #f4efe6;
+	--vectorcode-input-disabledBackground: rgba(244, 239, 230, 0.08);
+	--vectorcode-findInput-highlightBackground: rgba(55, 214, 194, 0.35);
+	--vectorcode-placeholder: rgba(244, 239, 230, 0.45);
+	--vectorcode-link: #65d9cc;
+	--vectorcode-link-hover: #9df0e6;
+	--vectorcode-disabled: rgba(244, 239, 230, 0.34);
+	--vectorcode-badge-bg: rgba(55, 214, 194, 0.16);
+	--vectorcode-badge-text: #bdf8f1;
+	--vectorcode-info-bg: rgba(91, 167, 255, 0.13);
+	--vectorcode-info-border: rgba(91, 167, 255, 0.45);
+	--vectorcode-info-text: #c4ddff;
+	--vectorcode-warning-bg: rgba(227, 196, 105, 0.14);
+	--vectorcode-warning-border: rgba(227, 196, 105, 0.5);
+	--vectorcode-warning-text: #f4dd9d;
+	--vectorcode-error-bg: rgba(255, 107, 107, 0.14);
+	--vectorcode-error-border: rgba(255, 107, 107, 0.5);
+	--vectorcode-error-text: #ffc8c8;
+	--vectorcode-button-primary-bg: #2bc7b7;
+	--vectorcode-button-primary-hover-bg: #38ddcc;
+	--vectorcode-button-primary-text: #061112;
+	--vectorcode-button-secondary-bg: rgba(244, 239, 230, 0.08);
+	--vectorcode-button-secondary-hover-bg: rgba(244, 239, 230, 0.13);
+	--vectorcode-button-secondary-text: #f4efe6;
+	--vectorcode-keybinding-bg: var(--vectorcode-button-secondary-bg);
+	--vectorcode-keybinding-border: rgba(244, 239, 230, 0.18);
+	--vectorcode-keybinding-bottom-border: rgba(0, 0, 0, 0.45);
+	--vectorcode-gutter-bg: #0b0f12;
+	--vectorcode-gutter-added: #37d6c2;
+	--vectorcode-gutter-added-secondary: rgba(55, 214, 194, 0.44);
+	--vectorcode-gutter-modified: #e3c469;
+	--vectorcode-gutter-modified-secondary: rgba(227, 196, 105, 0.45);
+	--vectorcode-gutter-deleted: #ff6b6b;
+	--vectorcode-gutter-deleted-secondary: rgba(255, 107, 107, 0.46);
+	--vectorcode-inline-value-bg: rgba(55, 214, 194, 0.12);
+	--vectorcode-inline-value-text: #bdf8f1;
+	--vectorcode-stack-frame-bg: rgba(227, 196, 105, 0.18);
+	--vectorcode-stack-frame-focused-bg: rgba(55, 214, 194, 0.2);
+	--vectorcode-stackframe-dot-content: "\eb8a";
+	--vectorcode-icon-font-family: codicon;
+	--vectorcode-diff-header-bg: rgba(244, 239, 230, 0.05);
+	--vectorcode-filter-match-bg: rgba(55, 214, 194, 0.18);
+	--vectorcode-filter-match-border: rgba(55, 214, 194, 0.58);
+	--vectorcode-graph-hover-bg: rgba(244, 239, 230, 0.08);
+	--vectorcode-scroll-shadow: rgba(0, 0, 0, 0.38);
+	--vectorcode-corner-small: 5px;
+	--vectorcode-repl-font-family: var(--monaco-monospace-font);
+	--vectorcode-repl-font-size: 13px;
+	--vectorcode-repl-font-size-for-twistie: 13px;
+	--vectorcode-repl-line-height: 20px;
+	/* Vector compatibility tokens for migrated workbench CSS. */
+	--vectorcode-action-item-auto-timeout: var(--vectorcode-shell-text);
+	--vectorcode-activityBar-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-activityBar-background: #081012;
+	--vectorcode-activityBar-foreground: var(--vectorcode-shell-text);
+	--vectorcode-activityBar-inactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-activityBarBadge-background: var(--vectorcode-badge-bg);
+	--vectorcode-activityBarBadge-foreground: var(--vectorcode-shell-text);
+	--vectorcode-activityBarTop-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-activityBarTop-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-activityBarTop-background: #081012;
+	--vectorcode-activityBarTop-foreground: var(--vectorcode-shell-text);
+	--vectorcode-badge-background: var(--vectorcode-badge-bg);
+	--vectorcode-badge-foreground: var(--vectorcode-shell-text);
+	--vectorcode-banner-background: var(--vectorcode-shell-bg);
+	--vectorcode-banner-foreground: var(--vectorcode-shell-text);
+	--vectorcode-banner-iconForeground: var(--vectorcode-shell-text);
+	--vectorcode-bodyFontSize: 13px;
+	--vectorcode-bodyFontSize-small: 12px;
+	--vectorcode-browser-border: var(--vectorcode-focus-ring);
+	--vectorcode-button-background: var(--vectorcode-button-primary-bg);
+	--vectorcode-button-border: var(--vectorcode-focus-ring);
+	--vectorcode-button-foreground: var(--vectorcode-shell-text);
+	--vectorcode-button-hoverBackground: var(--vectorcode-button-primary-hover-bg);
+	--vectorcode-button-secondaryBackground: var(--vectorcode-button-secondary-bg);
+	--vectorcode-button-secondaryBorder: var(--vectorcode-focus-ring);
+	--vectorcode-button-secondaryForeground: var(--vectorcode-shell-text);
+	--vectorcode-button-secondaryHoverBackground: var(--vectorcode-button-secondary-hover-bg);
+	--vectorcode-button-separator: var(--vectorcode-shell-text);
+	--vectorcode-charts-blue: #77aaff;
+	--vectorcode-charts-foreground: var(--vectorcode-shell-text);
+	--vectorcode-charts-green: #37d6c2;
+	--vectorcode-charts-orange: #e3c469;
+	--vectorcode-charts-purple: #b7a4ff;
+	--vectorcode-charts-red: #ff6b6b;
+	--vectorcode-charts-yellow: #e3c469;
+	--vectorcode-checkbox-background: var(--vectorcode-shell-bg);
+	--vectorcode-checkbox-border: var(--vectorcode-focus-ring);
+	--vectorcode-checkbox-foreground: var(--vectorcode-shell-text);
+	--vectorcode-checkbox-selectBackground: var(--vectorcode-shell-bg);
+	--vectorcode-checkbox-selectBorder: var(--vectorcode-focus-ring);
+	--vectorcode-commandCenter-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-commandCenter-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-commandCenter-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-commandCenter-background: var(--vectorcode-shell-bg);
+	--vectorcode-commandCenter-border: var(--vectorcode-focus-ring);
+	--vectorcode-commandCenter-foreground: var(--vectorcode-shell-text);
+	--vectorcode-commandCenter-inactiveBorder: var(--vectorcode-focus-ring);
+	--vectorcode-contrastActiveBorder: var(--vectorcode-focus-ring);
+	--vectorcode-contrastBorder: var(--vectorcode-focus-ring);
+	--vectorcode-cornerRadius-circle: var(--vectorcode-shell-text);
+	--vectorcode-cornerRadius-large: 8px;
+	--vectorcode-cornerRadius-medium: 6px;
+	--vectorcode-cornerRadius-small: 5px;
+	--vectorcode-cornerRadius-xLarge: 10px;
+	--vectorcode-debugTokenExpression-name: var(--vectorcode-shell-text);
+	--vectorcode-descriptionForeground: var(--vectorcode-shell-muted);
+	--vectorcode-diffEditor-border: var(--vectorcode-focus-ring);
+	--vectorcode-diffEditor-diagonalFill: var(--vectorcode-shell-text);
+	--vectorcode-diffEditor-insertedLineBackground: #37d6c2;
+	--vectorcode-diffEditor-insertedTextBackground: #37d6c2;
+	--vectorcode-diffEditor-insertedTextBorder: #37d6c2;
+	--vectorcode-diffEditor-move-border: var(--vectorcode-focus-ring);
+	--vectorcode-diffEditor-moveActive-border: var(--vectorcode-focus-ring);
+	--vectorcode-diffEditor-removedLineBackground: #ff6b6b;
+	--vectorcode-diffEditor-removedTextBackground: #ff6b6b;
+	--vectorcode-diffEditor-removedTextBorder: #ff6b6b;
+	--vectorcode-diffEditor-unchangedCodeBackground: var(--vectorcode-shell-bg);
+	--vectorcode-diffEditor-unchangedRegionBackground: var(--vectorcode-shell-bg);
+	--vectorcode-diffEditor-unchangedRegionForeground: var(--vectorcode-shell-text);
+	--vectorcode-diffEditor-unchangedRegionShadow: var(--vectorcode-shell-text);
+	--vectorcode-diffEditorGutter-insertedLineBackground: #37d6c2;
+	--vectorcode-diffEditorGutter-removedLineBackground: #ff6b6b;
+	--vectorcode-disabledForeground: var(--vectorcode-shell-muted);
+	--vectorcode-dropdown-background: var(--vectorcode-shell-bg);
+	--vectorcode-dropdown-border: var(--vectorcode-focus-ring);
+	--vectorcode-dropdown-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editor-background: var(--vectorcode-shell-bg);
+	--vectorcode-editor-compositionBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-dictation-widget-height: 28px;
+	--vectorcode-editor-dictation-widget-width: 28px;
+	--vectorcode-editor-findMatchBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-findMatchBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-findMatchHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-findMatchHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-findRangeHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-foldBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-foldPlaceholderForeground: var(--vectorcode-shell-muted);
+	--vectorcode-editor-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editor-hoverHighlightBackground: var(--vectorcode-hover-bg);
+	--vectorcode-editor-inactiveSelectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-editor-linkedEditingBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-placeholder-foreground: var(--vectorcode-shell-muted);
+	--vectorcode-editor-rangeHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-rangeHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-selectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-editor-selectionHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-selectionHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-snippetFinalTabstopHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-snippetFinalTabstopHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-snippetTabstopHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-snippetTabstopHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-symbolHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-symbolHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-wordHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-wordHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-wordHighlightStrongBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editor-wordHighlightStrongBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editor-wordHighlightTextBackground: var(--vectorcode-shell-text);
+	--vectorcode-editor-wordHighlightTextBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editorActionList-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorActionList-focusBackground: var(--vectorcode-selection-active);
+	--vectorcode-editorActionList-focusForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorActionList-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorBracketMatch-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorBracketMatch-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorCodeLens-fontFamily: var(--monaco-monospace-font);
+	--vectorcode-editorCodeLens-fontFamilyDefault: var(--monaco-monospace-font);
+	--vectorcode-editorCodeLens-fontFeatureSettings: normal;
+	--vectorcode-editorCodeLens-fontSize: 12px;
+	--vectorcode-editorCodeLens-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorCodeLens-lineHeight: 18px;
+	--vectorcode-editorCommentsWidget-rangeActiveBackground: var(--vectorcode-selection-active);
+	--vectorcode-editorCommentsWidget-rangeBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editorCommentsWidget-replyInputBackground: var(--vectorcode-input-bg);
+	--vectorcode-editorCursor-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorCursor-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorError-background: #ff6b6b;
+	--vectorcode-editorError-border: #ff6b6b;
+	--vectorcode-editorError-foreground: #ff6b6b;
+	--vectorcode-editorGhostText-background: var(--vectorcode-shell-text);
+	--vectorcode-editorGhostText-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorGhostText-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorGroup-dropBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editorGroup-focusedEmptyBorder: var(--vectorcode-focus-ring);
+	--vectorcode-editorGutter-addedBackground: #37d6c2;
+	--vectorcode-editorGutter-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorGutter-commentDraftGlyphForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-commentGlyphForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-commentRangeForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-commentUnresolvedGlyphForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-foldingControlForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-itemBackground: var(--vectorcode-shell-bg);
+	--vectorcode-editorGutter-itemGlyphForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorGutter-modifiedBackground: #e3c469;
+	--vectorcode-editorHint-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorHoverWidget-background: var(--vectorcode-hover-bg);
+	--vectorcode-editorHoverWidget-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorHoverWidget-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorHoverWidget-highlightForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorHoverWidget-statusBarBackground: var(--vectorcode-hover-bg);
+	--vectorcode-editorInfo-background: #77aaff;
+	--vectorcode-editorInfo-border: #77aaff;
+	--vectorcode-editorInfo-foreground: #77aaff;
+	--vectorcode-editorInlayHint-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorInlayHint-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorLightBulb-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorLightBulbAi-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorLightBulbAutoFix-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorLineNumber-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorLineNumber-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorLink-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorPane-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorRuler-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorStickyScroll-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorStickyScroll-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorStickyScroll-foldingOpacityTransition: var(--vectorcode-shell-text);
+	--vectorcode-editorStickyScroll-scrollableWidth: 100%;
+	--vectorcode-editorStickyScroll-shadow: var(--vectorcode-shell-text);
+	--vectorcode-editorStickyScrollGutter-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorStickyScrollHover-background: var(--vectorcode-hover-bg);
+	--vectorcode-editorSuggestWidget-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorSuggestWidget-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorSuggestWidget-focusHighlightForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorSuggestWidget-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorSuggestWidget-highlightForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorSuggestWidget-selectedForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorSuggestWidget-selectedIconForeground: var(--vectorcode-shell-text);
+	--vectorcode-editorSuggestWidgetStatus-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorUnicodeHighlight-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorUnicodeHighlight-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorUnnecessaryCode-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorWarning-background: #e3c469;
+	--vectorcode-editorWarning-border: #e3c469;
+	--vectorcode-editorWarning-foreground: #e3c469;
+	--vectorcode-editorWhitespace-foreground: normal;
+	--vectorcode-editorWidget-background: var(--vectorcode-shell-bg);
+	--vectorcode-editorWidget-border: var(--vectorcode-focus-ring);
+	--vectorcode-editorWidget-foreground: var(--vectorcode-shell-text);
+	--vectorcode-editorWidget-resizeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-errorForeground: #ff6b6b;
+	--vectorcode-explorer-align-offset-margin-left: 0px;
+	--vectorcode-extensionBadge-remoteBackground: var(--vectorcode-badge-bg);
+	--vectorcode-extensionBadge-remoteForeground: var(--vectorcode-shell-text);
+	--vectorcode-extensionButton-background: var(--vectorcode-button-primary-bg);
+	--vectorcode-extensionButton-border: var(--vectorcode-focus-ring);
+	--vectorcode-extensionButton-foreground: var(--vectorcode-shell-text);
+	--vectorcode-extensionButton-hoverBackground: var(--vectorcode-button-primary-hover-bg);
+	--vectorcode-extensionButton-prominentBackground: var(--vectorcode-button-primary-bg);
+	--vectorcode-extensionButton-prominentForeground: var(--vectorcode-shell-text);
+	--vectorcode-extensionButton-prominentHoverBackground: var(--vectorcode-button-primary-hover-bg);
+	--vectorcode-extensionButton-separator: var(--vectorcode-shell-text);
+	--vectorcode-extensionIcon-preReleaseForeground: var(--vectorcode-shell-text);
+	--vectorcode-extensionIcon-verifiedForeground: var(--vectorcode-shell-text);
+	--vectorcode-focusBorder: var(--vectorcode-focus-ring);
+	--vectorcode-foreground: var(--vectorcode-shell-text);
+	--vectorcode-gitDecoration-addedResourceForeground: #37d6c2;
+	--vectorcode-gitDecoration-deletedResourceForeground: #ff6b6b;
+	--vectorcode-gitDecoration-renamedResourceForeground: var(--vectorcode-shell-text);
+	--vectorcode-hover-maxWidth: 720px;
+	--vectorcode-hover-sourceWhiteSpace: pre-wrap;
+	--vectorcode-hover-whiteSpace: normal;
+	--vectorcode-icon-chevron-down-content: "\eab4";
+	--vectorcode-icon-chevron-down-font-family: codicon;
+	--vectorcode-icon-chevron-right-content: "\eab6";
+	--vectorcode-icon-chevron-right-font-family: codicon;
+	--vectorcode-icon-circle-filled-content: "\ea71";
+	--vectorcode-icon-circle-filled-font-family: codicon;
+	--vectorcode-icon-comment-add-content: "\ea6b";
+	--vectorcode-icon-comment-add-font-family: codicon;
+	--vectorcode-icon-comment-draft-content: "\ec0e";
+	--vectorcode-icon-comment-draft-font-family: codicon;
+	--vectorcode-icon-comment-unresolved-content: "\ec0a";
+	--vectorcode-icon-comment-unresolved-font-family: codicon;
+	--vectorcode-icon-debug-stop-content: "\ead7";
+	--vectorcode-icon-debug-stop-font-family: codicon;
+	--vectorcode-icon-foreground: var(--vectorcode-shell-text);
+	--vectorcode-icon-menu-content: "\eb94";
+	--vectorcode-icon-menu-font-family: codicon;
+	--vectorcode-icon-mic-filled-content: "\ec1c";
+	--vectorcode-icon-mic-filled-font-family: codicon;
+	--vectorcode-icon-pinned-dirty-content: "\ebb2";
+	--vectorcode-icon-pinned-dirty-font-family: codicon;
+	--vectorcode-icon-plus-content: "\ea60";
+	--vectorcode-icon-plus-font-family: codicon;
+	--vectorcode-icon-pulse-content: "\eb31";
+	--vectorcode-icon-pulse-font-family: codicon;
+	--vectorcode-icon-x-content: "\ea76";
+	--vectorcode-icon-x-font-family: codicon;
+	--vectorcode-inlineEdit-gutterIndicator-background: var(--vectorcode-shell-bg);
+	--vectorcode-inlineEdit-gutterIndicator-primaryBorder: var(--vectorcode-focus-ring);
+	--vectorcode-inlineEdit-gutterIndicator-primaryForeground: var(--vectorcode-shell-text);
+	--vectorcode-inlineEdit-modifiedBorder: #e3c469;
+	--vectorcode-inlineEdit-modifiedChangedLineBackground: #e3c469;
+	--vectorcode-inlineEdit-modifiedChangedTextBackground: #e3c469;
+	--vectorcode-inlineEdit-originalChangedLineBackground: var(--vectorcode-shell-bg);
+	--vectorcode-inlineEdit-originalChangedTextBackground: var(--vectorcode-shell-text);
+	--vectorcode-input-background: var(--vectorcode-input-bg);
+	--vectorcode-input-foreground: var(--vectorcode-shell-text);
+	--vectorcode-input-placeholderForeground: var(--vectorcode-shell-muted);
+	--vectorcode-inputOption-activeBackground: var(--vectorcode-input-bg);
+	--vectorcode-inputOption-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-inputOption-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-inputOption-hoverBackground: var(--vectorcode-input-bg);
+	--vectorcode-inputValidation-errorBackground: #ff6b6b;
+	--vectorcode-inputValidation-errorBorder: #ff6b6b;
+	--vectorcode-inputValidation-errorForeground: #ff6b6b;
+	--vectorcode-inputValidation-infoBorder: #77aaff;
+	--vectorcode-inputValidation-warningBackground: #e3c469;
+	--vectorcode-inputValidation-warningBorder: #e3c469;
+	--vectorcode-inputValidation-warningForeground: #e3c469;
+	--vectorcode-interactive-result-editor-background-color: var(--vectorcode-shell-text);
+	--vectorcode-interactive-session-foreground: var(--vectorcode-shell-text);
+	--vectorcode-keybindingLabel-background: var(--vectorcode-shell-bg);
+	--vectorcode-keybindingLabel-border: var(--vectorcode-focus-ring);
+	--vectorcode-keybindingLabel-bottomBorder: var(--vectorcode-focus-ring);
+	--vectorcode-keybindingLabel-foreground: var(--vectorcode-shell-text);
+	--vectorcode-keybindingTable-headerBackground: var(--vectorcode-shell-bg);
+	--vectorcode-keybindingTable-rowsBackground: var(--vectorcode-shell-bg);
+	--vectorcode-list-activeSelectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-list-activeSelectionForeground: var(--vectorcode-shell-text);
+	--vectorcode-list-dropBackground: var(--vectorcode-shell-bg);
+	--vectorcode-list-errorForeground: #ff6b6b;
+	--vectorcode-list-filterMatchBackground: var(--vectorcode-shell-bg);
+	--vectorcode-list-filterMatchBorder: var(--vectorcode-focus-ring);
+	--vectorcode-list-focusBackground: var(--vectorcode-selection-active);
+	--vectorcode-list-focusForeground: var(--vectorcode-shell-text);
+	--vectorcode-list-focusHighlightForeground: var(--vectorcode-shell-text);
+	--vectorcode-list-focusOutline: var(--vectorcode-focus-ring);
+	--vectorcode-list-highlightForeground: var(--vectorcode-shell-text);
+	--vectorcode-list-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-list-hoverForeground: var(--vectorcode-shell-text);
+	--vectorcode-list-inactiveSelectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-list-inactiveSelectionForeground: var(--vectorcode-shell-text);
+	--vectorcode-markdownAlert-caution-foreground: var(--vectorcode-shell-text);
+	--vectorcode-markdownAlert-important-foreground: var(--vectorcode-shell-text);
+	--vectorcode-markdownAlert-note-foreground: var(--vectorcode-shell-text);
+	--vectorcode-markdownAlert-tip-foreground: var(--vectorcode-shell-text);
+	--vectorcode-markdownAlert-warning-foreground: #e3c469;
+	--vectorcode-menu-border: var(--vectorcode-shell-line);
+	--vectorcode-menu-selectionBorder: var(--vectorcode-focus-ring);
+	--vectorcode-menu-separatorBackground: var(--vectorcode-shell-line);
+	--vectorcode-menubar-selectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-menubar-selectionBorder: var(--vectorcode-focus-ring);
+	--vectorcode-menubar-selectionForeground: var(--vectorcode-shell-text);
+	--vectorcode-mergeEditor-change-background: var(--vectorcode-shell-bg);
+	--vectorcode-mergeEditor-change-word-background: var(--vectorcode-shell-bg);
+	--vectorcode-mergeEditor-changeBase-background: var(--vectorcode-shell-bg);
+	--vectorcode-mergeEditor-changeBase-word-background: var(--vectorcode-shell-bg);
+	--vectorcode-mergeEditor-conflict-handledFocused-border: var(--vectorcode-focus-ring);
+	--vectorcode-mergeEditor-conflict-handledUnfocused-border: var(--vectorcode-focus-ring);
+	--vectorcode-mergeEditor-conflict-input1-background: var(--vectorcode-input-bg);
+	--vectorcode-mergeEditor-conflict-input2-background: var(--vectorcode-input-bg);
+	--vectorcode-mergeEditor-conflict-unhandledFocused-border: var(--vectorcode-focus-ring);
+	--vectorcode-mergeEditor-conflict-unhandledUnfocused-border: var(--vectorcode-focus-ring);
+	--vectorcode-mergeEditor-conflictingLines-background: var(--vectorcode-shell-bg);
+	--vectorcode-minimapSlider-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-minimapSlider-background: var(--vectorcode-shell-bg);
+	--vectorcode-minimapSlider-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-multiDiffEditor-background: var(--vectorcode-shell-bg);
+	--vectorcode-multiDiffEditor-border: var(--vectorcode-focus-ring);
+	--vectorcode-multiDiffEditor-headerBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebook-cellBorderColor: var(--vectorcode-shell-line);
+	--vectorcode-notebook-cellEditorBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebook-cellHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-notebook-cellInsertionIndicator: var(--vectorcode-shell-text);
+	--vectorcode-notebook-cellStatusBarItemHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-notebook-cellToolbarSeparator: var(--vectorcode-shell-text);
+	--vectorcode-notebook-editorBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebook-focusedCellBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebook-focusedCellBorder: var(--vectorcode-focus-ring);
+	--vectorcode-notebook-focusedEditorBorder: var(--vectorcode-focus-ring);
+	--vectorcode-notebook-inactiveFocusedCellBorder: var(--vectorcode-focus-ring);
+	--vectorcode-notebook-inactiveSelectedCellBorder: var(--vectorcode-focus-ring);
+	--vectorcode-notebook-outputContainerBackgroundColor: var(--vectorcode-shell-text);
+	--vectorcode-notebook-outputContainerBorderColor: var(--vectorcode-shell-line);
+	--vectorcode-notebook-selectedCellBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebook-selectedCellBorder: var(--vectorcode-focus-ring);
+	--vectorcode-notebook-symbolHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-notebookScrollbarSlider-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-notebookScrollbarSlider-background: rgba(244, 239, 230, 0.14);
+	--vectorcode-notebookScrollbarSlider-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-notebookStatusErrorIcon-foreground: #ff6b6b;
+	--vectorcode-notebookStatusSuccessIcon-foreground: #37d6c2;
+	--vectorcode-notificationLink-foreground: var(--vectorcode-shell-text);
+	--vectorcode-notifications-background: var(--vectorcode-shell-bg);
+	--vectorcode-notifications-border: var(--vectorcode-focus-ring);
+	--vectorcode-notifications-foreground: var(--vectorcode-shell-text);
+	--vectorcode-notificationsErrorIcon-foreground: #ff6b6b;
+	--vectorcode-notificationsInfoIcon-foreground: #77aaff;
+	--vectorcode-notificationsWarningIcon-foreground: #e3c469;
+	--vectorcode-outputView-background: var(--vectorcode-shell-bg);
+	--vectorcode-outputViewStickyScroll-background: var(--vectorcode-shell-bg);
+	--vectorcode-panel-background: var(--vectorcode-shell-panel);
+	--vectorcode-panel-border: var(--vectorcode-focus-ring);
+	--vectorcode-panelInput-border: var(--vectorcode-focus-ring);
+	--vectorcode-panelSection-border: var(--vectorcode-focus-ring);
+	--vectorcode-panelTitle-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-panelTitle-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-panelTitle-inactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-parameterHintsWidget-editorFontFamily: var(--monaco-monospace-font);
+	--vectorcode-parameterHintsWidget-editorFontFamilyDefault: var(--monaco-monospace-font);
+	--vectorcode-peekView-border: var(--vectorcode-focus-ring);
+	--vectorcode-peekViewEditor-background: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewEditor-matchHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewEditor-matchHighlightBorder: var(--vectorcode-focus-ring);
+	--vectorcode-peekViewEditorGutter-background: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewEditorStickyScroll-background: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewEditorStickyScrollGutter-background: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewResult-background: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewResult-fileForeground: var(--vectorcode-shell-text);
+	--vectorcode-peekViewResult-lineForeground: var(--vectorcode-shell-text);
+	--vectorcode-peekViewResult-matchHighlightBackground: var(--vectorcode-shell-bg);
+	--vectorcode-peekViewResult-selectionBackground: var(--vectorcode-selection-active);
+	--vectorcode-peekViewResult-selectionForeground: var(--vectorcode-shell-text);
+	--vectorcode-peekViewTitleDescription-foreground: var(--vectorcode-shell-muted);
+	--vectorcode-ports-iconRunningProcessForeground: var(--vectorcode-shell-text);
+	--vectorcode-problemsErrorIcon-foreground: #ff6b6b;
+	--vectorcode-problemsInfoIcon-foreground: #77aaff;
+	--vectorcode-problemsWarningIcon-foreground: #e3c469;
+	--vectorcode-profileBadge-background: var(--vectorcode-badge-bg);
+	--vectorcode-profileBadge-foreground: var(--vectorcode-shell-text);
+	--vectorcode-progressBar-background: var(--vectorcode-shell-bg);
+	--vectorcode-quickInputList-focusBackground: var(--vectorcode-input-bg);
+	--vectorcode-quickInputList-focusForeground: var(--vectorcode-shell-text);
+	--vectorcode-radio-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-radio-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-radio-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-radio-inactiveBackground: var(--vectorcode-selection-active);
+	--vectorcode-radio-inactiveBorder: var(--vectorcode-focus-ring);
+	--vectorcode-radio-inactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-radio-inactiveHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-sash-hover-size: 6px;
+	--vectorcode-sash-hoverBorder: var(--vectorcode-focus-ring);
+	--vectorcode-sash-size: 4px;
+	--vectorcode-scrollbar-background: rgba(244, 239, 230, 0.14);
+	--vectorcode-scrollbar-shadow: rgba(0, 0, 0, 0.38);
+	--vectorcode-scrollbarSlider-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-scrollbarSlider-background: rgba(244, 239, 230, 0.14);
+	--vectorcode-scrollbarSlider-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-search-resultsInfoForeground: #77aaff;
+	--vectorcode-searchEditor-findMatchBackground: var(--vectorcode-shell-bg);
+	--vectorcode-searchEditor-findMatchBorder: var(--vectorcode-focus-ring);
+	--vectorcode-settings-checkboxBackground: var(--vectorcode-shell-bg);
+	--vectorcode-settings-checkboxBorder: var(--vectorcode-focus-ring);
+	--vectorcode-settings-checkboxForeground: var(--vectorcode-shell-text);
+	--vectorcode-settings-focusedRowBackground: var(--vectorcode-shell-bg);
+	--vectorcode-settings-focusedRowBorder: var(--vectorcode-focus-ring);
+	--vectorcode-settings-headerBorder: var(--vectorcode-focus-ring);
+	--vectorcode-settings-headerForeground: var(--vectorcode-shell-text);
+	--vectorcode-settings-modifiedItemIndicator: #e3c469;
+	--vectorcode-settings-rowHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-shadow-active-tab: var(--vectorcode-shell-text);
+	--vectorcode-shadow-depth-x: var(--vectorcode-shell-text);
+	--vectorcode-shadow-depth-y: var(--vectorcode-shell-text);
+	--vectorcode-shadow-hover: var(--vectorcode-hover-bg);
+	--vectorcode-shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.34);
+	--vectorcode-shadow-md: var(--vectorcode-shell-text);
+	--vectorcode-shadow-sm: rgba(0, 0, 0, 0.38);
+	--vectorcode-shadow-xl: var(--vectorcode-shell-text);
+	--vectorcode-sideBar-background: var(--vectorcode-shell-panel);
+	--vectorcode-sideBarActivityBarTop-border: var(--vectorcode-focus-ring);
+	--vectorcode-sideBarSectionHeader-border: var(--vectorcode-focus-ring);
+	--vectorcode-sideBarSectionHeader-foreground: var(--vectorcode-shell-text);
+	--vectorcode-sideBarTitle-background: var(--vectorcode-shell-panel);
+	--vectorcode-sideBarTitle-foreground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-statusBarItem-errorBackground: #ff6b6b;
+	--vectorcode-statusBarItem-errorForeground: #ff6b6b;
+	--vectorcode-statusBarItem-errorHoverBackground: #ff6b6b;
+	--vectorcode-statusBarItem-errorHoverForeground: #ff6b6b;
+	--vectorcode-statusBarItem-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-statusBarItem-hoverForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-offlineBackground: var(--vectorcode-shell-bg);
+	--vectorcode-statusBarItem-offlineForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-offlineHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-statusBarItem-offlineHoverForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-prominentBackground: var(--vectorcode-shell-bg);
+	--vectorcode-statusBarItem-prominentForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-prominentHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-statusBarItem-prominentHoverForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-remoteBackground: var(--vectorcode-shell-bg);
+	--vectorcode-statusBarItem-remoteForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-remoteHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-statusBarItem-remoteHoverForeground: var(--vectorcode-shell-text);
+	--vectorcode-statusBarItem-warningBackground: #e3c469;
+	--vectorcode-statusBarItem-warningForeground: #e3c469;
+	--vectorcode-statusBarItem-warningHoverBackground: #e3c469;
+	--vectorcode-statusBarItem-warningHoverForeground: #e3c469;
+	--vectorcode-symbolIcon-arrayForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-booleanForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-classForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-colorForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-constantForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-constructorForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-enumeratorForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-enumeratorMemberForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-eventForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-fieldForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-fileForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-folderForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-functionForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-interfaceForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-keyForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-keywordForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-methodForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-moduleForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-namespaceForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-nullForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-numberForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-objectForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-operatorForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-packageForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-propertyForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-referenceForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-snippetForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-stringForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-structForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-textForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-typeParameterForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-unitForeground: var(--vectorcode-shell-text);
+	--vectorcode-symbolIcon-variableForeground: var(--vectorcode-shell-text);
+	--vectorcode-tab-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-tab-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-tab-dragAndDropBorder: var(--vectorcode-focus-ring);
+	--vectorcode-tab-inactiveBackground: var(--vectorcode-selection-active);
+	--vectorcode-tab-inactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-tab-selectedBackground: var(--vectorcode-shell-bg);
+	--vectorcode-tab-selectedForeground: var(--vectorcode-shell-text);
+	--vectorcode-tab-unfocusedActiveBackground: var(--vectorcode-selection-active);
+	--vectorcode-tab-unfocusedActiveForeground: var(--vectorcode-shell-text);
+	--vectorcode-tab-unfocusedInactiveBackground: var(--vectorcode-selection-active);
+	--vectorcode-tab-unfocusedInactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-terminal-ansiBlack: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiBlue: #77aaff;
+	--vectorcode-terminal-ansiBrightBlack: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiBrightBlue: #77aaff;
+	--vectorcode-terminal-ansiBrightCyan: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiBrightGreen: #37d6c2;
+	--vectorcode-terminal-ansiBrightMagenta: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiBrightRed: #ff6b6b;
+	--vectorcode-terminal-ansiBrightWhite: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiBrightYellow: #e3c469;
+	--vectorcode-terminal-ansiCyan: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiGreen: #37d6c2;
+	--vectorcode-terminal-ansiMagenta: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiRed: #ff6b6b;
+	--vectorcode-terminal-ansiWhite: var(--vectorcode-shell-text);
+	--vectorcode-terminal-ansiYellow: #e3c469;
+	--vectorcode-terminal-background: var(--vectorcode-shell-bg);
+	--vectorcode-terminal-border: var(--vectorcode-focus-ring);
+	--vectorcode-terminal-dropBackground: var(--vectorcode-shell-bg);
+	--vectorcode-terminal-hoverHighlightBackground: var(--vectorcode-hover-bg);
+	--vectorcode-terminal-initialHintForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminal-tab-activeBorder: var(--vectorcode-focus-ring);
+	--vectorcode-terminalCommandDecoration-defaultBackground: var(--vectorcode-shell-bg);
+	--vectorcode-terminalCommandDecoration-errorBackground: #ff6b6b;
+	--vectorcode-terminalCommandDecoration-successBackground: #37d6c2;
+	--vectorcode-terminalCommandGuide-foreground: var(--vectorcode-shell-text);
+	--vectorcode-terminalCursor-background: var(--vectorcode-shell-bg);
+	--vectorcode-terminalStickyScroll-background: var(--vectorcode-shell-bg);
+	--vectorcode-terminalStickyScroll-border: var(--vectorcode-focus-ring);
+	--vectorcode-terminalStickyScrollHover-background: var(--vectorcode-hover-bg);
+	--vectorcode-terminalSymbolIcon-aliasForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-argumentForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-fileForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-flagForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-folderForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-inlineSuggestionForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-methodForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-optionForeground: var(--vectorcode-shell-text);
+	--vectorcode-terminalSymbolIcon-optionValueForeground: var(--vectorcode-shell-text);
+	--vectorcode-testing-coverCountBadgeBackground: var(--vectorcode-badge-bg);
+	--vectorcode-testing-coverCountBadgeForeground: var(--vectorcode-shell-text);
+	--vectorcode-testing-coverage-lineHeight: 20px;
+	--vectorcode-testing-coveredBackground: #ff6b6b;
+	--vectorcode-testing-coveredBorder: #ff6b6b;
+	--vectorcode-testing-coveredGutterBackground: #ff6b6b;
+	--vectorcode-testing-iconErrored: #ff6b6b;
+	--vectorcode-testing-iconFailed: var(--vectorcode-shell-text);
+	--vectorcode-testing-iconPassed: var(--vectorcode-shell-text);
+	--vectorcode-testing-iconQueued: var(--vectorcode-shell-text);
+	--vectorcode-testing-iconSkipped: var(--vectorcode-shell-text);
+	--vectorcode-testing-iconUnset: var(--vectorcode-shell-text);
+	--vectorcode-testing-message-error-badgeBorder: #ff6b6b;
+	--vectorcode-testing-message-error-badgeForeground: #ff6b6b;
+	--vectorcode-testing-message-error-lineBackground: #ff6b6b;
+	--vectorcode-testing-message-info-decorationForeground: #77aaff;
+	--vectorcode-testing-message-info-lineBackground: #77aaff;
+	--vectorcode-testing-uncoveredBackground: #ff6b6b;
+	--vectorcode-testing-uncoveredBorder: #ff6b6b;
+	--vectorcode-testing-uncoveredGutterBackground: #ff6b6b;
+	--vectorcode-textBlockQuote-background: var(--vectorcode-shell-text);
+	--vectorcode-textBlockQuote-border: var(--vectorcode-focus-ring);
+	--vectorcode-textCodeBlock-background: var(--vectorcode-shell-text);
+	--vectorcode-textLink-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-textLink-foreground: var(--vectorcode-shell-text);
+	--vectorcode-textPreformat-background: var(--vectorcode-shell-text);
+	--vectorcode-textPreformat-border: var(--vectorcode-focus-ring);
+	--vectorcode-textPreformat-foreground: var(--vectorcode-shell-text);
+	--vectorcode-titleBar-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-titleBar-activeForeground: var(--vectorcode-shell-text);
+	--vectorcode-titleBar-border: var(--vectorcode-focus-ring);
+	--vectorcode-titleBar-inactiveForeground: var(--vectorcode-shell-muted);
+	--vectorcode-toolbar-action-min-width: 24px;
+	--vectorcode-toolbar-activeBackground: var(--vectorcode-selection-active);
+	--vectorcode-toolbar-hoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-toolbar-hoverOutline: var(--vectorcode-focus-ring);
+	--vectorcode-tree-tableColumnsBorder: var(--vectorcode-focus-ring);
+	--vectorcode-walkThrough-embeddedEditorBackground: var(--vectorcode-shell-bg);
+	--vectorcode-walkthrough-stepTitle-foreground: var(--vectorcode-shell-text);
+	--vectorcode-welcomePage-background: var(--vectorcode-shell-bg);
+	--vectorcode-welcomePage-progress-background: var(--vectorcode-shell-bg);
+	--vectorcode-welcomePage-progress-foreground: var(--vectorcode-shell-text);
+	--vectorcode-welcomePage-tileBackground: var(--vectorcode-shell-bg);
+	--vectorcode-welcomePage-tileBorder: var(--vectorcode-focus-ring);
+	--vectorcode-welcomePage-tileHoverBackground: var(--vectorcode-hover-bg);
+	--vectorcode-widget-border: var(--vectorcode-focus-ring);
+	--vectorcode-widget-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+	/* Vector platform tokens for migrated shared UI CSS. */
+	--vectorcode-actionBar-toggledBackground: var(--vectorcode-shell-bg);
+	--vectorcode-bodyFontSize-xSmall: var(--vectorcode-shell-text);
+	--vectorcode-menu-background: var(--vectorcode-shell-bg);
+	--vectorcode-menu-foreground: var(--vectorcode-shell-text);
+	--vectorcode-quickInputList-focusHighlightForeground: var(--vectorcode-focus-ring);
+	--vectorcode-icon-arrow-left: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M14.5%206.5%209%2012l5.5%205.5M9.5%2012H20'%20fill='none'%20stroke='black'%20stroke-width='1.55'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-arrow-right: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M9.5%206.5L15%2012l-5.5%205.5M4%2012h10.5'%20fill='none'%20stroke='black'%20stroke-width='1.55'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-files: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M6.5%205.5h7.2l3.8%203.8v9.2h-11zM13.5%205.7v3.9h3.8M4.5%208.5v12h10'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-phone: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M9%204.5h6a1.7%201.7%200%200%201%201.7%201.7v11.6a1.7%201.7%200%200%201-1.7%201.7H9a1.7%201.7%200%200%201-1.7-1.7V6.2A1.7%201.7%200%200%201%209%204.5zM10.6%2017.1h2.8'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-search: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M10.8%2017.1a6.3%206.3%200%201%200%200-12.6%206.3%206.3%200%200%200%200%2012.6zM15.4%2015.4l4.1%204.1'%20fill='none'%20stroke='black'%20stroke-width='1.55'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-git: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7.5%206.5v7M7.5%206.5h5.2a3.8%203.8%200%200%201%203.8%203.8v1.2M7.5%2013.5a2.4%202.4%200%201%200%200%204.8%202.4%202.4%200%200%200%200-4.8zM16.5%2011.5a2.4%202.4%200%201%200%200%204.8%202.4%202.4%200%200%200%200-4.8zM7.5%204.1a2.4%202.4%200%201%200%200%204.8%202.4%202.4%200%200%200%200-4.8z'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-run: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M8%205.9v12.2c0%20.7.8%201.1%201.4.7l9.1-6.1c.5-.3.5-1.1%200-1.4L9.4%205.2C8.8%204.8%208%205.2%208%205.9z'%20fill='none'%20stroke='black'%20stroke-width='1.55'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-extensions: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5%206.3A1.3%201.3%200%200%201%206.3%205h3.4A1.3%201.3%200%200%201%2011%206.3v3.4A1.3%201.3%200%200%201%209.7%2011H6.3A1.3%201.3%200%200%201%205%209.7zM13%206.3A1.3%201.3%200%200%201%2014.3%205h3.4A1.3%201.3%200%200%201%2019%206.3v3.4a1.3%201.3%200%200%201-1.3%201.3h-3.4A1.3%201.3%200%200%201%2013%209.7zM5%2014.3A1.3%201.3%200%200%201%206.3%2013h3.4a1.3%201.3%200%200%201%201.3%201.3v3.4A1.3%201.3%200%200%201%209.7%2019H6.3A1.3%201.3%200%200%201%205%2017.7zM13%2015.2h6M16%2012.2v6'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-account: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%2012.2a3.6%203.6%200%201%200%200-7.2%203.6%203.6%200%200%200%200%207.2zM5.2%2019.2c.9-3.1%203.3-5%206.8-5s5.9%201.9%206.8%205'%20fill='none'%20stroke='black'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-settings: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5%207h8.1M16.8%207H19M5%2012h2.2M10.9%2012H19M5%2017h9.1M17.8%2017H19M13.1%207a1.9%201.9%200%201%200%203.8%200%201.9%201.9%200%200%200-3.8%200zM7.2%2012a1.9%201.9%200%201%200%203.8%200%201.9%201.9%200%200%200-3.8%200zM14.1%2017a1.9%201.9%200%201%200%203.8%200%201.9%201.9%200%200%200-3.8%200z'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-terminal: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4.8%206.2h14.4v11.6H4.8zM7.2%209.5l2.6%202.5-2.6%202.5M11.3%2014.5h4.4'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-layout: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5%206h14v12H5zM5%209.7h14M9.8%209.7V18'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-sidebar: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5%205.5h14v13H5zM9.5%205.5v13'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-icon-panel: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5%205.5h14v13H5zM5%2014h14'%20fill='none'%20stroke='black'%20stroke-width='1.45'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-arrow-left: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M14.2%207.3%209.5%2012l4.7%204.7M10%2012h8.6'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-arrow-right: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M9.8%207.3l4.7%204.7-4.7%204.7M5.4%2012H14'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-search: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M10.7%2016.3a5.6%205.6%200%201%200%200-11.2%205.6%205.6%200%200%200%200%2011.2zM14.8%2014.8l4%204'%20fill='none'%20stroke='black'%20stroke-width='1.22'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-account: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%2011.5a3.15%203.15%200%201%200%200-6.3%203.15%203.15%200%200%200%200%206.3zM5.8%2018.8c.9-2.7%203-4.2%206.2-4.2s5.3%201.5%206.2%204.2'%20fill='none'%20stroke='black'%20stroke-width='1.22'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-settings: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5.5%207.2h7.1M16.1%207.2h2.4M5.5%2012h2.4M11.4%2012h7.1M5.5%2016.8h8.5M17.4%2016.8h1.1M12.6%207.2a1.75%201.75%200%201%200%203.5%200%201.75%201.75%200%200%200-3.5%200zM7.9%2012a1.75%201.75%200%201%200%203.5%200%201.75%201.75%200%200%200-3.5%200zM14%2016.8a1.7%201.7%200%201%200%203.4%200%201.7%201.7%200%200%200-3.4%200z'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-terminal: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5.4%207.1h13.2v9.8H5.4zM7.9%2010l2.2%202-2.2%202M11.8%2014h4.1'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.monaco-workbench .part.titlebar {
+	background: #101716 !important;
+	border-bottom: 1px solid var(--vectorcode-shell-line) !important;
+	color: var(--vectorcode-shell-text) !important;
+}
+
+.monaco-workbench .part.activitybar {
+	background: #081012 !important;
+	border-right: 1px solid rgba(55, 214, 194, 0.18) !important;
+}
+
+.monaco-workbench .activitybar > .content {
+	justify-content: flex-start !important;
+	padding-top: 8px;
+	position: relative;
+}
+
+.monaco-workbench .activitybar > .content > .composite-bar {
+	margin-bottom: 0 !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) {
+	bottom: 0;
+	left: 5px;
+	pointer-events: none;
+	position: absolute;
+	right: 5px;
+	top: 0;
+	z-index: 3;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .monaco-action-bar,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .actions-container {
+	height: 100%;
+	position: relative;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item {
+	background: #16201f;
+	border: 1px solid rgba(55, 214, 194, 0.32);
+	border-radius: 9px;
+	height: 28px;
+	pointer-events: auto;
+	position: fixed !important;
+	top: 4px;
+	width: 32px;
+	z-index: 1000;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:first-child {
+	left: auto;
+	right: 184px;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:last-child {
+	left: auto;
+	right: 146px;
+	transform: none;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label {
+	height: 28px !important;
+	width: 32px !important;
+}
+
+.monaco-workbench .codicon-arrow-left { --vectorcode-icon-mask: var(--vectorcode-icon-arrow-left); }
+.monaco-workbench .codicon-arrow-right { --vectorcode-icon-mask: var(--vectorcode-icon-arrow-right); }
+.monaco-workbench .codicon-explorer-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-files); }
+.monaco-workbench .codicon-vector-code-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-phone); }
+.monaco-workbench .codicon-search,
+.monaco-workbench .codicon-search-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-search); }
+.monaco-workbench .codicon-source-control-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-git); }
+.monaco-workbench .codicon-run-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-run); }
+.monaco-workbench .codicon-extensions-view-icon { --vectorcode-icon-mask: var(--vectorcode-icon-extensions); }
+.monaco-workbench .codicon-accounts-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-icon-account); }
+.monaco-workbench .codicon-settings-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-icon-settings); }
+.monaco-workbench .codicon-terminal { --vectorcode-icon-mask: var(--vectorcode-icon-terminal); }
+.monaco-workbench .codicon-configure-layout-icon { --vectorcode-icon-mask: var(--vectorcode-icon-layout); }
+.monaco-workbench .codicon-panel-left,
+.monaco-workbench .codicon-panel-left-off,
+.monaco-workbench .codicon-auxiliarybar-right-off-layout-icon { --vectorcode-icon-mask: var(--vectorcode-icon-sidebar); }
+.monaco-workbench .codicon-panel-layout-icon-off { --vectorcode-icon-mask: var(--vectorcode-icon-panel); }
+
+.monaco-workbench .part.titlebar .codicon-arrow-left { --vectorcode-icon-mask: var(--vectorcode-topbar-arrow-left); }
+.monaco-workbench .part.titlebar .codicon-arrow-right { --vectorcode-icon-mask: var(--vectorcode-topbar-arrow-right); }
+.monaco-workbench .part.titlebar .codicon-search { --vectorcode-icon-mask: var(--vectorcode-topbar-search); }
+.monaco-workbench .part.titlebar .codicon-terminal { --vectorcode-icon-mask: var(--vectorcode-topbar-terminal); }
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .codicon-accounts-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-topbar-account); }
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .codicon-settings-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-topbar-settings); }
+
+.monaco-workbench .part.activitybar .action-label.codicon::before,
+.monaco-workbench .part.titlebar .action-label.codicon::before,
+.monaco-workbench .part.titlebar .search-icon.codicon::before {
+	background: currentColor;
+	content: "" !important;
+	display: block;
+	flex: 0 0 20px;
+	height: 20px;
+	margin: auto;
+	-webkit-mask: var(--vectorcode-icon-mask) center / 20px 20px no-repeat;
+	mask: var(--vectorcode-icon-mask) center / 20px 20px no-repeat;
+	min-width: 20px;
+	width: 20px;
+}
+
+.monaco-workbench .part.titlebar .action-label.codicon::before,
+.monaco-workbench .part.titlebar .search-icon.codicon::before,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label.codicon::before {
+	flex-basis: 18px;
+	height: 18px;
+	-webkit-mask: var(--vectorcode-icon-mask) center / 18px 18px no-repeat;
+	mask: var(--vectorcode-icon-mask) center / 18px 18px no-repeat;
+	min-width: 18px;
+	width: 18px;
+}
+
+.monaco-workbench .part.activitybar .action-label.codicon,
+.monaco-workbench .part.titlebar .action-label.codicon {
+	align-items: center;
+	display: flex !important;
+	justify-content: center;
+}
+
+.monaco-workbench .part.activitybar .action-label.codicon::after,
+.monaco-workbench .part.titlebar .action-label.codicon::after,
+.monaco-workbench .part.titlebar .search-icon.codicon::after {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar .search-icon.codicon {
+	align-items: center;
+	display: inline-flex;
+	justify-content: center;
+}
+
+.monaco-workbench .part.activitybar .action-label {
+	border-radius: 8px;
+	color: var(--vectorcode-shell-muted) !important;
+}
+
+.monaco-workbench .part.activitybar .action-item.checked .action-label,
+.monaco-workbench .part.activitybar .action-label.checked {
+	background: var(--vectorcode-shell-accent) !important;
+	color: #07110f !important;
+}
+
+.monaco-workbench .part.sidebar {
+	background: var(--vectorcode-shell-bg) !important;
+	border-right: 1px solid rgba(244, 239, 230, 0.1) !important;
+}
+
+.monaco-workbench .part.sidebar > .composite.title,
+.monaco-workbench .pane-header {
+	background: #101618 !important;
+	border-color: rgba(244, 239, 230, 0.1) !important;
+	color: var(--vectorcode-shell-text) !important;
+}
+
+.monaco-workbench .part.editor {
+	background: #0d1114 !important;
+}
+
+.monaco-workbench .part.editor > .content {
+	background:
+		linear-gradient(180deg, rgba(15, 143, 140, 0.06), transparent 240px),
+		repeating-linear-gradient(90deg, rgba(244, 239, 230, 0.025) 0 1px, transparent 1px 32px),
+		#0d1114 !important;
+}
+
+.monaco-workbench .part.editor .title {
+	background: #0a0f12 !important;
+	border-bottom: 1px solid rgba(244, 239, 230, 0.1) !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab {
+	background: #101519 !important;
+	border-right: 1px solid rgba(244, 239, 230, 0.08) !important;
+	color: var(--vectorcode-shell-muted) !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab.active {
+	background: #18211f !important;
+	border-top: 2px solid var(--vectorcode-shell-accent) !important;
+	color: var(--vectorcode-shell-text) !important;
+}
+
+.monaco-workbench .editor-group-container.empty {
+	align-items: center;
+	background: transparent !important;
+	display: flex;
+	justify-content: center;
+	position: relative;
+}
+
+.monaco-workbench .editor-group-container.empty .editor-group-watermark {
+	display: none !important;
+}
+
+.monaco-workbench .part.panel {
+	background: #0d1114 !important;
+	border-top: 1px solid rgba(55, 214, 194, 0.18) !important;
+}
+
+.monaco-workbench .part.statusbar {
+	background: #07110f !important;
+	border-top: 1px solid rgba(55, 214, 194, 0.28) !important;
+	color: #9fb2ae !important;
+}
+
+.monaco-workbench .part.statusbar a,
+.monaco-workbench .part.statusbar .statusbar-item {
+	color: #9fb2ae !important;
 }
 
 .vector-code-control {
+	background:
+		linear-gradient(180deg, rgba(55, 214, 194, 0.08), transparent 210px),
+		#0b0f12;
 	box-sizing: border-box;
+	display: grid;
+	gap: 12px;
+	min-height: min-content;
+	padding: 14px;
+	padding-bottom: 28px;
+}
+
+.vector-code-projects-view {
+	background: #0b0f12;
+	color: #f4efe6;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden !important;
+}
+
+.vector-code-project-switcher {
+	background:
+		linear-gradient(180deg, rgba(55, 214, 194, 0.1), transparent 80px),
+		#0b0f12;
+	box-sizing: border-box;
+	display: grid;
+	gap: 8px;
+	height: 100%;
+	min-height: 0;
+	padding: 8px 10px 10px;
+}
+
+.vector-code-project-switcher__header {
+	align-items: center;
 	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	padding: 12px;
+	gap: 8px;
+	justify-content: space-between;
+	min-width: 0;
+}
+
+.vector-code-project-switcher__status {
+	color: #9fb2ae;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0;
+	line-height: 16px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.vector-code-project-switcher__icon-button {
+	align-items: center;
+	background: rgba(55, 214, 194, 0.14);
+	border: 1px solid rgba(55, 214, 194, 0.38);
+	border-radius: 7px;
+	color: #37d6c2;
+	cursor: pointer;
+	display: flex;
+	flex: 0 0 auto;
+	height: 28px;
+	justify-content: center;
+	padding: 0;
+	width: 30px;
+}
+
+.vector-code-project-switcher__icon-button:hover {
+	background: rgba(55, 214, 194, 0.24);
+	color: #f4efe6;
+}
+
+.vector-code-project-switcher__list {
+	display: grid;
+	gap: 6px;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding-right: 2px;
+}
+
+.vector-code-project-switcher__project {
+	background: #151b1b;
+	border: 1px solid rgba(244, 239, 230, 0.12);
+	border-left: 3px solid #37d6c2;
+	border-radius: 8px;
+	box-sizing: border-box;
+	color: #f4efe6;
+	cursor: pointer;
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+	padding: 7px 9px;
+	text-align: left;
+	width: 100%;
+}
+
+.vector-code-project-switcher__project:hover {
+	background: #1b2423;
+	border-color: rgba(55, 214, 194, 0.52);
+}
+
+.vector-code-project-switcher__project--active {
+	background:
+		linear-gradient(90deg, rgba(55, 214, 194, 0.18), transparent 72%),
+		#172221;
+	border-color: rgba(55, 214, 194, 0.7);
+	box-shadow: inset 0 0 0 1px rgba(55, 214, 194, 0.14);
+}
+
+.vector-code-project-switcher__project-name {
+	color: #f8f3e8;
+	font-size: 12px;
+	font-weight: 800;
+	line-height: 16px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.vector-code-project-switcher__empty,
+.vector-code-project-switcher__project-path {
+	color: #aeb8b4;
+	font-size: 11px;
+	line-height: 15px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.monaco-workbench .explorer-folders-view {
+	padding: 6px 7px 12px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row {
+	border-radius: 6px;
+	margin-left: 3px;
+	margin-right: 3px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row:hover:not(.selected):not(.focused) {
+	background: rgba(244, 239, 230, 0.05) !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row.focused,
+.monaco-workbench .explorer-folders-view .monaco-list-row.selected {
+	background: rgba(55, 214, 194, 0.18) !important;
+	outline: 1px solid rgba(55, 214, 194, 0.34) !important;
+}
+
+.monaco-workbench .explorer-folders-view .explorer-item {
+	color: #c7d0cc;
+	font-size: 12px;
 }
 
 .vector-code-control__header {
 	align-items: center;
-	border-bottom: 1px solid var(--vscode-panel-border);
+	background: #141a19;
+	border: 1px solid rgba(244, 239, 230, 0.12);
+	border-radius: 8px;
 	display: grid;
-	gap: 10px;
-	grid-template-columns: 28px minmax(0, 1fr);
-	padding: 2px 0 12px;
+	gap: 11px;
+	grid-template-columns: 36px minmax(0, 1fr);
+	padding: 12px;
 }
 
 .vector-code-control__mark {
 	align-items: center;
-	background: var(--vscode-badge-background);
-	border-radius: 6px;
-	color: var(--vscode-badge-foreground);
+	background: #37d6c2;
+	border-radius: 8px;
+	color: #07110f;
 	display: flex;
-	height: 28px;
+	height: 36px;
 	justify-content: center;
-	width: 28px;
+	width: 36px;
 }
 
 .vector-code-control__header-text {
@@ -41,17 +1078,17 @@
 }
 
 .vector-code-control__heading {
-	color: var(--vscode-foreground);
-	font-size: 14px;
-	font-weight: 600;
-	line-height: 18px;
+	color: #f8f3e8;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 22px;
 }
 
 .vector-code-control__header-status,
 .vector-code-control__card-status {
-	color: var(--vscode-descriptionForeground);
+	color: #aeb8b4;
 	font-size: 12px;
-	line-height: 18px;
+	line-height: 17px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -59,60 +1096,81 @@
 
 .vector-code-control__grid {
 	display: grid;
-	gap: 8px;
+	gap: 10px;
 }
 
 .vector-code-control__card {
-	background: var(--vscode-sideBar-background);
-	border-left: 2px solid var(--vscode-focusBorder);
-	box-shadow: inset 0 0 0 1px var(--vscode-panel-border);
+	background: #15191d;
+	border: 1px solid rgba(244, 239, 230, 0.11);
+	border-radius: 8px;
 	box-sizing: border-box;
-	padding: 10px 10px 10px 11px;
+	padding: 12px;
+}
+
+.vector-code-control__mobile {
+	background:
+		linear-gradient(160deg, rgba(55, 214, 194, 0.16), transparent 46%),
+		#111717;
+	border-color: rgba(55, 214, 194, 0.42);
 }
 
 .vector-code-control__card-header {
 	align-items: center;
 	display: flex;
-	gap: 7px;
+	gap: 8px;
 	min-width: 0;
 }
 
 .vector-code-control__card-icon {
-	color: var(--vscode-symbolIcon-functionForeground);
+	align-items: center;
+	background: rgba(55, 214, 194, 0.12);
+	border: 1px solid rgba(55, 214, 194, 0.28);
+	border-radius: 8px;
+	color: #37d6c2;
+	display: flex;
 	flex: 0 0 auto;
+	height: 28px;
+	justify-content: center;
+	width: 28px;
 }
 
 .vector-code-control__card-title {
-	color: var(--vscode-foreground);
+	color: #f8f3e8;
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: 700;
 	line-height: 18px;
 }
 
 .vector-code-control__card-actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
-	margin-top: 9px;
+	gap: 7px;
+	margin-top: 10px;
 }
 
 .vector-code-control__button {
-	background: var(--vscode-button-secondaryBackground);
-	border: 0;
-	border-radius: 3px;
-	color: var(--vscode-button-secondaryForeground);
+	align-items: center;
+	background: #37d6c2;
+	border: 1px solid rgba(7, 17, 15, 0.28);
+	border-radius: 7px;
+	color: #07110f;
 	cursor: pointer;
 	display: inline-flex;
-	gap: 5px;
-	align-items: center;
 	font-size: 12px;
+	font-weight: 700;
+	gap: 6px;
 	line-height: 18px;
-	min-height: 24px;
-	padding: 3px 8px;
+	min-height: 30px;
+	padding: 5px 10px;
 }
 
 .vector-code-control__button:hover {
-	background: var(--vscode-button-secondaryHoverBackground);
+	background: #6de4d5;
+}
+
+.vector-code-control__button:disabled {
+	cursor: default;
+	opacity: 0.6;
 }
 
 .vector-code-control__button-icon {
@@ -123,32 +1181,2487 @@
 	overflow-wrap: anywhere;
 }
 
-.vector-code-control__project-list {
+.vector-code-control__fields {
 	display: grid;
-	gap: 6px;
-	margin-top: 10px;
+	gap: 8px;
+	margin-top: 12px;
 }
 
-.vector-code-control__project {
+.vector-code-control__field {
+	display: grid;
+	gap: 5px;
 	min-width: 0;
 }
 
-.vector-code-control__project-empty,
-.vector-code-control__project-path {
-	color: var(--vscode-descriptionForeground);
+.vector-code-control__label {
+	color: #9fb2ae;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 16px;
+}
+
+.vector-code-control__input {
+	background: #090d10;
+	border: 1px solid rgba(244, 239, 230, 0.2);
+	border-radius: 7px;
+	box-sizing: border-box;
+	color: #f4efe6;
+	font: inherit;
+	min-width: 0;
+	outline: 0;
+	width: 100%;
+}
+
+.vector-code-control__input {
+	height: 34px;
+	padding: 6px 8px;
+}
+
+.vector-code-control__input::placeholder {
+	color: #7f8986;
+}
+
+.vector-code-control__input:focus,
+.vector-code-control__input:focus {
+	border-color: #37d6c2;
+	box-shadow: 0 0 0 2px rgba(55, 214, 194, 0.18);
+}
+
+.vector-code-control__mobile-detail {
+	display: grid;
+	gap: 7px;
+	margin-top: 10px;
+}
+
+.vector-code-control__mobile-detail {
+	min-width: 0;
+}
+
+.vector-code-control__mobile-detail {
+	color: #aeb8b4;
+	font-size: 12px;
+	line-height: 17px;
+}
+
+.vector-code-control__pairing {
+	background: #080c0f;
+	border: 1px solid rgba(55, 214, 194, 0.24);
+	border-radius: 8px;
+	display: grid;
+	gap: 10px;
+	justify-items: center;
+	margin-top: 12px;
+	min-width: 0;
+	padding: 10px;
+}
+
+.vector-code-control__pairing:empty {
+	display: none;
+}
+
+.vector-code-control__pairing--locked {
+	border-color: rgba(15, 143, 140, 0.44);
+}
+
+.vector-code-control__pairing-state {
+	background: #37d6c2;
+	border-radius: 999px;
+	color: #07110f;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 16px;
+	padding: 3px 8px;
+}
+
+.vector-code-control__pairing--locked .vector-code-control__pairing-state {
+	background: #0f8f8c;
+	color: #1b1105;
+}
+
+.vector-code-control__qr,
+.vector-code-control__qr-pending {
+	border-radius: 8px;
+	box-sizing: border-box;
+	height: auto;
+	max-width: 100%;
+	width: 200px;
+}
+
+.vector-code-control__qr {
+	background: #ffffff;
+	padding: 10px;
+}
+
+.vector-code-control__qr-pending {
+	align-items: center;
+	aspect-ratio: 1;
+	background:
+		linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+		linear-gradient(0deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+		#111820;
+	background-size: 18px 18px;
+	color: #9fb2ae;
+	display: flex;
+	font-size: 14px;
+	font-weight: 700;
+	justify-content: center;
+}
+
+.vector-code-control__pairing-meta {
+	color: #aeb8b4;
+	display: grid;
+	font-size: 11px;
+	gap: 3px;
+	justify-items: center;
+	line-height: 16px;
+	min-width: 0;
+	text-align: center;
+	width: 100%;
+}
+
+.vector-code-control__pairing-code {
+	background: rgba(15, 143, 140, 0.12);
+	border: 1px solid rgba(15, 143, 140, 0.26);
+	border-radius: 7px;
+	color: #f8f3e8;
+	font-family: var(--monaco-monospace-font);
+	font-size: 12px;
+	line-height: 18px;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	padding: 5px 7px;
+	text-align: center;
+}
+
+/* Vector shell refresh. */
+.monaco-workbench {
+	--vectorcode-shell-bg: #0c1211;
+	--vectorcode-shell-panel: #111817;
+	--vectorcode-shell-raised: #192321;
+	--vectorcode-shell-line: rgba(238, 244, 242, 0.12);
+	--vectorcode-shell-text: #eef4f2;
+	--vectorcode-shell-muted: #9fb2ae;
+	--vectorcode-shell-accent: #1fd0ca;
+	--vectorcode-shell-accent-strong: #3ce0da;
+	--vectorcode-shell-warn: #0f8f8c;
+}
+
+.monaco-workbench .part.titlebar {
+	background:
+		linear-gradient(90deg, rgba(31, 208, 202, 0.12), transparent 38%),
+		#0f1514 !important;
+	border-bottom: 1px solid rgba(31, 208, 202, 0.2) !important;
+	position: relative;
+}
+
+.monaco-workbench .part.activitybar {
+	background:
+		linear-gradient(180deg, rgba(31, 208, 202, 0.18), transparent 150px),
+		#0a0f0e !important;
+	border-right: 1px solid rgba(31, 208, 202, 0.22) !important;
+	box-shadow: inset -1px 0 0 rgba(238, 244, 242, 0.04);
+}
+
+.monaco-workbench .activitybar > .content {
+	padding-top: 82px;
+}
+
+.monaco-workbench .activitybar > .content::before {
+	background:
+		linear-gradient(145deg, rgba(60, 224, 218, 0.28), rgba(11, 139, 136, 0.12)),
+		url('./brand/vectorcode-mark-ondark.svg') center / 29px 29px no-repeat,
+		#101514;
+	border: 1px solid rgba(31, 208, 202, 0.32);
+	border-radius: 16px;
+	box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+	content: "";
+	height: 44px;
+	left: 8px;
+	position: absolute;
+	top: 16px;
+	width: 44px;
+	z-index: 4;
+}
+
+.monaco-workbench .part.activitybar > .content > .composite-bar .action-item {
+	margin: 0 0 9px !important;
+}
+
+.monaco-workbench .part.activitybar .action-label {
+	border: 1px solid transparent;
+	border-radius: 14px !important;
+	color: rgba(238, 244, 242, 0.68) !important;
+	height: 42px !important;
+	margin-left: 6px;
+	width: 42px !important;
+}
+
+.monaco-workbench .part.activitybar .action-item.checked .action-label,
+.monaco-workbench .part.activitybar .action-label.checked {
+	background:
+		linear-gradient(145deg, rgba(60, 224, 218, 0.28), rgba(31, 208, 202, 0.12)),
+		#14211f !important;
+	border-color: rgba(31, 208, 202, 0.6);
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(238, 244, 242, 0.06);
+	color: #1fd0ca !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item {
+	background: rgba(16, 21, 20, 0.96);
+	border-color: rgba(238, 244, 242, 0.14);
+	border-radius: 14px;
+	bottom: 58px;
+	height: 38px;
+	left: 11px !important;
+	right: auto !important;
+	top: auto;
+	width: 38px;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:last-child {
+	bottom: 14px;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label {
+	height: 38px !important;
+	margin-left: 0;
+	width: 38px !important;
+}
+
+.monaco-workbench .activitybar .codicon-accounts-view-bar-icon::before {
+	content: "\eb99" !important;
+}
+
+.monaco-workbench .activitybar .codicon-settings-view-bar-icon::before {
+	content: "\eb6d" !important;
+}
+
+.monaco-workbench .part.sidebar {
+	background:
+		linear-gradient(180deg, rgba(31, 208, 202, 0.08), transparent 190px),
+		#0d1312 !important;
+	border-right: 1px solid rgba(31, 208, 202, 0.2) !important;
+}
+
+.monaco-workbench .part.sidebar > .composite.title {
+	background: transparent !important;
+	border-bottom: 0 !important;
+	min-height: 44px;
+	padding-left: 10px;
+}
+
+.monaco-workbench .part.sidebar > .composite.title .title-label h2 {
+	color: #eef4f2 !important;
+	font-size: 12px !important;
+	font-weight: 800 !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+.monaco-workbench .part.sidebar > .content {
+	padding: 0 8px 8px;
+}
+
+.monaco-workbench .pane-header {
+	background: rgba(238, 244, 242, 0.045) !important;
+	border: 1px solid rgba(238, 244, 242, 0.08) !important;
+	border-radius: 12px !important;
+	color: #eef4f2 !important;
+	margin-top: 8px;
+}
+
+.monaco-workbench .pane-header .title {
+	font-size: 12px !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+.monaco-workbench .part.editor > .content {
+	background:
+		radial-gradient(circle at 74% 18%, rgba(31, 208, 202, 0.13), transparent 25%),
+		linear-gradient(180deg, rgba(15, 143, 140, 0.08), transparent 250px),
+		repeating-linear-gradient(90deg, rgba(238, 244, 242, 0.025) 0 1px, transparent 1px 36px),
+		#0b1010 !important;
+}
+
+.monaco-workbench .part.editor .title {
+	background: rgba(12, 18, 17, 0.92) !important;
+	border-bottom: 1px solid rgba(31, 208, 202, 0.16) !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab {
+	background: rgba(238, 244, 242, 0.045) !important;
+	border: 1px solid transparent !important;
+	border-radius: 12px 12px 0 0;
+	margin: 5px 2px 0;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab.active {
+	background: #15201e !important;
+	border-color: rgba(31, 208, 202, 0.34) !important;
+	border-top: 1px solid rgba(31, 208, 202, 0.72) !important;
+}
+
+.monaco-workbench .part.panel {
+	background: #101514 !important;
+	border-top: 1px solid rgba(31, 208, 202, 0.2) !important;
+}
+
+.monaco-workbench .part.statusbar {
+	background: #101514 !important;
+	border-top: 1px solid rgba(238, 244, 242, 0.08) !important;
+	color: #b7c7c3 !important;
+}
+
+.vector-code-project-switcher {
+	background:
+		linear-gradient(155deg, rgba(31, 208, 202, 0.14), transparent 56%),
+		#101514;
+	border: 1px solid rgba(238, 244, 242, 0.08);
+	border-radius: 16px;
+	gap: 10px;
+	grid-template-rows: 36px auto minmax(0, 1fr);
+	padding: 12px;
+}
+
+.vector-code-project-switcher__status {
+	color: #9fb2ae;
+	font-size: 10px;
+}
+
+.vector-code-project-switcher__icon-button {
+	background: rgba(31, 208, 202, 0.14);
+	border-color: rgba(31, 208, 202, 0.38);
+	border-radius: 12px;
+	color: #1fd0ca;
+}
+
+.vector-code-project-switcher__project {
+	background:
+		linear-gradient(90deg, rgba(238, 244, 242, 0.045), transparent),
+		#151c1b;
+	border: 1px solid rgba(238, 244, 242, 0.1);
+	border-left: 0;
+	border-radius: 13px;
+	padding: 9px 10px;
+}
+
+.vector-code-project-switcher__project::before {
+	background: #1fd0ca;
+	border-radius: 999px;
+	content: "";
+	height: 7px;
+	position: absolute;
+	width: 7px;
+}
+
+.vector-code-project-switcher__project {
+	padding-left: 25px;
+	position: relative;
+}
+
+.vector-code-project-switcher__project::before {
+	left: 10px;
+	top: 14px;
+}
+
+.vector-code-project-switcher__project:hover {
+	background:
+		linear-gradient(90deg, rgba(31, 208, 202, 0.13), transparent),
+		#192321;
+	border-color: rgba(31, 208, 202, 0.44);
+}
+
+.vector-code-project-switcher__project--active {
+	background:
+		linear-gradient(90deg, rgba(31, 208, 202, 0.22), transparent 76%),
+		#162522;
+	border-color: rgba(31, 208, 202, 0.7);
+}
+
+.monaco-workbench .explorer-folders-view {
+	padding: 10px 6px 14px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row {
+	border-radius: 10px;
+	margin-left: 4px;
+	margin-right: 4px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row.focused,
+.monaco-workbench .explorer-folders-view .monaco-list-row.selected {
+	background: rgba(31, 208, 202, 0.18) !important;
+	outline: 1px solid rgba(31, 208, 202, 0.42) !important;
+}
+
+.vector-code-control {
+	background:
+		linear-gradient(145deg, rgba(31, 208, 202, 0.12), transparent 42%),
+		#101514;
+	border: 1px solid rgba(238, 244, 242, 0.08);
+	border-radius: 18px;
+	margin: 8px;
+	padding: 12px;
+}
+
+.vector-code-control__header {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	grid-template-columns: 42px minmax(0, 1fr);
+	padding: 0;
+}
+
+.vector-code-control__mark {
+	background:
+		linear-gradient(145deg, rgba(60, 224, 218, 0.32), rgba(11, 139, 136, 0.12)),
+		#101514;
+	border: 1px solid rgba(31, 208, 202, 0.34);
+	border-radius: 16px;
+	color: transparent;
+	height: 42px;
+	width: 42px;
+}
+
+.vector-code-control__card {
+	background: rgba(238, 244, 242, 0.045);
+	border-color: rgba(238, 244, 242, 0.1);
+	border-radius: 15px;
+}
+
+.vector-code-control__mobile {
+	background:
+		linear-gradient(160deg, rgba(31, 208, 202, 0.16), transparent 52%),
+		rgba(13, 19, 18, 0.84);
+	border-color: rgba(31, 208, 202, 0.34);
+}
+
+.vector-code-control__button,
+.vector-code-control__input,
+.vector-code-control__pairing,
+.vector-code-control__pairing-code {
+	border-radius: 12px;
+}
+
+/* Cleaner VectorCode shell pass. Keep brand presence in the editor canvas only. */
+.monaco-workbench {
+	--vectorcode-shell-bg: #0c1111;
+	--vectorcode-shell-panel: #101615;
+	--vectorcode-shell-raised: #151b1a;
+	--vectorcode-shell-line: rgba(238, 244, 242, 0.09);
+	--vectorcode-shell-text: #eef4f2;
+	--vectorcode-shell-muted: #9aa8a5;
+	--vectorcode-shell-accent: #1fd0ca;
+	--vectorcode-shell-warn: #0f8f8c;
+	font-weight: 450;
+}
+
+.monaco-workbench .part.titlebar::before,
+.monaco-workbench .editor-group-container.empty::after,
+.vector-code-project-switcher::before {
+	content: none !important;
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar {
+	background: #0d1211 !important;
+	border-bottom: 1px solid rgba(238, 244, 242, 0.08) !important;
+}
+
+.monaco-workbench .part.activitybar {
+	background: #0b100f !important;
+	border-right: 1px solid rgba(31, 208, 202, 0.16) !important;
+}
+
+.monaco-workbench .activitybar > .content {
+	padding-top: 10px;
+}
+
+.monaco-workbench .activitybar > .content::before {
+	content: none !important;
+	display: none !important;
+}
+
+.monaco-workbench .part.editor > .content.empty .editor-group-container.empty {
+	opacity: 1 !important;
+	position: relative;
+}
+
+.monaco-workbench .part.editor > .content.empty .editor-group-container.empty::before {
+	background: url('./brand/vectorcode-logo-ondark.svg') center / contain no-repeat;
+	content: "" !important;
+	display: block !important;
+	height: 72px;
+	left: 50%;
+	max-width: 36vw;
+	opacity: 0.94;
+	pointer-events: none;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 260px;
+}
+
+.monaco-workbench .part.editor > .content:not(.empty) .editor-group-container.empty::before {
+	content: none !important;
+	display: none !important;
+}
+
+.monaco-workbench .part.activitybar .action-label {
+	border-radius: 8px !important;
+	height: 34px !important;
+	margin-left: 10px;
+	width: 34px !important;
+}
+
+.monaco-workbench .part.activitybar > .content > .composite-bar .action-item {
+	margin-bottom: 6px !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item {
+	border-radius: 8px;
+	height: 32px;
+	left: 13px !important;
+	width: 32px;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label {
+	height: 32px !important;
+	width: 32px !important;
+}
+
+.monaco-workbench .part.sidebar {
+	background: #0d1211 !important;
+}
+
+.monaco-workbench .part.sidebar > .composite.title {
+	min-height: 36px;
+	padding-left: 8px;
+}
+
+.monaco-workbench .part.sidebar > .composite.title .title-label h2,
+.monaco-workbench .pane-header .title {
+	font-size: 11px !important;
+	font-weight: 650 !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+.monaco-workbench .pane-header {
+	background: transparent !important;
+	border: 0 !important;
+	border-bottom: 1px solid rgba(238, 244, 242, 0.08) !important;
+	border-radius: 0 !important;
+	margin-top: 2px;
+}
+
+.monaco-workbench .part.editor > .content {
+	background:
+		linear-gradient(180deg, rgba(31, 208, 202, 0.045), transparent 220px),
+		repeating-linear-gradient(90deg, rgba(238, 244, 242, 0.018) 0 1px, transparent 1px 40px),
+		#0b1010 !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab {
+	border-radius: 7px 7px 0 0;
+	margin: 4px 1px 0;
+}
+
+.vector-code-project-switcher {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	gap: 7px;
+	grid-template-rows: auto minmax(0, 1fr);
+	padding: 6px 8px 8px;
+}
+
+.vector-code-project-switcher__status {
+	color: #95a5a2;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: none;
+}
+
+.vector-code-project-switcher__icon-button {
+	border-radius: 7px;
+	height: 24px;
+	width: 26px;
+}
+
+.vector-code-project-switcher__project {
+	background: rgba(238, 244, 242, 0.035);
+	border: 1px solid rgba(238, 244, 242, 0.08);
+	border-radius: 8px;
+	gap: 1px;
+	padding: 7px 8px 7px 21px;
+}
+
+.vector-code-project-switcher__project::before {
+	height: 5px;
+	left: 8px;
+	top: 13px;
+	width: 5px;
+}
+
+.vector-code-project-switcher__project--active {
+	background: rgba(31, 208, 202, 0.1);
+	border-color: rgba(31, 208, 202, 0.42);
+	box-shadow: none;
+}
+
+.vector-code-project-switcher__project-name {
+	font-size: 12px;
+	font-weight: 650;
+}
+
+.vector-code-project-switcher__empty,
+.vector-code-project-switcher__project-path {
+	font-size: 10px;
+}
+
+.monaco-workbench .explorer-folders-view {
+	padding: 6px 4px 10px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row {
+	border-radius: 7px;
+	margin-left: 2px;
+	margin-right: 2px;
+}
+
+.monaco-workbench .explorer-folders-view .explorer-item {
+	font-size: 12px;
+	font-weight: 450;
+}
+
+.vector-code-control {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	gap: 10px;
+	margin: 0;
+	padding: 10px;
+}
+
+.vector-code-control__header {
+	gap: 9px;
+	grid-template-columns: 34px minmax(0, 1fr);
+}
+
+.vector-code-control__mark {
+	background: rgba(31, 208, 202, 0.08);
+	border: 1px solid rgba(31, 208, 202, 0.22);
+	border-radius: 8px;
+	color: #1fd0ca;
+	height: 34px;
+	width: 34px;
+}
+
+.vector-code-control__mark::before {
+	background: none;
+	content: "\eadb" !important;
+	font-family: codicon;
+	font-size: 18px;
+	height: auto;
+	width: auto;
+}
+
+.vector-code-control__heading {
+	font-size: 15px;
+	font-weight: 650;
+	line-height: 19px;
+}
+
+.vector-code-control__header-status,
+.vector-code-control__card-status,
+.vector-code-control__mobile-detail {
 	font-size: 11px;
 	line-height: 16px;
 }
 
-.vector-code-control__project-name {
-	color: var(--vscode-foreground);
-	font-size: 12px;
-	font-weight: 600;
-	line-height: 16px;
+.vector-code-control__card {
+	background: rgba(238, 244, 242, 0.035);
+	border-color: rgba(238, 244, 242, 0.08);
+	border-radius: 8px;
+	padding: 10px;
 }
 
-.vector-code-control__project-path {
+.vector-code-control__mobile {
+	background: rgba(13, 19, 18, 0.8);
+	border-color: rgba(31, 208, 202, 0.22);
+}
+
+.vector-code-control__button,
+.vector-code-control__input,
+.vector-code-control__pairing,
+.vector-code-control__pairing-code {
+	border-radius: 7px;
+}
+
+.vector-code-control__button {
+	font-weight: 650;
+	min-height: 28px;
+}
+
+.vector-code-control__label {
+	color: #9fb2ae;
+}
+
+.vector-code-control__pairing--locked {
+	border-color: rgba(15, 143, 140, 0.42);
+}
+
+.vector-code-control__pairing--locked .vector-code-control__pairing-state {
+	background: #0f8f8c;
+	color: #eef4f2;
+}
+
+.vector-code-control__qr-pending {
+	color: #9fb2ae;
+}
+
+.vector-code-control__pairing-code {
+	background: rgba(15, 143, 140, 0.1);
+	border-color: rgba(15, 143, 140, 0.24);
+	color: #eef4f2;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top {
+	background: #0d1211;
+	border-bottom: 1px solid rgba(238, 244, 242, 0.08);
+	display: block;
+	height: 100%;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top .tabs-list-container,
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top > .monaco-toolbar {
+	display: none !important;
+}
+
+.vector-terminal-tabs-strip {
+	align-items: center;
+	box-sizing: border-box;
+	display: flex;
+	gap: 6px;
+	height: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 6px 8px;
+}
+
+.vector-terminal-tab {
+	align-items: center;
+	background: rgba(238, 244, 242, 0.045);
+	border: 1px solid rgba(238, 244, 242, 0.08);
+	border-radius: 7px;
+	color: #b8c6c2;
+	cursor: pointer;
+	display: inline-flex;
+	flex: 0 0 auto;
+	font: inherit;
+	font-size: 12px;
+	gap: 6px;
+	height: 28px;
+	max-width: 220px;
+	min-width: 76px;
+	padding: 0 7px 0 9px;
+}
+
+.vector-terminal-tab:hover {
+	background: rgba(238, 244, 242, 0.075);
+	color: #eef4f2;
+}
+
+.vector-terminal-tab--active {
+	background: rgba(31, 208, 202, 0.12);
+	border-color: rgba(31, 208, 202, 0.42);
+	color: #eef4f2;
+}
+
+.vector-terminal-tab__title,
+.vector-terminal-tab__description {
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.vector-terminal-tab__title {
+	font-weight: 600;
+}
+
+.vector-terminal-tab__description {
+	color: #879692;
+	font-size: 10px;
+}
+
+.vector-terminal-tab__close {
+	align-items: center;
+	border-radius: 5px;
+	color: #7f8f8b;
+	display: inline-flex;
+	flex: 0 0 auto;
+	font-size: 11px;
+	height: 16px;
+	justify-content: center;
+	line-height: 16px;
+	margin-left: 2px;
+	width: 16px;
+}
+
+.vector-terminal-tab__rename {
+	align-items: center;
+	border-radius: 5px;
+	color: #7f8f8b;
+	display: inline-flex;
+	flex: 0 0 auto;
+	font-size: 12px;
+	height: 16px;
+	justify-content: center;
+	line-height: 16px;
+	margin-left: 2px;
+	width: 16px;
+}
+
+.vector-terminal-tab__rename:hover {
+	background: rgba(238, 244, 242, 0.1);
+	color: #eef4f2;
+}
+
+.vector-terminal-tab__close:hover {
+	background: rgba(238, 244, 242, 0.1);
+	color: #eef4f2;
+}
+
+/* Muted brand pass. Keep the interface quiet and reserve teal for small state cues. */
+.monaco-workbench {
+	--vectorcode-shell-accent: #72aaa5;
+	--vectorcode-shell-accent-strong: #8fc8c3;
+	--vectorcode-shell-warn: #81908d;
+}
+
+.monaco-workbench .part.auxiliarybar {
+	display: none !important;
+	min-width: 0 !important;
+	width: 0 !important;
+}
+
+.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Secondary Side Bar"],
+.monaco-workbench .part.titlebar a.action-label.codicon-auxiliarybar-right-off-layout-icon,
+.monaco-workbench .part.titlebar a.action-label.codicon-auxiliarybar-right-layout-icon,
+.monaco-workbench .part.titlebar .action-item:has(a.action-label[aria-label^="Toggle Secondary Side Bar"]),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-auxiliarybar-right-off-layout-icon),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-auxiliarybar-right-layout-icon),
+.monaco-workbench .part.titlebar button[aria-label^="Toggle Secondary Side Bar"],
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-dock) {
+	display: none !important;
+}
+
+.monaco-workbench .part.activitybar {
+	background: #0b0f0f !important;
+	border-right-color: rgba(238, 244, 242, 0.08) !important;
+	box-shadow: none !important;
+}
+
+.monaco-workbench .part.activitybar .action-label.checked,
+.monaco-workbench .part.activitybar .action-item.checked .action-label,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label.checked {
+	background: rgba(238, 244, 242, 0.06) !important;
+	border-color: rgba(114, 170, 165, 0.24) !important;
+	box-shadow: none !important;
+	color: #dce7e4 !important;
+	outline: 1px solid rgba(114, 170, 165, 0.18) !important;
+}
+
+.monaco-workbench .part.editor > .content {
+	background:
+		repeating-linear-gradient(90deg, rgba(238, 244, 242, 0.014) 0 1px, transparent 1px 42px),
+		#0b0f0f !important;
+}
+
+.monaco-workbench .part.editor > .content.empty .editor-group-container.empty::before {
+	opacity: 0.78;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab.active {
+	border-top-color: rgba(114, 170, 165, 0.36) !important;
+	color: #e6efed !important;
+}
+
+.vector-code-project-switcher__project--active {
+	background: rgba(238, 244, 242, 0.055);
+	border-color: rgba(114, 170, 165, 0.24);
+}
+
+.vector-code-project-switcher__project::before {
+	background: #72aaa5;
+	opacity: 0.65;
+}
+
+.vector-code-project-switcher__icon-button,
+.vector-code-control__button {
+	background: rgba(238, 244, 242, 0.055);
+	border-color: rgba(238, 244, 242, 0.1);
+	color: #d8e3e0;
+}
+
+.vector-code-project-switcher__icon-button:hover,
+.vector-code-control__button:hover {
+	background: rgba(114, 170, 165, 0.1);
+	border-color: rgba(114, 170, 165, 0.2);
+	color: #eef4f2;
+}
+
+.vector-code-control__mobile {
+	background: rgba(238, 244, 242, 0.03);
+	border-color: rgba(238, 244, 242, 0.1);
+}
+
+.vector-code-control__mobile > .vector-code-control__card-header {
+	display: none;
+}
+
+.vector-code-control__input:focus,
+.vector-code-control__pairing--locked,
+.vector-code-control__pairing-code {
+	border-color: rgba(114, 170, 165, 0.22);
+}
+
+.vector-code-control__pairing--locked .vector-code-control__pairing-state,
+.vector-code-control__pairing-code {
+	background: rgba(238, 244, 242, 0.055);
+	color: #dce7e4;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top {
+	background: #0c1111;
+	border-bottom-color: rgba(238, 244, 242, 0.08);
+}
+
+.vector-terminal-tab--active {
+	background: rgba(238, 244, 242, 0.065);
+	border-color: rgba(114, 170, 165, 0.24);
+	color: #e6efed;
+}
+
+/* Final workbench cleanup: keep terminal controls terminal-specific and keep overflow usable. */
+.monaco-workbench .part.titlebar .action-item:has(.codicon-configure-layout-icon),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-left),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-left-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-sidebar-right-off),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-panel),
+.monaco-workbench .part.titlebar .action-item:has(.codicon-layout-panel-off),
+.monaco-workbench .part.titlebar a.action-label[aria-label^="Configure Layout"],
+.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Primary Side Bar"],
+.monaco-workbench .part.titlebar a.action-label[aria-label^="Toggle Panel"] {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar a.action-label.codicon-configure-layout-icon,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-left,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-left-off,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-right,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-right-off,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-layout-icon,
+.monaco-workbench .part.titlebar a.action-label.codicon-panel-layout-icon-off,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-configure-layout-icon) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-left-off) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-right-off) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon) *,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-panel-layout-icon-off) * {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal),
+.monaco-workbench .part.titlebar a.action-label.codicon-terminal {
+	display: flex !important;
+}
+
+.monaco-workbench .part.panel .composite.title {
+	min-height: 34px !important;
+}
+
+.monaco-workbench .part.panel .composite.title .title-actions,
+.monaco-workbench .part.panel .composite.title .global-actions {
+	display: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .title-actions *,
+.monaco-workbench .part.panel .composite.title .global-actions * {
+	display: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item:not(.checked) {
+	display: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item:not(.checked) * {
+	display: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item.checked .action-label {
+	border-bottom-color: rgba(114, 170, 165, 0.34) !important;
+	color: #d9e4e1 !important;
+	font-size: 11px !important;
+	font-weight: 650 !important;
+	letter-spacing: 0 !important;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top {
+	background: #0b0f0f !important;
+	border-bottom-color: rgba(238, 244, 242, 0.065) !important;
+}
+
+.vector-terminal-tabs-strip {
+	gap: 6px;
+	overflow: hidden;
+	padding: 4px 7px;
+}
+
+.vector-terminal-tabs-list {
+	align-items: center;
+	display: flex;
+	flex: 1 1 auto;
+	gap: 4px;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding-bottom: 1px;
+	scrollbar-color: rgba(238, 244, 242, 0.2) transparent;
+	scrollbar-width: thin;
+}
+
+.vector-terminal-tabs-list::-webkit-scrollbar {
+	height: 5px;
+}
+
+.vector-terminal-tabs-list::-webkit-scrollbar-thumb {
+	background: rgba(238, 244, 242, 0.18);
+	border-radius: 999px;
+}
+
+.vector-terminal-tabs-list::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.vector-terminal-tabs-actions {
+	align-items: center;
+	border-left: 1px solid rgba(238, 244, 242, 0.08);
+	display: flex;
+	flex: 0 0 auto;
+	gap: 3px;
+	padding-left: 5px;
+}
+
+.vector-terminal-tabs-action {
+	align-items: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	color: #8d9b98;
+	cursor: pointer;
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 24px;
+	justify-content: center;
+	padding: 0;
+	width: 24px;
+}
+
+.vector-terminal-tabs-action:hover {
+	background: rgba(238, 244, 242, 0.06);
+	border-color: rgba(238, 244, 242, 0.08);
+	color: #dce7e4;
+}
+
+.vector-terminal-tab {
+	background: transparent;
+	border-color: rgba(238, 244, 242, 0.07);
+	border-radius: 6px;
+	font-size: 11px;
+	gap: 5px;
+	height: 24px;
+	max-width: 180px;
+	min-width: 74px;
+	padding: 0 6px 0 8px;
+}
+
+.vector-terminal-tab:hover {
+	background: rgba(238, 244, 242, 0.045);
+}
+
+.vector-terminal-tab--active {
+	background: rgba(238, 244, 242, 0.055);
+	border-color: rgba(114, 170, 165, 0.2);
+}
+
+.vector-terminal-tab__close,
+.vector-terminal-tab__rename {
+	height: 15px;
+	width: 15px;
+}
+
+.monaco-workbench .part.sidebar > .composite.title {
+	min-height: 32px;
+}
+
+.vector-code-project-switcher {
+	gap: 4px;
+	padding: 4px 6px 6px;
+}
+
+.vector-code-project-switcher__header {
+	min-height: 26px;
+}
+
+.vector-code-project-switcher__status {
+	color: #8c9a97;
+	font-size: 10px;
+	font-weight: 550;
+}
+
+.vector-code-project-switcher__icon-button {
+	background: transparent;
+	border-color: rgba(238, 244, 242, 0.08);
+	color: #a7b4b1;
+	height: 23px;
+	width: 24px;
+}
+
+.vector-code-project-switcher__list {
+	gap: 2px;
+	padding-right: 0;
+}
+
+.vector-code-project-switcher__project {
+	background: transparent;
+	border-color: transparent;
+	border-radius: 6px;
+	min-height: 40px;
+	padding: 5px 7px 5px 18px;
+}
+
+.vector-code-project-switcher__project:hover {
+	background: rgba(238, 244, 242, 0.04);
+	border-color: transparent;
+}
+
+.vector-code-project-switcher__project::before {
+	height: 4px;
+	left: 7px;
+	opacity: 0.55;
+	top: 13px;
+	width: 4px;
+}
+
+.vector-code-project-switcher__project--active {
+	background: rgba(238, 244, 242, 0.045);
+	border-color: rgba(238, 244, 242, 0.08);
+}
+
+.vector-code-project-switcher__project-name {
+	font-size: 11.5px;
+	font-weight: 650;
+}
+
+.vector-code-project-switcher__empty,
+.vector-code-project-switcher__project-path {
+	color: #93a09d;
+	font-size: 10px;
+}
+
+.monaco-workbench .explorer-folders-view {
+	padding: 3px 3px 8px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row {
+	border-radius: 5px;
+	margin-left: 1px;
+	margin-right: 1px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row.focused,
+.monaco-workbench .explorer-folders-view .monaco-list-row.selected {
+	background: rgba(238, 244, 242, 0.06) !important;
+	outline: 1px solid rgba(114, 170, 165, 0.16) !important;
+}
+
+.monaco-workbench .explorer-folders-view .explorer-item {
+	color: inherit !important;
+	font-size: 11.5px;
+	font-weight: inherit;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label,
+.monaco-workbench .explorer-folders-view .monaco-icon-label .label-name,
+.monaco-workbench .explorer-folders-view .monaco-icon-label .label-description {
+	color: inherit !important;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .terminal-wrapper,
+.monaco-workbench .pane-body.integrated-terminal .xterm,
+.monaco-workbench .pane-body.integrated-terminal .xterm-rows,
+.monaco-workbench .pane-body.integrated-terminal .xterm-rows span {
+	font-weight: normal;
+}
+
+/* Dense project/file navigation pass. */
+.monaco-workbench .part.sidebar > .composite.title {
+	min-height: 30px !important;
+}
+
+.monaco-workbench .part.sidebar > .content {
+	font-size: 11px !important;
+}
+
+.monaco-workbench .pane-header {
+	min-height: 27px !important;
+	padding-left: 6px !important;
+	padding-right: 5px !important;
+}
+
+.monaco-workbench .pane-header .title {
+	font-size: 10.5px !important;
+	font-weight: 620 !important;
+}
+
+.vector-code-project-switcher {
+	gap: 2px;
+	padding: 2px 4px 4px;
+}
+
+.vector-code-project-switcher__header {
+	min-height: 22px;
+}
+
+.vector-code-project-switcher__status {
+	font-size: 9.5px;
+	font-weight: 520;
+	line-height: 14px;
+}
+
+.vector-code-project-switcher__icon-button {
+	background: transparent;
+	border-color: transparent;
+	height: 21px;
+	width: 21px;
+}
+
+.vector-code-project-switcher__icon-button:hover {
+	background: rgba(238, 244, 242, 0.055);
+	border-color: rgba(238, 244, 242, 0.08);
+}
+
+.vector-code-project-switcher__list {
+	gap: 1px;
+}
+
+.vector-code-project-switcher__project {
+	align-items: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	gap: 0;
+	min-height: 31px;
+	padding: 3px 6px 3px 16px;
+}
+
+.vector-code-project-switcher__project::before {
+	height: 4px;
+	left: 6px;
+	top: 10px;
+	width: 4px;
+}
+
+.vector-code-project-switcher__project:hover {
+	background: rgba(238, 244, 242, 0.035);
+	border-color: transparent;
+}
+
+.vector-code-project-switcher__project--active {
+	background: rgba(238, 244, 242, 0.045);
+	border-color: rgba(238, 244, 242, 0.075);
+}
+
+.vector-code-project-switcher__project-name {
+	font-size: 11px;
+	font-weight: 620;
+	line-height: 14px;
+}
+
+.vector-code-project-switcher__empty,
+.vector-code-project-switcher__project-path {
+	color: inherit !important;
+	font-size: 9.5px;
+	line-height: 12px;
+	opacity: 0.64;
+}
+
+.monaco-workbench .explorer-folders-view {
+	padding: 1px 2px 6px;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row {
+	border-radius: 4px;
+	margin-left: 0;
+	margin-right: 0;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row:hover:not(.selected):not(.focused) {
+	background: rgba(238, 244, 242, 0.035) !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-list-row.focused,
+.monaco-workbench .explorer-folders-view .monaco-list-row.selected {
+	background: rgba(238, 244, 242, 0.055) !important;
+	outline: none !important;
+}
+
+.monaco-workbench .explorer-folders-view .explorer-item,
+.monaco-workbench .explorer-folders-view .monaco-icon-label {
+	font-size: 11.5px !important;
+	line-height: 20px !important;
+}
+
+/* Brand system chrome that still comes from inherited workbench surfaces. */
+.monaco-workbench .monaco-dialog-box {
+	background: color-mix(in srgb, var(--vectorcode-shell-bg) 92%, #48d5c6 8%) !important;
+	border: 1px solid rgba(72, 213, 198, 0.22) !important;
+	border-radius: 8px !important;
+	box-shadow: 0 18px 54px rgba(0, 0, 0, 0.42) !important;
+}
+
+.monaco-workbench .monaco-dialog-box .dialog-icon,
+.monaco-workbench .notifications-toasts .notification-list-item .notification-icon,
+.monaco-workbench .notifications-center .notification-list-item .notification-icon {
+	color: #48d5c6 !important;
+}
+
+.monaco-workbench .notifications-toasts .notification-list-item,
+.monaco-workbench .notifications-center .notification-list-item {
+	background: color-mix(in srgb, var(--vectorcode-shell-bg) 94%, #48d5c6 6%) !important;
+	border: 1px solid rgba(72, 213, 198, 0.18) !important;
+	border-radius: 8px !important;
+}
+
+.monaco-workbench .monaco-button.default,
+.monaco-workbench .monaco-dialog-box .dialog-buttons-row .monaco-button.default,
+.monaco-workbench .notifications-list-container .notification-list-item .monaco-button.default {
+	background: rgba(72, 213, 198, 0.92) !important;
+	color: #06100f !important;
+}
+
+/* Vector top-right rail: search, account, settings, terminal. */
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center > .monaco-toolbar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center > .monaco-toolbar > .monaco-action-bar,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center > .monaco-toolbar > .monaco-action-bar > .actions-container {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	max-width: none !important;
+	min-width: 0 !important;
+	overflow: visible !important;
+	padding: 0 !important;
+	pointer-events: none !important;
+	width: 0 !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .codicon-circle-small-filled {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
+	align-items: center !important;
+	background: rgba(238, 244, 242, 0.035) !important;
+	border: 1px solid rgba(238, 244, 242, 0.09) !important;
+	border-radius: 8px !important;
+	box-shadow: none !important;
+	box-sizing: border-box !important;
+	display: flex !important;
+	height: 30px !important;
+	justify-content: center !important;
+	left: auto !important;
+	margin: 0 !important;
+	max-width: 30px !important;
+	min-width: 30px !important;
+	overflow: hidden !important;
+	padding: 0 !important;
+	pointer-events: auto !important;
+	position: fixed !important;
+	top: 4px !important;
+	width: 30px !important;
+	z-index: 3200 !important;
+	-webkit-app-region: no-drag;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick {
+	right: 124px !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:first-child {
+	right: 88px !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:last-child {
+	right: 52px !important;
+}
+
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
+	right: 16px !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick:hover,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal):hover {
+	background: rgba(238, 244, 242, 0.07) !important;
+	border-color: rgba(114, 170, 165, 0.26) !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-label {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-icon,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label,
+.monaco-workbench .part.titlebar a.action-label.codicon-terminal {
+	align-items: center !important;
+	background: transparent !important;
+	border: 0 !important;
+	color: #aeb8b4 !important;
+	display: flex !important;
+	font-size: 15px !important;
+	height: 28px !important;
+	justify-content: center !important;
+	line-height: 28px !important;
+	margin: 0 !important;
+	opacity: 1 !important;
+	padding: 0 !important;
+	width: 28px !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick:hover .search-icon,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover .action-label,
+.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal):hover a.action-label.codicon-terminal {
+	color: #e4ece9 !important;
+}
+
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item.checked,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label.checked,
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item.checked .action-label {
+	background: rgba(114, 170, 165, 0.11) !important;
+	border-color: rgba(114, 170, 165, 0.28) !important;
+	color: #e4ece9 !important;
+}
+
+/* Vector search dropdown. */
+.monaco-workbench .quick-input-widget {
+	background: rgba(11, 15, 15, 0.98) !important;
+	border: 1px solid rgba(238, 244, 242, 0.12) !important;
+	border-radius: 10px !important;
+	box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34) !important;
+	box-sizing: border-box !important;
+	color: #dce7e4 !important;
+	left: auto !important;
+	max-width: calc(100vw - 32px) !important;
+	overflow: hidden !important;
+	right: 16px !important;
+	top: 42px !important;
+	transform: none !important;
+	width: min(480px, calc(100vw - 32px)) !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-titlebar {
+	background: transparent !important;
+	border-bottom: 1px solid rgba(238, 244, 242, 0.07) !important;
+	border-radius: 10px 10px 0 0 !important;
+	min-height: 30px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-title {
+	color: #dce7e4 !important;
+	font-size: 11px !important;
+	font-weight: 650 !important;
+	letter-spacing: 0 !important;
+	padding: 6px 10px !important;
+	text-align: left !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-header {
+	background: rgba(238, 244, 242, 0.025) !important;
+	cursor: default !important;
+	padding: 8px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-filter {
+	min-height: 34px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-filter .monaco-inputbox {
+	background: rgba(238, 244, 242, 0.045) !important;
+	border: 1px solid rgba(238, 244, 242, 0.1) !important;
+	border-radius: 7px !important;
+	color: #eef4f2 !important;
+	min-height: 34px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-filter .monaco-inputbox.synthetic-focus {
+	border-color: rgba(114, 170, 165, 0.34) !important;
+	box-shadow: 0 0 0 2px rgba(114, 170, 165, 0.12) !important;
+	outline: 0 !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-filter .monaco-inputbox input {
+	color: #eef4f2 !important;
+	font-size: 13px !important;
+	height: 32px !important;
+	line-height: 32px !important;
+	padding: 0 8px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-filter .monaco-inputbox input::placeholder {
+	color: rgba(174, 184, 180, 0.72) !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-count {
+	right: 9px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-count .monaco-count-badge {
+	background: rgba(238, 244, 242, 0.075) !important;
+	border: 1px solid rgba(238, 244, 242, 0.09) !important;
+	border-radius: 999px !important;
+	color: #aeb8b4 !important;
+	font-size: 10px !important;
+	padding: 2px 7px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-description,
+.monaco-workbench .quick-input-widget .quick-input-message {
+	color: #9facaa !important;
+	font-size: 11px !important;
+	line-height: 16px !important;
+	margin: 4px 8px 6px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-progress.monaco-progress-container {
+	background: rgba(238, 244, 242, 0.06) !important;
+	height: 1px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-progress.monaco-progress-container .progress-bit {
+	background: #72aaa5 !important;
+	height: 1px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list {
+	background: transparent !important;
+	border-top: 1px solid rgba(238, 244, 242, 0.055) !important;
+	line-height: 24px !important;
+	padding: 5px 0 7px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-list {
+	background: transparent !important;
+	padding-bottom: 0 !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-scrollable-element {
+	padding: 0 6px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-list-row {
+	border-radius: 6px !important;
+	color: #c9d4d1 !important;
+	margin: 1px 0 !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-list-row:hover:not(.focused) {
+	background: rgba(238, 244, 242, 0.045) !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-list-row.focused {
+	background: rgba(114, 170, 165, 0.14) !important;
+	color: #eef4f2 !important;
+	outline: 1px solid rgba(114, 170, 165, 0.22) !important;
+	outline-offset: -1px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .quick-input-list-entry {
+	padding: 0 8px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .quick-input-list-icon {
+	color: #8fa19d !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .quick-input-list-rows {
+	margin-left: 8px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .label-name,
+.monaco-workbench .quick-input-widget .quick-input-list .quick-input-list-label-meta {
+	color: inherit !important;
+	font-size: 12px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .label-description,
+.monaco-workbench .quick-input-widget .quick-input-list .label-detail {
+	color: #8f9d99 !important;
+	font-size: 11px !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-highlighted-label .highlight {
+	color: #9fd5cf !important;
+	font-weight: 700 !important;
+}
+
+.monaco-workbench .quick-input-widget .quick-input-list .monaco-keybinding-key {
+	background: rgba(238, 244, 242, 0.055) !important;
+	border-color: rgba(238, 244, 242, 0.11) !important;
+	border-radius: 4px !important;
+	box-shadow: none !important;
+	color: #b6c2bf !important;
+	font-size: 10px !important;
+}
+
+/* Vector account/manage menus. */
+.monaco-workbench .context-view.monaco-menu-container {
+	background: rgba(11, 15, 15, 0.98) !important;
+	border: 1px solid rgba(238, 244, 242, 0.12) !important;
+	border-radius: 9px !important;
+	box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34) !important;
+	box-sizing: border-box !important;
+	min-width: 210px !important;
+	overflow: hidden !important;
+	padding: 5px !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-menu {
+	background: transparent !important;
+	color: #dce7e4 !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical {
+	padding: 0 !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .action-menu-item {
+	border-radius: 6px !important;
+	color: #c9d4d1 !important;
+	height: 26px !important;
+	margin: 1px 0 !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .action-item.focused .action-menu-item,
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .action-menu-item:hover {
+	background: rgba(114, 170, 165, 0.14) !important;
+	color: #eef4f2 !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .action-label:not(.separator),
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .keybinding,
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .submenu-indicator {
+	font-size: 12px !important;
+	line-height: 26px !important;
+	padding: 0 10px !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .keybinding,
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .submenu-indicator {
+	color: #8f9d99 !important;
+}
+
+.monaco-workbench .context-view.monaco-menu-container .monaco-action-bar.vertical .action-label.separator {
+	border-top: 1px solid rgba(238, 244, 242, 0.08) !important;
+	margin: 5px 0 !important;
+}
+
+/* Vector Explorer icons. */
+.monaco-workbench {
+	--vectorcode-explorer-new-file: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7%204.8h6.2l3.8%203.8v10.6H7zM13%205v3.9h3.8M12%2012.1v5.2M9.4%2014.7h5.2'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-new-folder: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4.8%207.4h5.2l1.5%201.7h7.7v9.1H4.8zM12%2011.5v4.8M9.6%2013.9h4.8'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-refresh: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M17.6%208.2A6.4%206.4%200%200%200%206.2%2011M6.4%207.3v3.8h3.8M6.4%2015.8A6.4%206.4%200%200%200%2017.8%2013M17.6%2016.7v-3.8h-3.8'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-collapse: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M6.2%207.2h11.6M8.2%2011h7.6M10.2%2014.8h3.6M9%2018h6'%20fill='none'%20stroke='black'%20stroke-width='1.2'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-more: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7.4%2012h.1M12%2012h.1M16.6%2012h.1'%20fill='none'%20stroke='black'%20stroke-width='2.1'%20stroke-linecap='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-chevron: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7.8%209.6l4.2%204.2%204.2-4.2'%20fill='none'%20stroke='black'%20stroke-width='1.35'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-file: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M7.4%204.8h6.2l3%203v11.4H7.4zM13.4%205v3h3'%20fill='none'%20stroke='black'%20stroke-width='1.16'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-folder: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4.8%207.2h5.1l1.6%201.7h7.7v8.9H4.8z'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-explorer-folder-open: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4.8%208h5.1l1.6%201.5h7.2M5.2%2010.5h14l-1.7%207.3H4.4z'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.monaco-workbench .part.sidebar .codicon-new-file { --vectorcode-icon-mask: var(--vectorcode-explorer-new-file); }
+.monaco-workbench .part.sidebar .codicon-new-folder { --vectorcode-icon-mask: var(--vectorcode-explorer-new-folder); }
+.monaco-workbench .part.sidebar .codicon-refresh { --vectorcode-icon-mask: var(--vectorcode-explorer-refresh); }
+.monaco-workbench .part.sidebar .codicon-collapse-all { --vectorcode-icon-mask: var(--vectorcode-explorer-collapse); }
+.monaco-workbench .part.sidebar .codicon-more,
+.monaco-workbench .part.sidebar .codicon-toolbar-more,
+.monaco-workbench .part.sidebar .codicon-ellipsis { --vectorcode-icon-mask: var(--vectorcode-explorer-more); }
+
+.monaco-workbench .part.sidebar .action-label.codicon-new-file::before,
+.monaco-workbench .part.sidebar .action-label.codicon-new-folder::before,
+.monaco-workbench .part.sidebar .action-label.codicon-refresh::before,
+.monaco-workbench .part.sidebar .action-label.codicon-collapse-all::before,
+.monaco-workbench .part.sidebar .action-label.codicon-more::before,
+.monaco-workbench .part.sidebar .action-label.codicon-toolbar-more::before,
+.monaco-workbench .part.sidebar .action-label.codicon-ellipsis::before {
+	background: currentColor !important;
+	content: "" !important;
+	display: block !important;
+	height: 16px !important;
+	margin: auto !important;
+	-webkit-mask: var(--vectorcode-icon-mask) center / 16px 16px no-repeat !important;
+	mask: var(--vectorcode-icon-mask) center / 16px 16px no-repeat !important;
+	width: 16px !important;
+}
+
+.monaco-workbench .part.sidebar .action-label.codicon-new-file,
+.monaco-workbench .part.sidebar .action-label.codicon-new-folder,
+.monaco-workbench .part.sidebar .action-label.codicon-refresh,
+.monaco-workbench .part.sidebar .action-label.codicon-collapse-all,
+.monaco-workbench .part.sidebar .action-label.codicon-more,
+.monaco-workbench .part.sidebar .action-label.codicon-toolbar-more,
+.monaco-workbench .part.sidebar .action-label.codicon-ellipsis {
+	align-items: center !important;
+	color: rgba(220, 231, 228, 0.68) !important;
+	display: flex !important;
+	height: 22px !important;
+	justify-content: center !important;
+	width: 22px !important;
+}
+
+.monaco-workbench .part.sidebar .action-label.codicon-new-file:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-new-folder:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-refresh:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-collapse-all:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-more:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-toolbar-more:hover,
+.monaco-workbench .part.sidebar .action-label.codicon-ellipsis:hover {
+	background: rgba(238, 244, 242, 0.055) !important;
+	border-radius: 5px !important;
+	color: #eef4f2 !important;
+}
+
+.monaco-workbench .part.sidebar .pane-header > .codicon:first-of-type::before,
+.monaco-workbench .explorer-folders-view .monaco-tl-twistie:not(.codicon-tree-item-loading)::before {
+	background: currentColor !important;
+	content: "" !important;
+	display: block !important;
+	height: 14px !important;
+	-webkit-mask: var(--vectorcode-explorer-chevron) center / 14px 14px no-repeat !important;
+	mask: var(--vectorcode-explorer-chevron) center / 14px 14px no-repeat !important;
+	width: 14px !important;
+}
+
+.monaco-workbench .part.sidebar .pane-header > .codicon:first-of-type,
+.monaco-workbench .explorer-folders-view .monaco-tl-twistie {
+	color: rgba(220, 231, 228, 0.54) !important;
+}
+
+.monaco-workbench .part.sidebar .pane-header:not(.expanded) > .codicon:first-of-type::before,
+.monaco-workbench .explorer-folders-view .monaco-tl-twistie.collapsed:not(.codicon-tree-item-loading)::before {
+	transform: rotate(-90deg) !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label.file-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="-file-icon"].file-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label.folder-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label.rootfolder-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="-folder-icon"].folder-icon::before {
+	background-color: currentColor !important;
+	background-image: none !important;
+	content: "" !important;
+	display: inline-block !important;
+	flex: 0 0 15px !important;
+	font-family: unset !important;
+	font-size: 0 !important;
+	height: 20px !important;
+	line-height: 20px !important;
+	margin-right: 5px !important;
+	opacity: 0.82;
+	padding-right: 0 !important;
+	width: 15px !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label.file-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="-file-icon"].file-icon::before {
+	-webkit-mask: var(--vectorcode-explorer-file) left center / 15px 15px no-repeat !important;
+	mask: var(--vectorcode-explorer-file) left center / 15px 15px no-repeat !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label.folder-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label.rootfolder-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="-folder-icon"].folder-icon::before {
+	-webkit-mask: var(--vectorcode-explorer-folder) left center / 15px 15px no-repeat !important;
+	mask: var(--vectorcode-explorer-folder) left center / 15px 15px no-repeat !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-tl-twistie.collapsible:not(.collapsed) + .monaco-tl-contents .monaco-icon-label.folder-icon::before,
+.monaco-workbench .explorer-folders-view .monaco-tl-twistie.collapsible:not(.collapsed) + .monaco-tl-contents .monaco-icon-label.rootfolder-icon::before {
+	-webkit-mask: var(--vectorcode-explorer-folder-open) left center / 15px 15px no-repeat !important;
+	mask: var(--vectorcode-explorer-folder-open) left center / 15px 15px no-repeat !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="monaco-decoration-"]::after {
+	border-radius: 999px !important;
+	font-size: 9px !important;
+	font-weight: 560 !important;
+	line-height: 12px !important;
+	margin: auto 8px auto 4px !important;
+	min-width: 7px !important;
+	opacity: 0.62 !important;
+	text-align: center !important;
+}
+
+.monaco-workbench .explorer-folders-view .monaco-icon-label[class*="monaco-decoration-bubbleBadge"]::after {
+	border-radius: 999px !important;
+	font-size: 0 !important;
+	height: 6px !important;
+	margin: auto 9px auto 5px !important;
+	min-width: 0 !important;
+	padding: 0 !important;
+	width: 6px !important;
+}
+
+/* Final Vector tab system: editor, panel, terminal, and project tabs share one language. */
+.monaco-workbench {
+	--vectorcode-tab-height: 27px;
+	--vectorcode-tab-radius: 6px;
+	--vectorcode-tab-bg: rgba(238, 244, 242, 0.028);
+	--vectorcode-tab-bg-hover: rgba(238, 244, 242, 0.052);
+	--vectorcode-tab-bg-active: rgba(238, 244, 242, 0.07);
+	--vectorcode-tab-border: rgba(238, 244, 242, 0.065);
+	--vectorcode-tab-border-hover: rgba(238, 244, 242, 0.11);
+	--vectorcode-tab-border-active: rgba(114, 170, 165, 0.28);
+	--vectorcode-tab-text: rgba(220, 231, 228, 0.66);
+	--vectorcode-tab-text-active: rgba(246, 251, 249, 0.94);
+	--vectorcode-tab-text-muted: rgba(220, 231, 228, 0.5);
+	--vectorcode-tab-accent: rgba(114, 170, 165, 0.8);
+}
+
+.monaco-workbench .part.editor .title {
+	background: rgba(9, 14, 14, 0.96) !important;
+	border-bottom: 1px solid rgba(238, 244, 242, 0.06) !important;
+}
+
+.monaco-workbench .part.editor .tabs-and-actions-container {
+	min-height: 33px !important;
+}
+
+.monaco-workbench .part.editor .tabs-container {
+	gap: 2px !important;
+	padding-left: 4px !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab {
+	background: var(--vectorcode-tab-bg) !important;
+	border: 1px solid var(--vectorcode-tab-border) !important;
+	border-bottom-color: transparent !important;
+	border-radius: var(--vectorcode-tab-radius) var(--vectorcode-tab-radius) 0 0 !important;
+	box-shadow: none !important;
+	color: var(--vectorcode-tab-text) !important;
+	font-size: 12px !important;
+	font-weight: 520 !important;
+	height: var(--vectorcode-tab-height) !important;
+	margin: 4px 0 0 !important;
+	position: relative !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab:hover {
+	background: var(--vectorcode-tab-bg-hover) !important;
+	border-color: var(--vectorcode-tab-border-hover) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab.active {
+	background: var(--vectorcode-tab-bg-active) !important;
+	border-color: var(--vectorcode-tab-border-active) !important;
+	border-top-color: var(--vectorcode-tab-border-active) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+	outline: none !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab.active::before {
+	background: var(--vectorcode-tab-accent) !important;
+	border-radius: 999px !important;
+	content: "" !important;
+	height: 1px !important;
+	left: 8px !important;
+	position: absolute !important;
+	right: 8px !important;
+	top: 2px !important;
+}
+
+.monaco-workbench .part.editor .tabs-container > .tab .tab-label,
+.monaco-workbench .part.editor .tabs-container > .tab .monaco-icon-label,
+.monaco-workbench .part.editor .tabs-container > .tab .monaco-icon-label-container,
+.monaco-workbench .part.editor .tabs-container > .tab .label-name {
+	color: inherit !important;
+	font-size: 12px !important;
+	font-weight: inherit !important;
+	letter-spacing: 0 !important;
+}
+
+.monaco-workbench .part.panel .composite.title {
+	background: rgba(9, 14, 14, 0.96) !important;
+	border-color: rgba(238, 244, 242, 0.06) !important;
+	min-height: 32px !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item .action-label {
+	align-items: center !important;
+	background: var(--vectorcode-tab-bg) !important;
+	border: 1px solid var(--vectorcode-tab-border) !important;
+	border-radius: var(--vectorcode-tab-radius) !important;
+	box-sizing: border-box !important;
+	color: var(--vectorcode-tab-text) !important;
+	display: inline-flex !important;
+	font-size: 12px !important;
+	font-weight: 540 !important;
+	height: 24px !important;
+	letter-spacing: 0 !important;
+	padding: 0 10px !important;
+	text-transform: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item:hover .action-label {
+	background: var(--vectorcode-tab-bg-hover) !important;
+	border-color: var(--vectorcode-tab-border-hover) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item.checked .action-label {
+	background: var(--vectorcode-tab-bg-active) !important;
+	border-color: var(--vectorcode-tab-border-active) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+	font-size: 12px !important;
+	font-weight: 540 !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+.monaco-workbench .part.panel .composite.title .composite-bar .action-item .active-item-indicator::before {
+	display: none !important;
+}
+
+.monaco-workbench .pane-body.integrated-terminal .tabs-container.vector-terminal-tabs-top {
+	background: rgba(9, 14, 14, 0.96) !important;
+	border-bottom-color: rgba(238, 244, 242, 0.06) !important;
+}
+
+.vector-terminal-tabs-strip {
+	gap: 5px !important;
+	padding: 4px 6px !important;
+}
+
+.vector-terminal-tabs-list {
+	gap: 4px !important;
+	scrollbar-color: rgba(220, 231, 228, 0.2) transparent !important;
+}
+
+.vector-terminal-tab {
+	background: var(--vectorcode-tab-bg) !important;
+	border: 1px solid var(--vectorcode-tab-border) !important;
+	border-radius: var(--vectorcode-tab-radius) !important;
+	color: var(--vectorcode-tab-text) !important;
+	font-size: 11.5px !important;
+	font-weight: 520 !important;
+	height: 24px !important;
+	max-width: 188px !important;
+	min-width: 72px !important;
+	padding: 0 6px 0 8px !important;
+}
+
+.vector-terminal-tab:hover {
+	background: var(--vectorcode-tab-bg-hover) !important;
+	border-color: var(--vectorcode-tab-border-hover) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.vector-terminal-tab--active {
+	background: var(--vectorcode-tab-bg-active) !important;
+	border-color: var(--vectorcode-tab-border-active) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.vector-terminal-tab__title {
+	color: inherit !important;
+	font-weight: inherit !important;
+}
+
+.vector-terminal-tab__description {
+	color: var(--vectorcode-tab-text-muted) !important;
+	font-size: 10px !important;
+	font-weight: 500 !important;
+}
+
+.vector-terminal-tab__close,
+.vector-terminal-tab__rename,
+.vector-terminal-tabs-action {
+	border-radius: 5px !important;
+	color: var(--vectorcode-tab-text-muted) !important;
+}
+
+.vector-terminal-tab__close:hover,
+.vector-terminal-tab__rename:hover,
+.vector-terminal-tabs-action:hover {
+	background: var(--vectorcode-tab-bg-hover) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.vector-terminal-tabs-action {
+	background: var(--vectorcode-tab-bg) !important;
+	border: 1px solid var(--vectorcode-tab-border) !important;
+	height: 24px !important;
+	width: 24px !important;
+}
+
+.vector-code-project-switcher__project {
+	background: var(--vectorcode-tab-bg) !important;
+	border: 1px solid var(--vectorcode-tab-border) !important;
+	border-radius: var(--vectorcode-tab-radius) !important;
+	color: var(--vectorcode-tab-text) !important;
+	grid-template-rows: 14px 12px !important;
+	height: 38px !important;
+	min-height: 30px !important;
+	padding: 4px 7px 4px 16px !important;
+	row-gap: 2px !important;
+}
+
+.vector-code-project-switcher__project:hover {
+	background: var(--vectorcode-tab-bg-hover) !important;
+	border-color: var(--vectorcode-tab-border-hover) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.vector-code-project-switcher__project--active {
+	background: var(--vectorcode-tab-bg-active) !important;
+	border-color: var(--vectorcode-tab-border-active) !important;
+	color: var(--vectorcode-tab-text-active) !important;
+}
+
+.vector-code-project-switcher__project::before {
+	background: var(--vectorcode-tab-accent) !important;
+	opacity: 0.65 !important;
+}
+
+.vector-code-project-switcher__project-name {
+	color: inherit !important;
+	font-size: 11px !important;
+	font-weight: 610 !important;
+	letter-spacing: 0 !important;
+}
+
+.vector-code-project-switcher__project-path {
+	color: var(--vectorcode-tab-text-muted) !important;
+	font-size: 9.5px !important;
+}
+
+/* Vector-owned Debug and Git empty-state surfaces. */
+.monaco-workbench .vector-debug-welcome-view {
+	background: var(--vectorcode-shell-bg, #0b0f12);
+	color: var(--vectorcode-shell-text, #f4efe6);
+	height: 100%;
+	overflow: hidden;
+}
+
+.monaco-workbench .vector-debug-welcome {
+	box-sizing: border-box;
+	display: flex;
+	height: 100%;
+	min-height: 0;
+	padding: 10px;
+}
+
+.monaco-workbench .vector-debug-card {
+	align-content: start;
+	background: var(--vectorcode-shell-panel, #111719);
+	border: 1px solid var(--vectorcode-shell-line, rgba(244, 239, 230, 0.12));
+	border-radius: 8px;
+	box-sizing: border-box;
+	display: grid;
+	gap: 10px;
+	min-width: 0;
+	padding: 12px;
+	width: 100%;
+}
+
+.monaco-workbench .vector-debug-card__header {
+	align-items: center;
+	display: grid;
+	gap: 10px;
+	grid-template-columns: 34px minmax(0, 1fr);
+	min-width: 0;
+}
+
+.monaco-workbench .vector-debug-card__mark {
+	align-items: center;
+	background: rgba(55, 214, 194, 0.1);
+	border: 1px solid rgba(55, 214, 194, 0.28);
+	border-radius: 7px;
+	color: var(--vectorcode-shell-accent, #37d6c2);
+	display: flex;
+	height: 34px;
+	justify-content: center;
+	width: 34px;
+}
+
+.monaco-workbench .vector-debug-card__header-text {
+	min-width: 0;
+}
+
+.monaco-workbench .vector-debug-card__eyebrow {
+	color: var(--vectorcode-shell-muted, #aeb8b4);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0;
+	line-height: 14px;
+	text-transform: uppercase;
+}
+
+.monaco-workbench .vector-debug-card__title {
+	color: var(--vectorcode-shell-text, #f4efe6);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 18px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.monaco-workbench .vector-debug-card__copy,
+.monaco-workbench .vector-debug-card__hint {
+	color: var(--vectorcode-shell-muted, #aeb8b4);
+	font-size: 12px;
+	line-height: 17px;
+}
+
+.monaco-workbench .vector-debug-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-width: 0;
+}
+
+.monaco-workbench .vector-debug-card__button {
+	align-items: center;
+	background: rgba(244, 239, 230, 0.06);
+	border: 1px solid rgba(244, 239, 230, 0.12);
+	border-radius: 7px;
+	color: var(--vectorcode-shell-text, #f4efe6);
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 12px;
+	font-weight: 700;
+	gap: 6px;
+	height: 30px;
+	line-height: 16px;
+	max-width: 100%;
+	min-width: 0;
+	padding: 0 10px;
+}
+
+.monaco-workbench .vector-debug-card__button:hover {
+	background: rgba(244, 239, 230, 0.1);
+	border-color: rgba(244, 239, 230, 0.2);
+}
+
+.monaco-workbench .vector-debug-card__button--primary {
+	background: rgba(55, 214, 194, 0.16);
+	border-color: rgba(55, 214, 194, 0.36);
+	color: var(--vectorcode-shell-accent, #37d6c2);
+}
+
+.monaco-workbench .vector-debug-card__button--primary:hover {
+	background: rgba(55, 214, 194, 0.22);
+	border-color: rgba(55, 214, 194, 0.48);
+}
+
+.monaco-workbench .vector-debug-card__button-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.monaco-workbench .vector-git-view {
+	background: var(--vectorcode-shell-bg, #0b0f12);
+	color: var(--vectorcode-shell-text, #f4efe6);
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view {
+	background: var(--vectorcode-shell-bg, #0b0f12);
+	box-sizing: border-box;
+	padding: 10px;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content {
+	align-items: stretch;
+	background: var(--vectorcode-shell-panel, #111719);
+	border: 1px solid var(--vectorcode-shell-line, rgba(244, 239, 230, 0.12));
+	border-radius: 8px;
+	box-sizing: border-box;
+	color: var(--vectorcode-shell-text, #f4efe6);
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 12px;
+	width: 100%;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content::before {
+	align-items: center;
+	background: rgba(55, 214, 194, 0.1);
+	border: 1px solid rgba(55, 214, 194, 0.28);
+	border-radius: 7px;
+	color: var(--vectorcode-shell-accent, #37d6c2);
+	content: "Git";
+	display: flex;
+	font-size: 10px;
+	font-weight: 700;
+	height: 28px;
+	justify-content: center;
+	letter-spacing: 0;
+	text-transform: uppercase;
+	width: 42px;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > p {
+	color: var(--vectorcode-shell-muted, #aeb8b4);
+	font-size: 12px;
+	line-height: 17px;
+	margin: 0;
+	width: auto;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > p:first-of-type {
+	color: var(--vectorcode-shell-text, #f4efe6);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 18px;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > .button-container {
+	margin: 0;
+	max-width: none;
+	width: auto;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > .button-container > .monaco-button {
+	background: rgba(55, 214, 194, 0.16) !important;
+	border: 1px solid rgba(55, 214, 194, 0.36) !important;
+	border-radius: 7px !important;
+	color: var(--vectorcode-shell-accent, #37d6c2) !important;
+	font-size: 12px;
+	font-weight: 700;
+	height: 30px;
+	max-width: none;
+	padding: 0 10px;
+	width: auto;
+}
+
+.monaco-workbench .vector-git-view.welcome > .welcome-view .welcome-view-content > .button-container > .monaco-button:hover {
+	background: rgba(55, 214, 194, 0.22) !important;
+	border-color: rgba(55, 214, 194, 0.48) !important;
+}
+
+/* Vector Git view polish. */
+.monaco-workbench .scm-view {
+	background: transparent !important;
+	color: rgba(220, 231, 228, 0.78) !important;
+}
+
+.monaco-workbench .scm-view .scm-provider {
+	align-items: stretch !important;
+	box-shadow: none !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row {
+	color: rgba(220, 231, 228, 0.7) !important;
+	font-size: 11.5px !important;
+	line-height: 22px !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row:hover:not(.selected):not(.focused) {
+	background: rgba(238, 244, 242, 0.035) !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row.focused,
+.monaco-workbench .scm-view .monaco-list-row.selected {
+	background: rgba(238, 244, 242, 0.06) !important;
+	color: rgba(246, 251, 249, 0.92) !important;
+	outline: 1px solid rgba(114, 170, 165, 0.16) !important;
+	outline-offset: -1px !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .monaco-icon-label-container,
+.monaco-workbench .scm-view .monaco-list-row .resource,
+.monaco-workbench .scm-view .monaco-list-row .resource-group {
+	height: 22px !important;
+}
+
+.monaco-workbench .scm-view .scm-input {
+	align-items: stretch !important;
+	height: auto !important;
+	padding: 6px 8px 3px !important;
+}
+
+.monaco-workbench .scm-view .scm-editor {
+	background: rgba(238, 244, 242, 0.035) !important;
+	border: 1px solid rgba(238, 244, 242, 0.08) !important;
+	border-radius: 6px !important;
+	min-height: 28px !important;
+}
+
+.monaco-workbench .scm-view .scm-editor.synthetic-focus {
+	border-color: rgba(114, 170, 165, 0.34) !important;
+	outline: 1px solid rgba(114, 170, 165, 0.16) !important;
+}
+
+.monaco-workbench .scm-view .scm-editor-container .monaco-editor,
+.monaco-workbench .scm-view .scm-editor-container .monaco-editor-background,
+.monaco-workbench .scm-view .scm-editor-container .monaco-editor .margin,
+.monaco-workbench .scm-view .scm-editor-container .monaco-editor .monaco-editor-background,
+.monaco-workbench .part.basepanel > .content .scm-view .scm-editor-container .monaco-editor,
+.monaco-workbench .part.basepanel > .content .scm-view .scm-editor-container .monaco-editor .margin,
+.monaco-workbench .part.basepanel > .content .scm-view .scm-editor-container .monaco-editor .monaco-editor-background {
+	background-color: transparent !important;
+}
+
+.monaco-workbench .scm-view .scm-editor-container .mtk1 {
+	color: rgba(238, 244, 242, 0.9) !important;
+}
+
+.monaco-workbench .scm-view .scm-editor-container .placeholder-text.mtk1 {
+	color: rgba(220, 231, 228, 0.42) !important;
+	font-size: 11.5px !important;
+}
+
+.monaco-workbench .scm-view .button-container {
+	height: auto !important;
+	padding: 3px 8px 7px !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown {
+	border-radius: 6px !important;
+	box-shadow: none !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-button.monaco-text-button,
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-dropdown-button {
+	background: rgba(114, 170, 165, 0.16) !important;
+	border: 1px solid rgba(114, 170, 165, 0.26) !important;
+	box-shadow: none !important;
+	color: rgba(246, 251, 249, 0.92) !important;
+	height: 28px !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-button.monaco-text-button {
+	border-radius: 6px 0 0 6px !important;
+	font-size: 11.5px !important;
+	font-weight: 610 !important;
+	letter-spacing: 0 !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown > .monaco-dropdown-button {
+	border-left: 0 !important;
+	border-radius: 0 6px 6px 0 !important;
+}
+
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown:hover > .monaco-button.monaco-text-button,
+.monaco-workbench .scm-view .button-container > .monaco-button-dropdown:hover > .monaco-dropdown-button {
+	background: rgba(114, 170, 165, 0.22) !important;
+	border-color: rgba(114, 170, 165, 0.36) !important;
+}
+
+.monaco-workbench .scm-view .button-container .codicon {
+	color: rgba(128, 218, 211, 0.86) !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .resource-group > .name,
+.monaco-workbench .scm-view .monaco-list-row .resource-group .monaco-highlighted-label {
+	color: rgba(246, 251, 249, 0.9) !important;
+	font-size: 11.5px !important;
+	font-weight: 640 !important;
+	letter-spacing: 0 !important;
+}
+
+.monaco-workbench .scm-view .count,
+.monaco-workbench .scm-view .monaco-count-badge,
+.monaco-workbench .part.activitybar .badge .badge-content {
+	background: rgba(114, 170, 165, 0.72) !important;
+	border: 0 !important;
+	border-radius: 999px !important;
+	color: #07110f !important;
+	font-size: 10px !important;
+	font-weight: 680 !important;
+	min-width: 14px !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .resource > .name .label-name,
+.monaco-workbench .scm-view .monaco-list-row .history-item .monaco-icon-label .label-name {
+	color: rgba(220, 231, 228, 0.78) !important;
+	font-size: 11.5px !important;
+	font-weight: 520 !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .resource > .name .label-description,
+.monaco-workbench .scm-view .monaco-list-row .history-item .monaco-icon-label .label-description {
+	color: rgba(220, 231, 228, 0.45) !important;
+	font-size: 10.5px !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .resource > .decoration-icon,
+.monaco-workbench .scm-view .monaco-list-row .resource > .name > .monaco-icon-label::after,
+.monaco-workbench .scm-view .monaco-list-row .history-item-change > .label-container > .monaco-icon-label::after {
+	font-size: 10px !important;
+	font-weight: 680 !important;
+	opacity: 0.78 !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .history-item > .label-container > .label {
+	background: rgba(114, 170, 165, 0.15) !important;
+	border: 1px solid rgba(114, 170, 165, 0.22) !important;
+	border-radius: 999px !important;
+	color: rgba(246, 251, 249, 0.9) !important;
+	line-height: 17px !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container > .graph > path,
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container > svg > path {
+	stroke: rgba(114, 170, 165, 0.56) !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container > .graph > circle {
+	fill: rgba(114, 170, 165, 0.8) !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container > .graph > circle {
+	stroke: rgba(9, 14, 14, 0.96) !important;
+}
+
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.current > .graph > circle:last-child,
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.incoming-changes > .graph > circle:last-child,
+.monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.outgoing-changes > .graph > circle:last-child {
+	fill: rgba(9, 14, 14, 0.96) !important;
 }

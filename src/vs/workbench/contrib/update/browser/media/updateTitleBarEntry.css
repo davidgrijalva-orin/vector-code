@@ -6,7 +6,7 @@
 .monaco-action-bar .update-indicator {
 	display: flex;
 	align-items: center;
-	border-radius: var(--vscode-cornerRadius-medium);
+	border-radius: var(--vectorcode-cornerRadius-medium);
 	white-space: nowrap;
 	padding: 0px 8px;
 	height: 22px;
@@ -16,29 +16,29 @@
 }
 
 .monaco-action-bar .update-indicator:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .monaco-action-bar .update-indicator .indicator-label {
-	font-size: var(--vscode-bodyFontSize-small);
+	font-size: var(--vectorcode-bodyFontSize-small);
 	position: relative;
 }
 
 /* Prominent state (action required) — primary button style */
 .monaco-action-bar .update-indicator.prominent {
-	background-color: var(--vscode-button-background);
-	color: var(--vscode-button-foreground);
-	border-color: var(--vscode-button-background);
+	background-color: var(--vectorcode-button-background);
+	color: var(--vectorcode-button-foreground);
+	border-color: var(--vectorcode-button-background);
 }
 
 .monaco-action-bar .update-indicator.prominent:hover {
-	background-color: var(--vscode-button-hoverBackground);
-	border-color: var(--vscode-button-hoverBackground);
+	background-color: var(--vectorcode-button-hoverBackground);
+	border-color: var(--vectorcode-button-hoverBackground);
 }
 
 /* Disabled state */
 .monaco-action-bar .update-indicator.update-disabled .indicator-label {
-	color: var(--vscode-disabledForeground);
+	color: var(--vectorcode-disabledForeground);
 }
 
 /* Progress underline bar (shared base) */
@@ -58,7 +58,7 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		var(--vscode-progressBar-background) 80%,
+		var(--vectorcode-progressBar-background) 80%,
 		transparent 100%
 	);
 	background-size: 200% 100%;
@@ -75,8 +75,8 @@
 	width: 100%;
 	background: linear-gradient(
 		90deg,
-		var(--vscode-progressBar-background) var(--update-progress, 0%),
-		color-mix(in srgb, var(--vscode-progressBar-background) 25%, transparent) var(--update-progress, 0%)
+		var(--vectorcode-progressBar-background) var(--update-progress, 0%),
+		color-mix(in srgb, var(--vectorcode-progressBar-background) 25%, transparent) var(--update-progress, 0%)
 	);
 	transition: background 0.3s ease;
 }

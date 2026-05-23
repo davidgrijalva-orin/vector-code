@@ -29,10 +29,6 @@ export enum BrowserViewCommandId {
 	OpenExternal = `${commandPrefix}.openExternal`,
 	OpenSettings = `${commandPrefix}.openSettings`,
 
-	// Chat actions
-	AddElementToChat = `${commandPrefix}.addElementToChat`,
-	AddConsoleLogsToChat = `${commandPrefix}.addConsoleLogsToChat`,
-
 	// Dev Tools
 	ToggleDevTools = `${commandPrefix}.toggleDevTools`,
 

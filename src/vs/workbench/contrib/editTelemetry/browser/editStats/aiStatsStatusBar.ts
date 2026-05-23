@@ -210,7 +210,7 @@ export function createAiStatsHover(options: IAiStatsHoverOptions) {
 		n.div({
 			style: {
 				marginTop: '8px',
-				borderTop: '1px solid var(--vscode-widget-border)',
+				borderTop: '1px solid var(--vectorcode-widget-border)',
 				paddingTop: '8px',
 			}
 		}, [

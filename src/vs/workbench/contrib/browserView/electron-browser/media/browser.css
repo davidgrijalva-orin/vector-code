@@ -34,7 +34,7 @@
 		display: flex;
 		align-items: center;
 		padding: 6px 8px;
-		background-color: var(--vscode-editor-background);
+		background-color: var(--vectorcode-editor-background);
 		flex-shrink: 0;
 		gap: 8px;
 	}
@@ -59,12 +59,12 @@
 		display: flex;
 		align-items: center;
 		min-width: 0;
-		background-color: var(--vscode-input-background);
-		border: 1px solid var(--vscode-input-border);
-		border-radius: var(--vscode-cornerRadius-small);
+		background-color: var(--vectorcode-input-background);
+		border: 1px solid var(--vectorcode-input-border);
+		border-radius: var(--vectorcode-cornerRadius-small);
 
 		&:has(.browser-url-input:focus) {
-			border-color: var(--vscode-focusBorder);
+			border-color: var(--vectorcode-focusBorder);
 		}
 	}
 
@@ -75,9 +75,9 @@
 		font-size: 13px;
 		line-height: 17px;
 		background-color: transparent;
-		color: var(--vscode-input-foreground);
+		color: var(--vectorcode-input-foreground);
 		border: none;
-		border-radius: var(--vscode-cornerRadius-small);
+		border-radius: var(--vectorcode-cornerRadius-small);
 		outline: none !important;
 		text-overflow: ellipsis;
 		overflow: hidden;
@@ -99,8 +99,8 @@
 		margin: 0;
 		padding: 0 2px;
 		flex-shrink: 0;
-		border-radius: var(--vscode-cornerRadius-small);
-		color: var(--vscode-descriptionForeground);
+		border-radius: var(--vectorcode-cornerRadius-small);
+		color: var(--vectorcode-descriptionForeground);
 		font-size: 13px;
 		line-height: 1;
 		white-space: nowrap;
@@ -123,9 +123,9 @@
 		padding: 3px 4px;
 		flex-shrink: 0;
 		border-radius: 9999px;
-		border: 1px solid var(--vscode-button-secondaryBorder, transparent);
-		background-color: var(--vscode-button-secondaryBackground);
-		color: var(--vscode-button-secondaryForeground);
+		border: 1px solid var(--vectorcode-button-secondaryBorder, transparent);
+		background-color: var(--vectorcode-button-secondaryBackground);
+		color: var(--vectorcode-button-secondaryForeground);
 		font-size: 12px;
 		line-height: 1;
 		white-space: nowrap;
@@ -136,9 +136,9 @@
 		position: relative;
 
 		&.attention {
-			border-color: var(--vscode-button-border, transparent);
-			background-color: var(--vscode-button-background);
-			color: var(--vscode-button-foreground);
+			border-color: var(--vectorcode-button-border, transparent);
+			background-color: var(--vectorcode-button-background);
+			color: var(--vectorcode-button-foreground);
 			max-width: 200px;
 			padding: 3px 6px;
 
@@ -147,7 +147,7 @@
 			}
 
 			&:hover {
-				background-color: var(--vscode-button-hoverBackground);
+				background-color: var(--vectorcode-button-hoverBackground);
 			}
 		}
 
@@ -156,11 +156,11 @@
 		}
 
 		&:hover {
-			background-color: var(--vscode-button-secondaryHoverBackground);
+			background-color: var(--vectorcode-button-secondaryHoverBackground);
 		}
 
 		&:focus-visible {
-			outline: 1px solid var(--vscode-focusBorder);
+			outline: 1px solid var(--vectorcode-focusBorder);
 			outline-offset: 1px;
 		}
 
@@ -185,15 +185,15 @@
 
 		.browser-share-toggle {
 			padding: 2px 4px;
-			border-radius: var(--vscode-cornerRadius-small);
+			border-radius: var(--vectorcode-cornerRadius-small);
 			border-width: 0;
-			color: var(--vscode-descriptionForeground);
+			color: var(--vectorcode-descriptionForeground);
 			white-space: nowrap;
 			gap: 4px;
 			outline: none !important;
 
 			&:focus-visible {
-				outline: 1px solid var(--vscode-focusBorder) !important;
+				outline: 1px solid var(--vectorcode-focusBorder) !important;
 				outline-offset: 0px !important;
 			}
 
@@ -202,23 +202,23 @@
 			}
 
 			&:hover {
-				background-color: var(--vscode-toolbar-hoverBackground) !important;
-				color: var(--vscode-foreground);
+				background-color: var(--vectorcode-toolbar-hoverBackground) !important;
+				color: var(--vectorcode-foreground);
 			}
 
 			&.checked {
 				background: linear-gradient(135deg in lab,
-					color-mix(in srgb, #51a2ff 25%, transparent),
-					color-mix(in srgb, #4af0c0 25%, transparent),
-					color-mix(in srgb, #b44aff 25%, transparent)
+					color-mix(in srgb, var(--vectorcode-shell-accent) 25%, transparent),
+					color-mix(in srgb, var(--vectorcode-link) 25%, transparent),
+					color-mix(in srgb, var(--vectorcode-shell-warn) 25%, transparent)
 				) !important;
-				color: var(--vscode-foreground);
+				color: var(--vectorcode-foreground);
 
 				&:hover {
 					background: linear-gradient(135deg in lab,
-						color-mix(in srgb, #51a2ff 35%, transparent),
-						color-mix(in srgb, #4af0c0 35%, transparent),
-						color-mix(in srgb, #b44aff 35%, transparent)
+						color-mix(in srgb, var(--vectorcode-shell-accent) 35%, transparent),
+						color-mix(in srgb, var(--vectorcode-link) 35%, transparent),
+						color-mix(in srgb, var(--vectorcode-shell-warn) 35%, transparent)
 					) !important;
 				}
 			}
@@ -245,7 +245,7 @@
 		height: round(down, 100% - 3px, calc(1px / var(--zoom-factor, 1)));
 		margin: 0 auto;
 		overflow: visible;
-		border-radius: var(--vscode-cornerRadius-small);
+		border-radius: var(--vectorcode-cornerRadius-small);
 		position: relative;
 		outline: none !important;
 		z-index: 0; /* Important: creates a new stacking context for the gradient border trick */
@@ -260,13 +260,13 @@
 			right: -1px;
 			bottom: -1px;
 			z-index: -2;
-			border-radius: calc(var(--vscode-cornerRadius-small) + 1px);
+			border-radius: calc(var(--vectorcode-cornerRadius-small) + 1px);
 			background: conic-gradient(from var(--animation-angle),
-				color-mix(in srgb, #b44aff var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #4af0c0 var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #51a2ff var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #4af0c0 var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #b44aff var(--animation-opacity), var(--vscode-browser-border, transparent))
+				color-mix(in srgb, var(--vectorcode-shell-warn) var(--animation-opacity), var(--vectorcode-browser-border, transparent)),
+				color-mix(in srgb, var(--vectorcode-link) var(--animation-opacity), var(--vectorcode-browser-border, transparent)),
+				color-mix(in srgb, var(--vectorcode-shell-accent) var(--animation-opacity), var(--vectorcode-browser-border, transparent)),
+				color-mix(in srgb, var(--vectorcode-link) var(--animation-opacity), var(--vectorcode-browser-border, transparent)),
+				color-mix(in srgb, var(--vectorcode-shell-warn) var(--animation-opacity), var(--vectorcode-browser-border, transparent))
 			);
 			pointer-events: none;
 		}
@@ -276,7 +276,7 @@
 			left: -2px;
 			right: -2px;
 			bottom: -2px;
-			border-radius: calc(var(--vscode-cornerRadius-small) + 2px);
+			border-radius: calc(var(--vectorcode-cornerRadius-small) + 2px);
 			--animation-angle: 495deg;
 			--animation-opacity: 100%;
 		}
@@ -303,8 +303,8 @@
 			right: 1px;
 			bottom: 1px;
 			z-index: -1;
-			border-radius: var(--vscode-cornerRadius-small);
-			background-color: var(--vscode-editor-background);
+			border-radius: var(--vectorcode-cornerRadius-small);
+			background-color: var(--vectorcode-editor-background);
 			pointer-events: none;
 		}
 	}
@@ -314,7 +314,7 @@
 		height: 100%;
 		position: relative;
 		overflow: hidden;
-		border-radius: var(--vscode-cornerRadius-small);
+		border-radius: var(--vectorcode-cornerRadius-small);
 	}
 
 	.browser-placeholder-screenshot {
@@ -338,8 +338,8 @@
 		align-items: center;
 		justify-content: center;
 		pointer-events: none;
-		color: var(--vscode-foreground);
-		background-color: color-mix(in srgb, var(--vscode-editor-background) 15%, transparent);
+		color: var(--vectorcode-foreground);
+		background-color: color-mix(in srgb, var(--vectorcode-editor-background) 15%, transparent);
 		opacity: 0;
 		visibility: hidden;
 		transition: opacity 200ms ease-in;
@@ -350,16 +350,16 @@
 		}
 
 		&.show-message {
-			background-color: color-mix(in srgb, var(--vscode-editor-background) 60%, transparent);
+			background-color: color-mix(in srgb, var(--vectorcode-editor-background) 60%, transparent);
 		}
 	}
 
 	.browser-overlay-paused-message {
 		padding: 20px 40px;
 		border-radius: 4px;
-		border: 1px solid var(--vscode-editorWidget-border);
-		background-color: var(--vscode-editor-background);
-		box-shadow: var(--vscode-shadow-lg);
+		border: 1px solid var(--vectorcode-editorWidget-border);
+		background-color: var(--vectorcode-editor-background);
+		box-shadow: var(--vectorcode-shadow-lg);
 		max-width: 80%;
 		text-align: center;
 		display: none;
@@ -377,7 +377,7 @@
 
 	.browser-overlay-paused-detail {
 		font-size: 14px;
-		color: var(--vscode-descriptionForeground);
+		color: var(--vectorcode-descriptionForeground);
 	}
 
 	.browser-error-container {
@@ -390,7 +390,7 @@
 		align-items: flex-start;
 		justify-content: center;
 		padding: 80px 40px;
-		background-color: var(--vscode-editor-background);
+		background-color: var(--vectorcode-editor-background);
 		overflow-y: auto;
 	}
 
@@ -404,7 +404,7 @@
 	.browser-error-title {
 		font-size: 18px;
 		font-weight: 600;
-		color: var(--vscode-errorForeground);
+		color: var(--vectorcode-errorForeground);
 		margin-bottom: 20px;
 	}
 
@@ -417,7 +417,7 @@
 		}
 
 		code {
-			background-color: var(--vscode-textCodeBlock-background);
+			background-color: var(--vectorcode-textCodeBlock-background);
 			padding: 1px 4px;
 			border-radius: 3px;
 			font-family: var(--monaco-monospace-font);
@@ -455,12 +455,12 @@
 			.monaco-sash {
 				width: 2px !important;
 				height: calc(100% - 4px);
-				border-radius: var(--vscode-cornerRadius-circle);
+				border-radius: var(--vectorcode-cornerRadius-circle);
 
 				&::before {
-					width: var(--vscode-sash-hover-size);
-					left: calc(50% - (var(--vscode-sash-hover-size) / 2));
-					border-radius: var(--vscode-cornerRadius-circle);
+					width: var(--vectorcode-sash-hover-size);
+					left: calc(50% - (var(--vectorcode-sash-hover-size) / 2));
+					border-radius: var(--vectorcode-cornerRadius-circle);
 				}
 			}
 
@@ -485,7 +485,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background-color: var(--vscode-editor-background);
+		background-color: var(--vectorcode-editor-background);
 
 		.browser-welcome-content {
 			display: flex;
@@ -500,14 +500,14 @@
 			.codicon {
 				font-size: 40px;
 				margin-bottom: 24px;
-				color: var(--vscode-descriptionForeground);
+				color: var(--vectorcode-descriptionForeground);
 			}
 		}
 
 		.browser-welcome-title {
 			font-size: 13px;
 			font-weight: 600;
-			color: var(--vscode-foreground);
+			color: var(--vectorcode-foreground);
 			margin-top: 5px;
 			text-align: center;
 			line-height: normal;
@@ -521,7 +521,7 @@
 			max-width: 280px;
 			padding: 0 20px;
 			margin: 8px auto 0;
-			color: var(--vscode-descriptionForeground);
+			color: var(--vectorcode-descriptionForeground);
 
 			p {
 				margin-top: 8px;
@@ -546,20 +546,20 @@
 		justify-content: center;
 		width: 24px;
 		height: 24px;
-		border-radius: var(--vscode-cornerRadius-small);
+		border-radius: var(--vectorcode-cornerRadius-small);
 		cursor: pointer;
-		background-color: var(--vscode-statusBarItem-errorBackground);
+		background-color: var(--vectorcode-statusBarItem-errorBackground);
 		outline: none !important;
 
 		&:focus-visible {
-			outline: 1px solid var(--vscode-focusBorder) !important;
+			outline: 1px solid var(--vectorcode-focusBorder) !important;
 			outline-offset: -1px !important;
 		}
 
 		.codicon {
 			font-size: 15px;
 			margin: 0;
-			color: var(--vscode-statusBarItem-errorForeground);
+			color: var(--vectorcode-statusBarItem-errorForeground);
 		}
 	}
 
@@ -576,7 +576,7 @@
 		padding: 4px 8px;
 		font-size: 13px;
 		line-height: 17px;
-		color: var(--vscode-input-foreground);
+		color: var(--vectorcode-input-foreground);
 		cursor: text;
 		white-space: nowrap;
 		overflow: hidden;
@@ -584,12 +584,12 @@
 		outline: none !important;
 
 		&.placeholder {
-			color: var(--vscode-input-placeholderForeground);
+			color: var(--vectorcode-input-placeholderForeground);
 		}
 	}
 
 	.browser-url-display-protocol-bad {
-		color: var(--vscode-errorForeground);
+		color: var(--vectorcode-errorForeground);
 		text-decoration: line-through;
 	}
 
@@ -602,16 +602,16 @@
 		}
 
 		&.cert-error .codicon {
-			color: var(--vscode-errorForeground);
+			color: var(--vectorcode-errorForeground);
 		}
 	}
 
 	.browser-cert-details-table {
 		margin-top: 16px;
 		padding: 8px 4px;
-		border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
-		border-radius: var(--vscode-cornerRadius-medium);
-		background-color: var(--vscode-editorWidget-background);
+		border: 1px solid var(--vectorcode-widget-border, var(--vectorcode-contrastBorder, transparent));
+		border-radius: var(--vectorcode-cornerRadius-medium);
+		background-color: var(--vectorcode-editorWidget-background);
 	}
 
 	.browser-cert-details-heading {
@@ -628,12 +628,12 @@
 		font-size: 12px;
 
 		&:nth-child(odd) {
-			background-color: rgba(130, 130, 130, 0.04);
+			background-color: var(--vectorcode-list-inactiveSelectionBackground);
 		}
 	}
 
 	.browser-cert-details-label {
-		color: var(--vscode-descriptionForeground);
+		color: var(--vectorcode-descriptionForeground);
 		white-space: nowrap;
 	}
 
@@ -668,7 +668,7 @@
 
 	.browser-site-info-hover-heading {
 		font-weight: 600;
-		color: var(--vscode-errorForeground);
+		color: var(--vectorcode-errorForeground);
 	}
 
 	.browser-site-info-hover-detail {
@@ -680,18 +680,18 @@
 	.browser-site-info-hover-revoke {
 		display: inline-block;
 		font-size: 12px;
-		color: var(--vscode-textLink-foreground);
+		color: var(--vectorcode-textLink-foreground);
 		cursor: pointer;
 		text-decoration: var(--text-link-decoration);
 		margin-top: 8px;
 
 		&:hover {
-			color: var(--vscode-textLink-activeForeground);
+			color: var(--vectorcode-textLink-activeForeground);
 			text-decoration: underline;
 		}
 
 		&:focus-visible {
-			outline: 1px solid var(--vscode-focusBorder);
+			outline: 1px solid var(--vectorcode-focusBorder);
 			outline-offset: 2px;
 		}
 	}

@@ -7,27 +7,27 @@
 
 .monaco-workbench {
 	.codicon-testing-error-icon {
-		color: var(--vscode-testing-iconErrored);
+		color: var(--vectorcode-testing-iconErrored);
 	}
 
 	.codicon-testing-failed-icon {
-		color: var(--vscode-testing-iconFailed);
+		color: var(--vectorcode-testing-iconFailed);
 	}
 
 	.codicon-testing-passed-icon {
-		color: var(--vscode-testing-iconPassed);
+		color: var(--vectorcode-testing-iconPassed);
 	}
 
 	.codicon-testing-queued-icon {
-		color: var(--vscode-testing-iconQueued);
+		color: var(--vectorcode-testing-iconQueued);
 	}
 
 	.codicon-testing-skipped-icon {
-		color: var(--vscode-testing-iconSkipped);
+		color: var(--vectorcode-testing-iconSkipped);
 	}
 
 	.codicon-testing-unset-icon {
-		color: var(--vscode-testing-iconUnset);
+		color: var(--vectorcode-testing-iconUnset);
 	}
 }
 
@@ -81,8 +81,8 @@
 }
 
 .test-output-peek-tree {
-	color: var(--vscode-editor-foreground);
-	border-left: 1px solid var(--vscode-panelSection-border);
+	color: var(--vectorcode-editor-foreground);
+	border-left: 1px solid var(--vectorcode-panelSection-border);
 }
 
 .test-explorer .monaco-list-row .codicon-testing-hidden {
@@ -96,10 +96,10 @@
 }
 
 .test-explorer .monaco-list-row .monaco-action-bar .codicon-testing-continuous-is-on {
-	color: var(--vscode-inputOption-activeForeground);
-	border-color: var(--vscode-inputOption-activeBorder);
-	background: var(--vscode-inputOption-activeBackground);
-	border: 1px solid var(--vscode-inputOption-activeBorder);
+	color: var(--vectorcode-inputOption-activeForeground);
+	border-color: var(--vectorcode-inputOption-activeBorder);
+	background: var(--vectorcode-inputOption-activeBackground);
+	border: 1px solid var(--vectorcode-inputOption-activeBorder);
 	border-radius: 3px;
 }
 
@@ -122,8 +122,8 @@
 }
 
 .test-explorer .monaco-list-row .error {
-	outline: 1px solid var(--vscode-inputValidation-errorBorder);
-	background: var(--vscode-inputValidation-errorBackground);
+	outline: 1px solid var(--vectorcode-inputValidation-errorBorder);
+	background: var(--vectorcode-inputValidation-errorBackground);
 	padding: 2px 4px;
 	border-radius: 2px;
 	margin: 3px 12px 3px 3px;
@@ -141,11 +141,11 @@
 }
 
 .test-explorer .monaco-list-row .error a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .test-explorer .monaco-list-row .error a:hover {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .test-explorer .computed-state,
@@ -223,19 +223,19 @@
 }
 
 .monaco-editor .zone-widget.test-output-peek .type-decoration {
-	background-color: var(--vscode-peekViewEditor-matchHighlightBackground);
-	border: 2px solid var(--vscode-peekViewEditor-matchHighlightBorder);
+	background-color: var(--vectorcode-peekViewEditor-matchHighlightBackground);
+	border: 2px solid var(--vectorcode-peekViewEditor-matchHighlightBorder);
 	box-sizing: border-box;
 }
 
 .monaco-editor .zone-widget.test-output-peek .monaco-editor .monaco-editor-background,
 .monaco-editor .zone-widget.test-output-peek .monaco-editor .inputarea.ime-input,
 .monaco-editor .zone-widget.test-output-peek .test-output-peek-message-container {
-	background-color: var(--vscode-peekViewEditor-background);
+	background-color: var(--vectorcode-peekViewEditor-background);
 }
 
 .monaco-editor .zone-widget.test-output-peek .monaco-editor .margin {
-	background-color: var(--vscode-peekViewEditorGutter-background);
+	background-color: var(--vectorcode-peekViewEditorGutter-background);
 }
 
 .test-output-peek-message-container {
@@ -294,11 +294,11 @@
 
 		&,
 		.codicon {
-			color: var(--vscode-textLink-foreground);
+			color: var(--vectorcode-textLink-foreground);
 		}
 
 		&:hover {
-			color: var(--vscode-textLink-activeForeground);
+			color: var(--vectorcode-textLink-activeForeground);
 		}
 
 		&[aria-disabled="true"] {
@@ -331,9 +331,9 @@
 }
 
 .testing-filter-action-item > .monaco-action-bar .testing-filter-button.checked {
-	border-color: var(--vscode-inputOption-activeBorder);
-	color: var(--vscode-inputOption-activeForeground);
-	background-color: var(--vscode-inputOption-activeBackground);
+	border-color: var(--vectorcode-inputOption-activeBorder);
+	color: var(--vectorcode-inputOption-activeForeground);
+	background-color: var(--vectorcode-inputOption-activeBackground);
 }
 
 .testing-filter-action-bar .testing-filter-action-item {
@@ -391,7 +391,7 @@
 }
 
 .testing-diff-lens-widget {
-	color: var(--vscode-editorCodeLens-foreground);
+	color: var(--vectorcode-editorCodeLens-foreground);
 }
 
 .test-message-inline-content {
@@ -407,7 +407,7 @@
 }
 
 .test-message-inline-content-s1 {
-	color: var(--vscode-testing-message-info-decorationForeground) !important;
+	color: var(--vectorcode-testing-message-info-decorationForeground) !important;
 }
 
 .monaco-workbench .test-error-content-widget {
@@ -416,7 +416,7 @@
 
 .monaco-workbench .test-error-content-widget .inner {
 	margin-left: 20px;
-	color: var(--vscode-testing-message-error-badgeForeground) !important;
+	color: var(--vectorcode-testing-message-error-badgeForeground) !important;
 	border-top-right-radius: 2px;
 	border-bottom-right-radius: 2px;
 	padding-right: 3px;
@@ -428,7 +428,7 @@
 	cursor: pointer;
 	box-sizing: border-box;
 	position: relative;
-	border: 1px solid var(--vscode-testing-message-error-badgeBorder);
+	border: 1px solid var(--vectorcode-testing-message-error-badgeBorder);
 	border-left: none;
 
 	&.is-current {
@@ -456,16 +456,16 @@
 		left: -10px;
 		z-index: -1;
 		stroke-width: 0.71px; /* 1 / sqrt(2) */
-		stroke: var(--vscode-testing-message-error-badgeBorder);
+		stroke: var(--vectorcode-testing-message-error-badgeBorder);
 	}
 }
 
 .monaco-editor .testing-inline-message-severity-0 {
-	background: var(--vscode-testing-message-error-lineBackground) !important;
+	background: var(--vectorcode-testing-message-error-lineBackground) !important;
 }
 
 .monaco-editor .testing-inline-message-severity-1 {
-	background: var(--vscode-testing-message-info-lineBackground) !important;
+	background: var(--vectorcode-testing-message-info-lineBackground) !important;
 }
 
 /** -- coverage  */
@@ -504,12 +504,12 @@
 }
 
 .coverage-summary-widget {
-	color: var(--vscode-editor-foreground);
+	color: var(--vectorcode-editor-foreground);
 	z-index: 1;
-	background: var(--vscode-editor-background);
+	background: var(--vectorcode-editor-background);
 	left: 0;
 	width: 100%;
-	box-shadow: var(--vscode-editorStickyScroll-shadow) 0 3px 2px -2px;
+	box-shadow: var(--vectorcode-editorStickyScroll-shadow) 0 3px 2px -2px;
 
 	> div {
 		display: flex;
@@ -555,9 +555,9 @@
 
 .test-coverage-tree-per-test-switcher {
 	display: flex;
-	background-color: var(--vscode-dropdown-background);
-	color: var(--vscode-dropdown-foreground);
-	border: 1px solid var(--vscode-dropdown-border);
+	background-color: var(--vectorcode-dropdown-background);
+	color: var(--vectorcode-dropdown-foreground);
+	border: 1px solid var(--vectorcode-dropdown-border);
 
 	margin: 3px 0;
 	cursor: pointer;
@@ -575,8 +575,8 @@
 
 	&::after {
 		content: '';
-		content: var(--vscode-icon-chevron-right-content);
-		font-family: var(--vscode-icon-chevron-right-font-family);
+		content: var(--vectorcode-icon-chevron-right-content);
+		font-family: var(--vectorcode-icon-chevron-right-font-family);
 		font-size: 18px;
 		padding-left: 22px;
 	}
@@ -611,13 +611,13 @@
 }
 
 .coverage-deco-gutter.coverage-deco-hit::before {
-	background: var(--vscode-testing-coveredGutterBackground);
-	border-color: var(--vscode-testing-coveredGutterBackground);
+	background: var(--vectorcode-testing-coveredGutterBackground);
+	border-color: var(--vectorcode-testing-coveredGutterBackground);
 }
 
 .coverage-deco-gutter.coverage-deco-miss::before {
-	background: var(--vscode-testing-uncoveredGutterBackground);
-	border-color: var(--vscode-testing-uncoveredGutterBackground);
+	background: var(--vectorcode-testing-uncoveredGutterBackground);
+	border-color: var(--vectorcode-testing-uncoveredGutterBackground);
 }
 
 .hc-light .coverage-deco-gutter::before,
@@ -629,13 +629,13 @@
 
 .coverage-deco-gutter.coverage-deco-miss.coverage-deco-hit::before {
 	background-image: linear-gradient(45deg,
-			var(--vscode-testing-coveredGutterBackground) 25%,
-			var(--vscode-testing-uncoveredGutterBackground) 25%,
-			var(--vscode-testing-uncoveredGutterBackground) 50%,
-			var(--vscode-testing-coveredGutterBackground) 50%,
+			var(--vectorcode-testing-coveredGutterBackground) 25%,
+			var(--vectorcode-testing-uncoveredGutterBackground) 25%,
+			var(--vectorcode-testing-uncoveredGutterBackground) 50%,
+			var(--vectorcode-testing-coveredGutterBackground) 50%,
 			75%,
-			var(--vscode-testing-uncoveredGutterBackground) 75%,
-			var(--vscode-testing-uncoveredGutterBackground) 100%);
+			var(--vectorcode-testing-uncoveredGutterBackground) 75%,
+			var(--vectorcode-testing-uncoveredGutterBackground) 100%);
 	background-size: 6px 6px;
 	background-color: transparent;
 }
@@ -646,13 +646,13 @@
 
 .monaco-editor {
 	.coverage-deco-inline.coverage-deco-hit {
-		background: var(--vscode-testing-coveredBackground);
-		outline: 1px solid var(--vscode-testing-coveredBorder);
+		background: var(--vectorcode-testing-coveredBackground);
+		outline: 1px solid var(--vectorcode-testing-coveredBorder);
 	}
 
 	.coverage-deco-inline.coverage-deco-miss {
-		background: var(--vscode-testing-uncoveredBackground);
-		outline: 1px solid var(--vscode-testing-uncoveredBorder);
+		background: var(--vectorcode-testing-uncoveredBackground);
+		outline: 1px solid var(--vectorcode-testing-uncoveredBorder);
 	}
 
 	.hc-light .coverage-deco-inline.coverage-deco-hit,
@@ -674,16 +674,16 @@
 		left: 50%;
 		text-align: center;
 		transform: translate(-50%, -50%);
-		padding: calc(var(--vscode-testing-coverage-lineHeight) / 10);
+		padding: calc(var(--vectorcode-testing-coverage-lineHeight) / 10);
 		border-radius: 2px;
-		font: normal normal normal calc(var(--vscode-testing-coverage-lineHeight) / 2)/1 codicon;
+		font: normal normal normal calc(var(--vectorcode-testing-coverage-lineHeight) / 2)/1 codicon;
 		border: 1px solid;
 	}
 
 	.coverage-deco-inline-count {
 		position: relative;
-		background: var(--vscode-testing-coverCountBadgeBackground);
-		color: var(--vscode-testing-coverCountBadgeForeground);
+		background: var(--vectorcode-testing-coverCountBadgeBackground);
+		color: var(--vectorcode-testing-coverCountBadgeForeground);
 		font-size: 0.7em;
 		margin: 0 0.7em 0 0.4em;
 		padding: 0.2em 0 0.2em 0.2em;
@@ -700,8 +700,8 @@
 			bottom: 0;
 			width: 0.5em;
 			background-image:
-				linear-gradient(to bottom left, transparent 50%, var(--vscode-testing-coverCountBadgeBackground) 0),
-				linear-gradient(to bottom right, var(--vscode-testing-coverCountBadgeBackground) 50%, transparent 0);
+				linear-gradient(to bottom left, transparent 50%, var(--vectorcode-testing-coverCountBadgeBackground) 0),
+				linear-gradient(to bottom right, var(--vectorcode-testing-coverCountBadgeBackground) 50%, transparent 0);
 			background-size: 100% 50%;
 			background-repeat: no-repeat;
 			background-position: top, bottom;

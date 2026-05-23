@@ -43,7 +43,6 @@ export const terminalStickyScrollConfiguration: IStringDictionary<IConfiguration
 			'clear',
 			'cls',
 			'clear-host',
-			'copilot',
 			'claude',
 			'codex',
 			'gemini'

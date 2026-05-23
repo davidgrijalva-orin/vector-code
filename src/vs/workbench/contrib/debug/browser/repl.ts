@@ -75,7 +75,7 @@ import { FocusSessionActionViewItem } from './debugActionViewItems.js';
 import { DEBUG_COMMAND_CATEGORY, FOCUS_REPL_ID } from './debugCommands.js';
 import { DebugExpressionRenderer } from './debugExpressionRenderer.js';
 import { debugConsoleClearAll, debugConsoleEvaluationPrompt } from './debugIcons.js';
-import './media/repl.css';
+import '../../vectorCode/browser/media/vectorRepl.css';
 import { ReplFilter } from './replFilter.js';
 import { ReplAccessibilityProvider, ReplDataSource, ReplDelegate, ReplEvaluationInputsRenderer, ReplEvaluationResultsRenderer, ReplGroupRenderer, ReplOutputElementRenderer, ReplRawObjectsRenderer, ReplVariablesRenderer } from './replViewer.js';
 
@@ -411,10 +411,10 @@ export class Repl extends FilterViewPane implements IHistoryNavigationWidget {
 				}
 			`;
 			const cssFontFamily = this.replOptions.replConfiguration.fontFamily === 'default' ? 'var(--monaco-monospace-font)' : this.replOptions.replConfiguration.fontFamily;
-			this.container.style.setProperty(`--vscode-repl-font-family`, cssFontFamily);
-			this.container.style.setProperty(`--vscode-repl-font-size`, `${this.replOptions.replConfiguration.fontSize}px`);
-			this.container.style.setProperty(`--vscode-repl-font-size-for-twistie`, `${this.replOptions.replConfiguration.fontSizeForTwistie}px`);
-			this.container.style.setProperty(`--vscode-repl-line-height`, this.replOptions.replConfiguration.cssLineHeight);
+			this.container.style.setProperty(`--vectorcode-repl-font-family`, cssFontFamily);
+			this.container.style.setProperty(`--vectorcode-repl-font-size`, `${this.replOptions.replConfiguration.fontSize}px`);
+			this.container.style.setProperty(`--vectorcode-repl-font-size-for-twistie`, `${this.replOptions.replConfiguration.fontSizeForTwistie}px`);
+			this.container.style.setProperty(`--vectorcode-repl-line-height`, this.replOptions.replConfiguration.cssLineHeight);
 
 			this.tree?.rerender();
 

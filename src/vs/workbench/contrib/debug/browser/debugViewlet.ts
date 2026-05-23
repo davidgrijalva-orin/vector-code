@@ -6,7 +6,7 @@
 import { IActionViewItem } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { IAction } from '../../../../base/common/actions.js';
 import { DisposableStore, dispose, IDisposable } from '../../../../base/common/lifecycle.js';
-import './media/debugViewlet.css';
+import '../../vectorCode/browser/media/vectorDebugViewlet.css';
 import * as nls from '../../../../nls.js';
 import { createActionViewItem } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { Action2, MenuId, MenuItemAction, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';

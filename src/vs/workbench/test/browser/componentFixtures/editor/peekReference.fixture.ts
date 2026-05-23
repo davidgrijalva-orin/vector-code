@@ -47,7 +47,7 @@ main();
 function renderPeekReference({ container, disposableStore, theme }: ComponentFixtureContext): void {
 	container.style.width = '700px';
 	container.style.height = '400px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const uri = URI.parse('inmemory://peek-fixture.ts');
 

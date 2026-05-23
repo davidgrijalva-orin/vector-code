@@ -14,6 +14,7 @@
   ],
   "activationEvents": [
     "onNotebook:jupyter-notebook",
+    "onNotebookSerializer:jupyter-notebook",
     "onNotebookSerializer:interactive",
     "onNotebookSerializer:repl"
   ],
@@ -47,10 +48,21 @@
             "tags": [
               "experimental"
             ]
+          },
+          "vectorcode.notebook.pythonPath": {
+            "type": "string",
+            "scope": "resource",
+            "markdownDescription": "%vectorcode.notebook.pythonPath%",
+            "default": ""
           }
         }
       }
     ],
+    "configurationDefaults": {
+      "workbench.editorAssociations": {
+        "*.ipynb": "jupyter-notebook"
+      }
+    },
     "commands": [
       {
         "command": "ipynb.newUntitledIpynb",

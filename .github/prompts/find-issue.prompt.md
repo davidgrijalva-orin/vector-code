@@ -1,7 +1,7 @@
 ---
 # ⚠️: Internal use only. To onboard, follow instructions at https://github.com/microsoft/vscode-engineering/blob/main/docs/gh-mcp-onboarding.md
 agent: agent
-model: Claude Sonnet 4.5 (copilot)
+model: Claude Sonnet 4.5 (vectorcode)
 argument-hint: Describe your issue. Include relevant keywords or phrases.
 description: Search for an existing VS Code GitHub issue
 tools:

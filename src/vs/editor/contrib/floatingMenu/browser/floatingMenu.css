@@ -5,16 +5,16 @@
 
 .floating-menu-overlay-widget {
 	padding: 2px 4px;
-	color: var(--vscode-foreground);
-	background-color: var(--vscode-editorWidget-background);
-	border-radius: var(--vscode-cornerRadius-medium);
-	border: 1px solid var(--vscode-contrastBorder);
+	color: var(--vectorcode-foreground);
+	background-color: var(--vectorcode-editorWidget-background);
+	border-radius: var(--vectorcode-cornerRadius-medium);
+	border: 1px solid var(--vectorcode-contrastBorder);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 4px;
 	z-index: 10;
-	box-shadow: var(--vscode-shadow-lg);
+	box-shadow: var(--vectorcode-shadow-lg);
 	overflow: hidden;
 
 	&.single-button {
@@ -27,8 +27,8 @@
 		.action-item > .action-label.codicon:not(.separator) {
 			height: 28px;
 			line-height: 28px;
-			border-radius: var(--vscode-cornerRadius-medium);
-			box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+			border-radius: var(--vectorcode-cornerRadius-medium);
+			box-shadow: 0 2px 8px var(--vectorcode-widget-shadow);
 		}
 
 		.action-item > .action-label {
@@ -48,11 +48,11 @@
 		padding: 4px 6px;
 		font-size: 11px;
 		line-height: 14px;
-		border-radius: var(--vscode-cornerRadius-small);
+		border-radius: var(--vectorcode-cornerRadius-small);
 	}
 
 	.action-item > .action-label.codicon:not(.separator) {
-		color: var(--vscode-foreground);
+		color: var(--vectorcode-foreground);
 		width: 22px;
 		height: 22px;
 		padding: 0;
@@ -65,12 +65,12 @@
 
 	.action-item.primary > .action-label,
 	.action-item.primary > .action-label.action-label.codicon:not(.separator) {
-		background-color: var(--vscode-button-background);
-		color: var(--vscode-button-foreground);
+		background-color: var(--vectorcode-button-background);
+		color: var(--vectorcode-button-foreground);
 	}
 
 	.action-item.primary > .action-label:hover {
-		background-color: var(--vscode-button-hoverBackground) !important;
+		background-color: var(--vectorcode-button-hoverBackground) !important;
 	}
 }
 
@@ -78,8 +78,8 @@
 .hc-light .floating-menu-overlay-widget.single-button {
 	border-width: 1px;
 	border-style: solid;
-	border-color: var(--vscode-contrastBorder);
-	background-color: var(--vscode-editorWidget-background);
+	border-color: var(--vectorcode-contrastBorder);
+	background-color: var(--vectorcode-editorWidget-background);
 	padding: 0;
 	.action-item > .action-label,
 	.action-item > .action-label.codicon:not(.separator) {

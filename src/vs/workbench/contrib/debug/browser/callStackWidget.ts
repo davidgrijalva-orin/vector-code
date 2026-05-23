@@ -42,7 +42,7 @@ import { defaultButtonStyles } from '../../../../platform/theme/browser/defaultS
 import { ResourceLabel } from '../../../browser/labels.js';
 import { IEditorService, SIDE_GROUP } from '../../../services/editor/common/editorService.js';
 import { makeStackFrameColumnDecoration, TOP_STACK_FRAME_DECORATION } from './callStackEditorContribution.js';
-import './media/callStackWidget.css';
+import '../../vectorCode/browser/media/vectorCallStackWidget.css';
 
 
 export class CallStackFrame {

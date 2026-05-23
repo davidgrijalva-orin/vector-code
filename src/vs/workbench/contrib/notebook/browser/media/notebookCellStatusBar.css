@@ -72,8 +72,8 @@
 
 /* Ensure execution status icons always maintain their themed colors */
 .monaco-workbench .notebookOverlay .monaco-list .monaco-list-row .cell-statusbar-container .cell-status-item .codicon-notebook-state-success {
-	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+	color: var(--vectorcode-notebookStatusSuccessIcon-foreground);
 }
 .monaco-workbench .notebookOverlay .monaco-list .monaco-list-row .cell-statusbar-container .cell-status-item .codicon-notebook-state-error {
-	color: var(--vscode-notebookStatusErrorIcon-foreground);
+	color: var(--vectorcode-notebookStatusErrorIcon-foreground);
 }

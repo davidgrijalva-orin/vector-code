@@ -466,7 +466,7 @@ export const activate: ActivationFunction<void> = (ctx) => {
 		max-height: var(--notebook-cell-output-max-height);
 	}
 	#container div.output .scrollable.scrollbar-visible {
-		border-color: var(--vscode-editorWidget-border);
+		border-color: var(--vectorcode-editorWidget-border);
 	}
 	#container div.output .scrollable.scrollbar-visible:focus {
 		border-color: var(--theme-input-focus-border-color);
@@ -483,7 +483,7 @@ export const activate: ActivationFunction<void> = (ctx) => {
 		cursor: pointer;
 	}
 	#container div.output .scrollable.more-above {
-		box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset
+		box-shadow: var(--vectorcode-scrollbar-shadow) 0 6px 6px -6px inset
 	}
 	.output-plaintext .code-bold,
 	.output-stream .code-bold,
@@ -516,10 +516,10 @@ export const activate: ActivationFunction<void> = (ctx) => {
 		height: 20px;
 		display: inline-flex;
 		cursor: pointer;
-		border: solid 1px var(--vscode-notebook-cellToolbarSeparator);
+		border: solid 1px var(--vectorcode-notebook-cellToolbarSeparator);
 	}
 	#container .error-output-actions li.hover {
-		background-color: var(--vscode-toolbar-hoverBackground);
+		background-color: var(--vectorcode-toolbar-hoverBackground);
 	}
 	#container .error-output-actions li:focus-within {
 		border-color: var(--theme-input-focus-border-color);
@@ -528,7 +528,7 @@ export const activate: ActivationFunction<void> = (ctx) => {
 		outline: 0;
 	}
 	#container .error-output-actions li a {
-		color: var(--vscode-foreground);
+		color: var(--vectorcode-foreground);
 		text-decoration: none;
 	}
 	#container .error-output-header a {

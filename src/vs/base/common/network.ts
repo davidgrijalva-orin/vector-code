@@ -78,20 +78,11 @@ export namespace Schemas {
 	/** Scheme used for the image carousel editor. */
 	export const vscodeImageCarousel = 'vscode-image-carousel';
 
-	/** Scheme used for code blocks in chat. */
-	export const vscodeChatCodeBlock = 'vscode-chat-code-block';
+	/** Scheme used for generated code blocks. */
+	export const vscodeGeneratedCodeBlock = 'vscode-generated-code-block';
 
-	/** Scheme used for LHS of code compare (aka diff) blocks in chat. */
-	export const vscodeChatCodeCompareBlock = 'vscode-chat-code-compare-block';
-
-	/** Scheme used for the chat input editor. */
-	export const vscodeChatEditor = 'vscode-chat-editor';
-
-	/** Scheme used for the chat input part */
-	export const vscodeChatInput = 'chatSessionInput';
-
-	/** Scheme used for local chat session content */
-	export const vscodeLocalChatSession = 'vscode-chat-session';
+	/** Scheme used for LHS of generated code compare blocks. */
+	export const vscodeGeneratedCodeCompareBlock = 'vscode-generated-code-compare-block';
 
 	/**
 	 * Scheme used internally for webviews that aren't linked to a resource (i.e. not custom editors)
@@ -161,9 +152,9 @@ export namespace Schemas {
 	export const chatEditingModel = 'chat-editing-text-model';
 
 	/**
-	 * Used for rendering multidiffs in copilot agent sessions
+	 * Used for rendering multidiffs in vectorcode agent sessions
 	 */
-	export const copilotPr = 'copilot-pr';
+	export const vectorcodePr = 'vectorcode-pr';
 }
 
 export function matchesScheme(target: URI | string, scheme: string): boolean {

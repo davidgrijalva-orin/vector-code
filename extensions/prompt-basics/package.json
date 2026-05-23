@@ -31,27 +31,10 @@
           "instructions"
         ],
         "extensions": [
-          ".instructions.md",
-          "copilot-instructions.md"
+          ".instructions.md"
         ],
         "filenamePatterns": [
           "**/.claude/rules/**/*.md"
-        ],
-        "configuration": "./language-configuration.json"
-      },
-      {
-        "id": "chatagent",
-        "aliases": [
-          "Agent",
-          "chat agent"
-        ],
-        "extensions": [
-          ".agent.md",
-          ".chatmode.md"
-        ],
-        "filenamePatterns": [
-          "**/.github/agents/*.md",
-          "**/.claude/agents/*.md"
         ],
         "configuration": "./language-configuration.json"
       },

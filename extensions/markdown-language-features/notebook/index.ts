@@ -274,7 +274,7 @@ export const activate: ActivationFunction<void> = (ctx) => {
 
 		code {
 			font-size: 1em;
-			font-family: var(--vscode-editor-font-family);
+			font-family: var(--vectorcode-editor-font-family);
 		}
 
 		pre code {

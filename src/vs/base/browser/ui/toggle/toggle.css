@@ -19,12 +19,12 @@
 }
 
 .monaco-custom-toggle:hover {
-	background-color: var(--vscode-inputOption-hoverBackground);
+	background-color: var(--vectorcode-inputOption-hoverBackground);
 }
 
 .hc-black .monaco-custom-toggle:hover,
 .hc-light .monaco-custom-toggle:hover {
-	border: 1px dashed var(--vscode-focusBorder);
+	border: 1px dashed var(--vectorcode-focusBorder);
 }
 
 .hc-black .monaco-custom-toggle,
@@ -57,7 +57,7 @@
 }
 
 .monaco-action-bar .checkbox-action-item:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .monaco-action-bar .checkbox-action-item > .monaco-custom-toggle.monaco-checkbox {

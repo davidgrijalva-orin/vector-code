@@ -385,7 +385,7 @@ const runOptions: IJSONSchema = {
 		runOn: {
 			type: 'string',
 			enum: ['default', 'folderOpen', 'worktreeCreated'],
-			description: nls.localize('JsonSchema.tasks.runOn', 'Configures when the task should be run. If set to folderOpen, then the task will be run automatically when the folder is opened. If set to worktreeCreated, then the task will be run automatically when an Agent Session worktree is created.'),
+			description: nls.localize('JsonSchema.tasks.runOn', 'Configures when the task should be run. If set to folderOpen, then the task will be run automatically when the folder is opened. If set to worktreeCreated, then the task will be run automatically when a worktree is created.'),
 			default: 'default'
 		},
 		instanceLimit: {
@@ -437,7 +437,7 @@ const taskConfiguration: IJSONSchema = {
 		},
 		promptOnClose: {
 			type: 'boolean',
-			description: nls.localize('JsonSchema.tasks.promptOnClose', 'Whether the user is prompted when VS Code closes with a running task.'),
+			description: nls.localize('JsonSchema.tasks.promptOnClose', 'Whether the user is prompted when Vector Code closes with a running task.'),
 			default: false
 		},
 		presentation: Objects.deepClone(presentation),

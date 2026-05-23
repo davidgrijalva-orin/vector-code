@@ -15,11 +15,11 @@
 .monaco-workbench.mac:lang(ja) { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic Pro", sans-serif; }
 .monaco-workbench.mac:lang(ko) { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Nanum Gothic", "AppleGothic", sans-serif; }
 
-.monaco-workbench.windows { font-family: "Segoe WPC", "Segoe UI", sans-serif; }
-.monaco-workbench.windows:lang(zh-Hans) { font-family: "Segoe WPC", "Segoe UI", "Microsoft YaHei", sans-serif; }
-.monaco-workbench.windows:lang(zh-Hant) { font-family: "Segoe WPC", "Segoe UI", "Microsoft Jhenghei", sans-serif; }
-.monaco-workbench.windows:lang(ja) { font-family: "Segoe WPC", "Segoe UI", "Yu Gothic UI", "Meiryo UI", sans-serif; }
-.monaco-workbench.windows:lang(ko) { font-family: "Segoe WPC", "Segoe UI", "Malgun Gothic", "Dotom", sans-serif; }
+.monaco-workbench.windows { font-family: system-ui, "Segoe UI", sans-serif; }
+.monaco-workbench.windows:lang(zh-Hans) { font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
+.monaco-workbench.windows:lang(zh-Hant) { font-family: system-ui, "Segoe UI", "Microsoft Jhenghei", sans-serif; }
+.monaco-workbench.windows:lang(ja) { font-family: system-ui, "Segoe UI", "Yu Gothic UI", "Meiryo UI", sans-serif; }
+.monaco-workbench.windows:lang(ko) { font-family: system-ui, "Segoe UI", "Malgun Gothic", "Dotom", sans-serif; }
 
 /* Linux: add `system-ui` as first font and not `Ubuntu` to allow other distribution pick their standard OS font */
 .monaco-workbench.linux { font-family: system-ui, "Ubuntu", "Droid Sans", sans-serif; }
@@ -52,19 +52,19 @@ body {
 	inset: 0;
 	z-index: 1;
 	overflow: hidden;
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 
 	/* Elevation shadows */
-	--vscode-shadow-sm: 0 0 4px rgba(0, 0, 0, 0.08);
-	--vscode-shadow-md: 0 0 6px rgba(0, 0, 0, 0.08);
-	--vscode-shadow-lg: 0 0 12px rgba(0, 0, 0, 0.14);
-	--vscode-shadow-xl: 0 0 20px rgba(0, 0, 0, 0.15);
-	--vscode-shadow-hover: 0 0 8px rgba(0, 0, 0, 0.12);
-	--vscode-shadow-active-tab: 0 8px 12px rgba(0, 0, 0, 0.02);
+	--vectorcode-shadow-sm: 0 0 4px rgba(0, 0, 0, 0.08);
+	--vectorcode-shadow-md: 0 0 6px rgba(0, 0, 0, 0.08);
+	--vectorcode-shadow-lg: 0 0 12px rgba(0, 0, 0, 0.14);
+	--vectorcode-shadow-xl: 0 0 20px rgba(0, 0, 0, 0.15);
+	--vectorcode-shadow-hover: 0 0 8px rgba(0, 0, 0, 0.12);
+	--vectorcode-shadow-active-tab: 0 8px 12px rgba(0, 0, 0, 0.02);
 
 	/* Panel depth shadows cast onto the editor surface */
-	--vscode-shadow-depth-x: 5px 0 10px -4px rgba(0, 0, 0, 0.05);
-	--vscode-shadow-depth-y: 0 5px 10px -4px rgba(0, 0, 0, 0.04);
+	--vectorcode-shadow-depth-x: 5px 0 10px -4px rgba(0, 0, 0, 0.05);
+	--vectorcode-shadow-depth-y: 0 5px 10px -4px rgba(0, 0, 0, 0.04);
 }
 
 /* Disable panel/part shadows when the setting is off (preserves floating modals, notifications, etc.) */
@@ -82,10 +82,10 @@ body {
 .monaco-workbench.no-shadows {
 	/* Use zero-offset transparent shadows instead of 'none' because these
 	 * variables are interpolated into multi-value box-shadow declarations. */
-	--vscode-shadow-active-tab: 0 0 0 0 transparent;
-	--vscode-shadow-depth-x: 0 0 0 0 transparent;
-	--vscode-shadow-depth-y: 0 0 0 0 transparent;
-	--vscode-shadow-sm: 0 0 0 0 transparent;
+	--vectorcode-shadow-active-tab: 0 0 0 0 transparent;
+	--vectorcode-shadow-depth-x: 0 0 0 0 transparent;
+	--vectorcode-shadow-depth-y: 0 0 0 0 transparent;
+	--vectorcode-shadow-sm: 0 0 0 0 transparent;
 }
 
 .monaco-workbench.web {
@@ -157,20 +157,20 @@ body {
 .monaco-workbench table {
 	/*
 	 * Somehow this is required when tables show in floating windows
-	 * to override the user-agent style which sets a specific color
+	 * to override the browser default style which sets a specific color
 	 * and font-size
 	 */
 	color: inherit;
 	font-size: inherit;
 }
 
-.monaco-workbench input::placeholder { color: var(--vscode-input-placeholderForeground); }
-.monaco-workbench input::-webkit-input-placeholder  { color: var(--vscode-input-placeholderForeground); }
-.monaco-workbench input::-moz-placeholder { color: var(--vscode-input-placeholderForeground); }
+.monaco-workbench input::placeholder { color: var(--vectorcode-input-placeholderForeground); }
+.monaco-workbench input::-webkit-input-placeholder  { color: var(--vectorcode-input-placeholderForeground); }
+.monaco-workbench input::-moz-placeholder { color: var(--vectorcode-input-placeholderForeground); }
 
-.monaco-workbench textarea::placeholder { color: var(--vscode-input-placeholderForeground); }
-.monaco-workbench textarea::-webkit-input-placeholder { color: var(--vscode-input-placeholderForeground); }
-.monaco-workbench textarea::-moz-placeholder { color: var(--vscode-input-placeholderForeground); }
+.monaco-workbench textarea::placeholder { color: var(--vectorcode-input-placeholderForeground); }
+.monaco-workbench textarea::-webkit-input-placeholder { color: var(--vectorcode-input-placeholderForeground); }
+.monaco-workbench textarea::-moz-placeholder { color: var(--vectorcode-input-placeholderForeground); }
 
 .monaco-workbench .pointer {
 	cursor: pointer;
@@ -198,11 +198,11 @@ body {
 }
 
 .monaco-workbench .codicon {
-	color: var(--vscode-icon-foreground);
+	color: var(--vectorcode-icon-foreground);
 }
 
 .monaco-workbench .codicon[class*='codicon-'] {
-	font-size: 16px; /* sets font-size for codicons in workbench (https://github.com/microsoft/vscode/issues/98495) */
+	font-size: 16px; /* sets font-size for codicons in workbench (https://github.com/microsoft/vector/issues/98495) */
 }
 
 .monaco-workbench .predefined-file-icon[class*='codicon-']::before {
@@ -220,7 +220,7 @@ body {
 }
 
 .monaco-workbench.modal-dialog-visible .monaco-progress-container.infinite .progress-bit {
-	display: none; /* stop progress animations when dialogs are visible (https://github.com/microsoft/vscode/issues/138396) */
+	display: none; /* stop progress animations when dialogs are visible (https://github.com/microsoft/vector/issues/138396) */
 }
 
 /* Custom Dropdown (select) Arrows */
@@ -239,8 +239,8 @@ body {
 }
 
 .monaco-workbench .select-container:after {
-	content: var(--vscode-icon-chevron-down-content);
-	font-family: var(--vscode-icon-chevron-down-font-family);
+	content: var(--vectorcode-icon-chevron-down-content);
+	font-family: var(--vectorcode-icon-chevron-down-font-family);
 	font-size: 16px;
 	width: 16px;
 	height: 16px;
@@ -268,7 +268,7 @@ body {
 	outline-width: 1px;
 	outline-style: solid;
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 	opacity: 1;
 }
 
@@ -290,7 +290,7 @@ body {
 }
 
 .monaco-workbench.mac select:focus {
-	border-color: transparent; /* outline is a square, but border has a radius, so we avoid this glitch when focused (https://github.com/microsoft/vscode/issues/26045) */
+	border-color: transparent; /* outline is a square, but border has a radius, so we avoid this glitch when focused (https://github.com/microsoft/vector/issues/26045) */
 }
 
 .monaco-workbench.hc-black .monaco-list:not(.element-focused):not(:active):focus:before,
@@ -307,16 +307,16 @@ body {
 	outline-width: 1px;
 	outline-style: solid;
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .monaco-workbench .monaco-list:not(:focus) .monaco-list-row.focused .monaco-highlighted-label .highlight,
 .monaco-workbench .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
-	color: var(--vscode-list-highlightForeground);
+	color: var(--vectorcode-list-highlightForeground);
 }
 
 .monaco-workbench .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight {
-	color: var(--vscode-list-focusHighlightForeground);
+	color: var(--vectorcode-list-focusHighlightForeground);
 }
 
 .monaco-workbench .synthetic-focus :focus {
@@ -342,15 +342,15 @@ body {
 
 .monaco-workbench .monaco-action-bar:not(.vertical) .action-label:not(.disabled):hover,
 .monaco-workbench .monaco-action-bar:not(.vertical) .monaco-dropdown-with-primary:not(.disabled):hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 }
 
 .monaco-workbench .monaco-action-bar:not(.vertical) .action-item.active .action-label:not(.disabled),
 .monaco-workbench .monaco-action-bar:not(.vertical) .monaco-dropdown.active .action-label:not(.disabled) {
-	background-color: var(--vscode-toolbar-activeBackground);
+	background-color: var(--vectorcode-toolbar-activeBackground);
 }
 
 .monaco-workbench .monaco-action-bar:not(.vertical) .action-item .action-label:hover:not(.disabled) {
-	outline: 1px dashed var(--vscode-toolbar-hoverOutline);
+	outline: 1px dashed var(--vectorcode-toolbar-hoverOutline);
 	outline-offset: -1px;
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 .terminal-voice {
-	background-color: var(--vscode-terminal-background, var(--vscode-panel-background));
+	background-color: var(--vectorcode-terminal-background, var(--vectorcode-panel-background));
 	padding: 2px;
 	border-radius: 8px;
 	display: flex;
@@ -21,27 +21,27 @@
 }
 
 .terminal-voice.recording.codicon.codicon-mic-filled {
-	color: var(--vscode-activityBarBadge-background);
+	color: var(--vectorcode-activityBarBadge-background);
 	animation: ani-terminal-speech 1s infinite;
 }
 
 @keyframes ani-terminal-speech {
 	0% {
-		color: var(--vscode-terminalCursor-background);
+		color: var(--vectorcode-terminalCursor-background);
 	}
 
 	50% {
-		color: var(--vscode-activityBarBadge-background);
+		color: var(--vectorcode-activityBarBadge-background);
 	}
 
 	100% {
-		color: var(--vscode-terminalCursor-background);
+		color: var(--vectorcode-terminalCursor-background);
 	}
 }
 
 .terminal-voice-progress-text {
 	font-style: italic;
-	color: var(--vscode-editorGhostText-foreground) !important;
-	border: 1px solid var(--vscode-editorGhostText-border);
+	color: var(--vectorcode-editorGhostText-foreground) !important;
+	border: 1px solid var(--vectorcode-editorGhostText-border);
 	z-index: 1000;
 }

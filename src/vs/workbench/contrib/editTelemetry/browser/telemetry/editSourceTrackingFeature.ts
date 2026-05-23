@@ -60,10 +60,9 @@ export class EditTrackingFeature extends Disposable {
 			return derived(reader => extensionIds.read(reader).has(extIdLowerCase));
 		}
 
-		const copilotInstalled = getExtensionInfoObs('GitHub.copilot', this._extensionService);
-		const copilotChatInstalled = getExtensionInfoObs('GitHub.copilot-chat', this._extensionService);
+		const vectorcodeInstalled = getExtensionInfoObs('GitHub.vectorcode', this._extensionService);
 
-		const shouldSendDetails = derived(reader => editSourceDetailsEnabled.read(reader) || !!copilotInstalled.read(reader) || !!copilotChatInstalled.read(reader));
+		const shouldSendDetails = derived(reader => editSourceDetailsEnabled.read(reader) || !!vectorcodeInstalled.read(reader));
 
 		const instantiationServiceWithInterceptedTelemetry = this._instantiationService.createChild(new ServiceCollection(
 			[ITelemetryService, this._instantiationService.createInstance(DataChannelForwardingTelemetryService)]

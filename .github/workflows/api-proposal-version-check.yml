@@ -270,7 +270,7 @@ jobs:
 
             ---
 
-            If the version change is required, comment \`/api-proposal-change-required\` to unblock this check and acknowledge that you will update any critical consuming extensions (Copilot Chat).`;
+            If the version change is required, comment \`/api-proposal-change-required\` to unblock this check and acknowledge that you will update any critical consuming extensions.`;
 
             if (existingComment) {
               await github.rest.issues.updateComment({

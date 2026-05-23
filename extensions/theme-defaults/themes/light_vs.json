@@ -34,9 +34,7 @@
 		"terminal.inactiveSelectionBackground": "#E5EBF1",
 		"widget.border": "#d4d4d4",
 		"actionBar.toggledBackground": "#dddddd",
-		"diffEditor.unchangedRegionBackground": "#f8f8f8",
-		"agentsNewSessionButton.border": "#D8D8D8",
-		"agentsChatInput.border": "#D8D8D8"
+		"diffEditor.unchangedRegionBackground": "#f8f8f8"
 	},
 	"tokenColors": [
 		{
@@ -434,7 +432,7 @@
 	"semanticTokenColors": {
 		"newOperator": "#0000ff",
 		"stringLiteral": "#a31515",
-		"customLiteral": "#000000",
-		"numberLiteral": "#098658",
+			"customLiteral": "#000000",
+			"numberLiteral": "#098658"
+		}
 	}
-}

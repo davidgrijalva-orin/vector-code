@@ -3,41 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createCommandUri } from '../../../../base/common/htmlContent.js';
+import { $, addDisposableListener, append, clearNode, EventType } from '../../../../base/browser/dom.js';
+import { Codicon } from '../../../../base/common/codicons.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { isCodeEditor, isDiffEditor } from '../../../../editor/browser/editorBrowser.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { ILocalizedString } from '../../../../platform/action/common/action.js';
+import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
+import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
 import { IHoverService } from '../../../../platform/hover/browser/hover.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { OpenFileAction, OpenFolderAction } from '../../../browser/actions/workspaceActions.js';
+import { IWorkspaceContextService, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
 import { ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
-import { WorkbenchStateContext } from '../../../common/contextkeys.js';
-import { Extensions, IViewDescriptorService, IViewsRegistry, ViewContentGroups } from '../../../common/views.js';
-import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUG_EXTENSION_AVAILABLE, IDebugService } from '../common/debug.js';
+import { IViewDescriptorService } from '../../../common/views.js';
+import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import { DEBUG_CONFIGURE_COMMAND_ID, DEBUG_START_COMMAND_ID } from './debugCommands.js';
-
-const debugStartLanguageKey = 'debugStartLanguage';
-const CONTEXT_DEBUG_START_LANGUAGE = new RawContextKey<string>(debugStartLanguageKey, undefined);
-const CONTEXT_DEBUGGER_INTERESTED_IN_ACTIVE_EDITOR = new RawContextKey<boolean>('debuggerInterestedInActiveEditor', false);
 
 export class WelcomeView extends ViewPane {
 
 	static readonly ID = 'workbench.debug.welcome';
 	static readonly LABEL: ILocalizedString = localize2('run', "Run");
 
-	private debugStartLanguageContext: IContextKey<string | undefined>;
-	private debuggerInterestedContext: IContextKey<boolean>;
+	private welcomeContainer: HTMLElement | undefined;
+	private readonly bodyDisposables = new DisposableStore();
+	private readonly debugKeybindingLabel: string;
 
 	constructor(
 		options: IViewletViewOptions,
@@ -46,122 +41,83 @@ export class WelcomeView extends ViewPane {
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IDebugService private readonly debugService: IDebugService,
-		@IEditorService private readonly editorService: IEditorService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
 		@IOpenerService openerService: IOpenerService,
-		@IStorageService storageSevice: IStorageService,
 		@IHoverService hoverService: IHoverService,
+		@ICommandService private readonly commandService: ICommandService,
+		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, hoverService);
 
-		this.debugStartLanguageContext = CONTEXT_DEBUG_START_LANGUAGE.bindTo(contextKeyService);
-		this.debuggerInterestedContext = CONTEXT_DEBUGGER_INTERESTED_IN_ACTIVE_EDITOR.bindTo(contextKeyService);
-		const lastSetLanguage = storageSevice.get(debugStartLanguageKey, StorageScope.WORKSPACE);
-		this.debugStartLanguageContext.set(lastSetLanguage);
+		this._register(this.bodyDisposables);
+		this.debugKeybindingLabel = keybindingService.appendKeybinding('', DEBUG_START_COMMAND_ID);
+		this._register(this.workspaceContextService.onDidChangeWorkbenchState(() => this.renderWelcome()));
+	}
 
-		const setContextKey = () => {
-			let editorControl = this.editorService.activeTextEditorControl;
-			if (isDiffEditor(editorControl)) {
-				editorControl = editorControl.getModifiedEditor();
-			}
-
-			if (isCodeEditor(editorControl)) {
-				const model = editorControl.getModel();
-				const language = model ? model.getLanguageId() : undefined;
-				if (language && this.debugService.getAdapterManager().someDebuggerInterestedInLanguage(language)) {
-					this.debugStartLanguageContext.set(language);
-					this.debuggerInterestedContext.set(true);
-					storageSevice.store(debugStartLanguageKey, language, StorageScope.WORKSPACE, StorageTarget.MACHINE);
-					return;
-				}
-			}
-			this.debuggerInterestedContext.set(false);
-		};
-
-		const disposables = new DisposableStore();
-		this._register(disposables);
-
-		this._register(editorService.onDidActiveEditorChange(() => {
-			disposables.clear();
-
-			let editorControl = this.editorService.activeTextEditorControl;
-			if (isDiffEditor(editorControl)) {
-				editorControl = editorControl.getModifiedEditor();
-			}
-
-			if (isCodeEditor(editorControl)) {
-				disposables.add(editorControl.onDidChangeModelLanguage(setContextKey));
-			}
-
-			setContextKey();
-		}));
-		this._register(this.debugService.getAdapterManager().onDidRegisterDebugger(setContextKey));
-		this._register(this.onDidChangeBodyVisibility(visible => {
-			if (visible) {
-				setContextKey();
-			}
-		}));
-		setContextKey();
-
-		debugKeybindingLabel = this.keybindingService.appendKeybinding('', DEBUG_START_COMMAND_ID);
+	protected override renderBody(container: HTMLElement): void {
+		container.classList.add('vector-debug-welcome-view');
+		this.welcomeContainer = append(container, $('.vector-debug-welcome'));
+		this.renderWelcome();
 	}
 
 	override shouldShowWelcome(): boolean {
-		return true;
+		return false;
+	}
+
+	private renderWelcome(): void {
+		if (!this.welcomeContainer) {
+			return;
+		}
+
+		this.bodyDisposables.clear();
+		clearNode(this.welcomeContainer);
+		const hasProject = this.workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY;
+
+		const card = append(this.welcomeContainer, $('.vector-debug-card'));
+		const header = append(card, $('.vector-debug-card__header'));
+		const mark = append(header, $('.vector-debug-card__mark'));
+		mark.classList.add(...ThemeIcon.asClassNameArray(Codicon.debugAlt));
+
+		const headerText = append(header, $('.vector-debug-card__header-text'));
+		const eyebrow = append(headerText, $('.vector-debug-card__eyebrow'));
+		eyebrow.textContent = localize('vectorRunEyebrow', 'Run');
+		const title = append(headerText, $('.vector-debug-card__title'));
+		title.textContent = hasProject ? localize('vectorRunProjectExecution', 'Project Execution') : localize('vectorRunNoProject', 'No Project Selected');
+
+		const copy = append(card, $('.vector-debug-card__copy'));
+		copy.textContent = hasProject
+			? localize('vectorRunReadyCopy', 'Start the active project or create a run profile for repeatable workflows.')
+			: localize('vectorRunNoProjectCopy', 'Add a project from Files before creating run profiles.');
+
+		const actions = append(card, $('.vector-debug-card__actions'));
+		if (hasProject) {
+			this.renderAction(actions, localize('vectorRunStart', 'Start'), Codicon.debugStart, DEBUG_START_COMMAND_ID, true);
+			this.renderAction(actions, localize('vectorRunProfile', 'Profile'), Codicon.settingsGear, DEBUG_CONFIGURE_COMMAND_ID, false, { addNew: true });
+		} else {
+			this.renderAction(actions, localize('vectorRunFiles', 'Files'), Codicon.files, EXPLORER_VIEWLET_ID, true);
+		}
+
+		const hint = append(card, $('.vector-debug-card__hint'));
+		hint.textContent = hasProject && this.debugKeybindingLabel
+			? localize('vectorRunKeybindingHint', 'Start shortcut: {0}', this.debugKeybindingLabel.trim())
+			: localize('vectorRunProjectScopedHint', 'Run state follows the active project.');
+	}
+
+	private renderAction(container: HTMLElement, label: string, icon: ThemeIcon, commandId: string, primary: boolean, ...args: unknown[]): void {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = primary ? 'vector-debug-card__button vector-debug-card__button--primary' : 'vector-debug-card__button';
+		button.setAttribute('aria-label', label);
+
+		const iconNode = append(button, $('.vector-debug-card__button-icon'));
+		iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
+		const labelNode = append(button, $('.vector-debug-card__button-label'));
+		labelNode.textContent = label;
+
+		container.appendChild(button);
+		this.bodyDisposables.add(addDisposableListener(button, EventType.CLICK, () => {
+			void this.commandService.executeCommand(commandId, ...args);
+		}));
 	}
 }
-
-const viewsRegistry = Registry.as<IViewsRegistry>(Extensions.ViewsRegistry);
-viewsRegistry.registerViewWelcomeContent(WelcomeView.ID, {
-	content: localize(
-		{
-			key: 'openAFileWhichCanBeDebugged',
-			comment: [
-				'Please do not translate the word "command", it is part of our internal syntax which must not change',
-				'{Locked="](command:{0})"}'
-			]
-		},
-		"[Open a file](command:{0}) which can be debugged or run.", OpenFileAction.ID
-	),
-	when: ContextKeyExpr.and(CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUGGER_INTERESTED_IN_ACTIVE_EDITOR.toNegated()),
-	group: ViewContentGroups.Open,
-});
-
-let debugKeybindingLabel = '';
-viewsRegistry.registerViewWelcomeContent(WelcomeView.ID, {
-	content: `[${localize('runAndDebugAction', "Run and Debug")}${debugKeybindingLabel}](command:${DEBUG_START_COMMAND_ID})`,
-	when: CONTEXT_DEBUGGERS_AVAILABLE,
-	group: ViewContentGroups.Debug,
-	// Allow inserting more buttons directly after this one (by setting order to 1).
-	order: 1
-});
-
-viewsRegistry.registerViewWelcomeContent(WelcomeView.ID, {
-	content: localize({ key: 'customizeRunAndDebug2', comment: ['{Locked="launch.json"}', '{Locked="["}', '{Locked="]({0})"}'] },
-		"To customize Run and Debug [create a launch.json file]({0}).", `${createCommandUri(DEBUG_CONFIGURE_COMMAND_ID, { addNew: true }).toString()}`),
-	when: ContextKeyExpr.and(CONTEXT_DEBUGGERS_AVAILABLE, WorkbenchStateContext.notEqualsTo('empty')),
-	group: ViewContentGroups.Debug
-});
-
-viewsRegistry.registerViewWelcomeContent(WelcomeView.ID, {
-	content: localize(
-		{
-			key: 'customizeRunAndDebugOpenFolder2',
-			comment: [
-				'{Locked="launch.json"}',
-				'{Locked="["}',
-				'{Locked="]({0})"}',
-			]
-		},
-		"To customize Run and Debug, [open a folder]({0}) and create a launch.json file.", createCommandUri(OpenFolderAction.ID).toString()),
-	when: ContextKeyExpr.and(CONTEXT_DEBUGGERS_AVAILABLE, WorkbenchStateContext.isEqualTo('empty')),
-	group: ViewContentGroups.Debug
-});
-
-viewsRegistry.registerViewWelcomeContent(WelcomeView.ID, {
-	content: localize('allDebuggersDisabled', "All debug extensions are disabled. Enable a debug extension or install a new one from the Marketplace."),
-	when: CONTEXT_DEBUG_EXTENSION_AVAILABLE.toNegated(),
-	group: ViewContentGroups.Debug
-});

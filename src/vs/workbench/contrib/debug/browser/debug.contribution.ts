@@ -20,7 +20,7 @@ import { IQuickAccessRegistry, Extensions as QuickAccessExtensions } from '../..
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { EditorPaneDescriptor, IEditorPaneRegistry } from '../../../browser/editor.js';
 import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContainer.js';
-import { FocusedViewContext, IsSessionsWindowContext } from '../../../common/contextkeys.js';
+import { FocusedViewContext } from '../../../common/contextkeys.js';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
 import { EditorExtensions } from '../../../common/editor.js';
 import { IViewContainersRegistry, IViewsRegistry, ViewContainer, ViewContainerLocation, Extensions as ViewExtensions } from '../../../common/views.js';
@@ -52,8 +52,8 @@ import { DebugToolBar } from './debugToolBar.js';
 import { DebugViewPaneContainer } from './debugViewlet.js';
 import { DisassemblyView, DisassemblyViewContribution } from './disassemblyView.js';
 import { LoadedScriptsView } from './loadedScriptsView.js';
-import './media/debug.contribution.css';
-import './media/debugHover.css';
+import '../../vectorCode/browser/media/vectorDebugContribution.css';
+import '../../vectorCode/browser/media/vectorDebugHover.css';
 import { Repl } from './repl.js';
 import { ReplAccessibilityHelp } from './replAccessibilityHelp.js';
 import { ReplAccessibleView } from './replAccessibleView.js';
@@ -62,7 +62,6 @@ import { StatusBarColorProvider } from './statusbarColorProvider.js';
 import { SET_VARIABLE_ID, VIEW_MEMORY_ID, VariablesView } from './variablesView.js';
 import { ADD_WATCH_ID, ADD_WATCH_LABEL, REMOVE_WATCH_EXPRESSIONS_COMMAND_ID, REMOVE_WATCH_EXPRESSIONS_LABEL, WatchExpressionsView } from './watchExpressionsView.js';
 import { WelcomeView } from './welcomeView.js';
-import { DebugChatContextContribution } from './debugChatIntegration.js';
 
 // Register services
 import './debug.service.contribution.js';
@@ -82,7 +81,6 @@ Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).regi
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(StatusBarColorProvider, LifecyclePhase.Eventually);
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(DisassemblyViewContribution, LifecyclePhase.Eventually);
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(DebugLifecycle, LifecyclePhase.Eventually);
-registerWorkbenchContribution2(DebugChatContextContribution.ID, DebugChatContextContribution, WorkbenchPhase.AfterRestored);
 
 // Register Quick Access
 Registry.as<IQuickAccessRegistry>(QuickAccessExtensions.Quickaccess).registerQuickAccessProvider({
@@ -265,7 +263,6 @@ MenuRegistry.appendMenuItem(MenuId.MenubarMainMenu, {
 		mnemonicTitle: nls.localize({ key: 'mRun', comment: ['&& denotes a mnemonic'] }, "&&Run")
 	},
 	order: 6,
-	when: IsSessionsWindowContext.negate()
 });
 
 MenuRegistry.appendMenuItem(MenuId.MenubarDebugMenu, {
@@ -452,7 +449,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([{
 
 const viewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
 	id: VIEWLET_ID,
-	title: nls.localize2('run and debug', "Run and Debug"),
+	title: nls.localize2('runView', "Run"),
 	openCommandActionDescriptor: {
 		id: VIEWLET_ID,
 		mnemonicTitle: nls.localize({ key: 'miViewRun', comment: ['&& denotes a mnemonic'] }, "&&Run"),
@@ -693,7 +690,7 @@ configurationRegistry.registerConfiguration({
 		},
 		'debug.hideLauncherWhileDebugging': {
 			type: 'boolean',
-			markdownDescription: nls.localize({ comment: ['This is the description for a setting'], key: 'debug.hideLauncherWhileDebugging' }, "Hide 'Start Debugging' control in title bar of 'Run and Debug' view while debugging is active. Only relevant when {0} is not `docked`.", '`#debug.toolBarLocation#`'),
+			markdownDescription: nls.localize({ comment: ['This is the description for a setting'], key: 'debug.hideLauncherWhileDebugging' }, "Hide the 'Start Debugging' control in the Run view title bar while debugging is active. Only relevant when {0} is not `docked`.", '`#debug.toolBarLocation#`'),
 			default: false
 		},
 		'debug.hideSlowPreLaunchWarning': {

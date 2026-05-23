@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isActiveDocument, reset } from '../../../../base/browser/dom.js';
+import { addDisposableListener, EventHelper, EventLike, EventType, isActiveDocument, reset } from '../../../../base/browser/dom.js';
 import { BaseActionViewItem, IBaseActionViewItemOptions } from '../../../../base/browser/ui/actionbar/actionViewItems.js';
 import { getDefaultHoverDelegate } from '../../../../base/browser/ui/hover/hoverDelegateFactory.js';
 import { IHoverDelegate } from '../../../../base/browser/ui/hover/hoverDelegate.js';
@@ -12,7 +12,6 @@ import { IAction, SubmenuAction } from '../../../../base/common/actions.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../base/common/observable.js';
 import { localize } from '../../../../nls.js';
 import { createActionViewItem } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { HiddenItemStrategy, MenuWorkbenchToolBar, WorkbenchToolBar } from '../../../../platform/actions/browser/toolbar.js';
@@ -23,10 +22,6 @@ import { IQuickInputService } from '../../../../platform/quickinput/common/quick
 import { WindowTitle } from './windowTitle.js';
 import { IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
 import { IHoverService } from '../../../../platform/hover/browser/hover.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-
-const AI_DISABLED_SETTING = 'chat.disableAIFeatures';
-const AGENT_STATUS_ENABLED_SETTING = 'chat.agentsControl.enabled';
 
 export class CommandCenterControl {
 
@@ -61,20 +56,11 @@ export class CommandCenterControl {
 			}
 		});
 
-		let quickInputVisible = false;
 		this._disposables.add(Event.filter(quickInputService.onShow, () => isActiveDocument(this.element), this._disposables)(() => {
-			quickInputVisible = true;
-			this._setVisibility(quickInputService.alignment.get() !== 'top');
-		}));
-		this._disposables.add(quickInputService.onHide(() => {
-			quickInputVisible = false;
 			this._setVisibility(true);
 		}));
-		this._disposables.add(autorun(reader => {
-			const alignment = quickInputService.alignment.read(reader);
-			if (quickInputVisible) {
-				this._setVisibility(alignment !== 'top');
-			}
+		this._disposables.add(quickInputService.onHide(() => {
+			this._setVisibility(true);
 		}));
 		this._disposables.add(titleToolbar);
 	}
@@ -104,7 +90,7 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 		@IKeybindingService private _keybindingService: IKeybindingService,
 		@IInstantiationService private _instaService: IInstantiationService,
 		@IEditorGroupsService private _editorGroupService: IEditorGroupsService,
-		@IConfigurationService private _configurationService: IConfigurationService,
+		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 	) {
 		super(undefined, _submenu.actions.find(action => action.id === 'workbench.action.quickOpenWithModes') ?? _submenu.actions[0], options);
 		this._hoverDelegate = options.hoverDelegate ?? getDefaultHoverDelegate('mouse');
@@ -153,8 +139,20 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 
 					return this._instaService.createInstance(class CommandCenterQuickPickItem extends BaseActionViewItem {
 
+						private _closeQuickInputOnClick = false;
+
 						constructor() {
 							super(undefined, action, options);
+						}
+
+						override onClick(event: EventLike, preserveFocus = false): void {
+							if (this._closeQuickInputOnClick || that._quickInputService.currentQuickInput) {
+								this._closeQuickInputOnClick = false;
+								EventHelper.stop(event, true);
+								void that._quickInputService.cancel();
+								return;
+							}
+							super.onClick(event, preserveFocus);
 						}
 
 						override render(container: HTMLElement): void {
@@ -162,20 +160,13 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 							container.classList.toggle('command-center-quick-pick');
 							container.role = 'button';
 							container.setAttribute('aria-description', this.getTooltip());
-
-							// When agent control mode is 'compact', hide search icon and left-align the label
-							// Backward compat: the old boolean setting (true) and the new default (undefined) both map to compact
-							const aiFeaturesDisabled = that._configurationService.getValue<boolean>(AI_DISABLED_SETTING) === true;
-							const aiCustomizationsDisabled = that._configurationService.getValue<boolean>('disableAICustomizations') === true
-								|| that._configurationService.getValue<boolean>('workbench.disableAICustomizations') === true;
-							const forcedHidden = aiFeaturesDisabled && aiCustomizationsDisabled;
-							const agentControlValue = that._configurationService.getValue(AGENT_STATUS_ENABLED_SETTING);
-							const isCompactMode = !forcedHidden && (agentControlValue === true || agentControlValue === undefined || agentControlValue === 'compact');
-							container.classList.toggle('compact-mode', isCompactMode);
+							this._store.add(addDisposableListener(container, EventType.MOUSE_DOWN, () => {
+								this._closeQuickInputOnClick = !!that._quickInputService.currentQuickInput;
+							}));
 
 							const action = this.action;
 
-							// icon (search) - hidden in compact mode
+							// icon (search)
 							const searchIcon = document.createElement('span');
 							searchIcon.ariaHidden = 'true';
 							searchIcon.className = action.class ?? '';
@@ -186,11 +177,7 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 							const labelElement = document.createElement('span');
 							labelElement.classList.add('search-label');
 							labelElement.textContent = label;
-							if (isCompactMode) {
-								reset(container, labelElement);
-							} else {
-								reset(container, searchIcon, labelElement);
-							}
+							reset(container, searchIcon, labelElement);
 
 							const hover = this._store.add(that._hoverService.setupManagedHover(that._hoverDelegate, container, this.getTooltip()));
 

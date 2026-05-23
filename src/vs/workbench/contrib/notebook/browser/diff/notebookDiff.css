@@ -326,15 +326,15 @@
 }
 
 .notebook-text-diff-editor .diffViewport {
-	background: var(--vscode-scrollbarSlider-background);
+	background: var(--vectorcode-scrollbarSlider-background);
 }
 
 .notebook-text-diff-editor .diffViewport:hover {
-	background: var(--vscode-scrollbarSlider-hoverBackground);
+	background: var(--vectorcode-scrollbarSlider-hoverBackground);
 }
 
 .notebook-text-diff-editor .diffViewport:active {
-	background: var(--vscode-scrollbarSlider-activeBackground);
+	background: var(--vectorcode-scrollbarSlider-activeBackground);
 }
 
 /** Diff cell borders */
@@ -342,29 +342,29 @@
 .notebook-text-diff-editor .cell-body .border-container .bottom-border,
 .notebook-text-diff-editor .cell-diff-editor-container .output-header-container,
 .notebook-text-diff-editor .cell-diff-editor-container .metadata-header-container {
-	border-top: 1px solid var(--vscode-notebook-cellBorderColor);
+	border-top: 1px solid var(--vectorcode-notebook-cellBorderColor);
 }
 
 .notebook-text-diff-editor .cell-body .border-container .left-border {
-	border-left: 1px solid var(--vscode-notebook-cellBorderColor);
+	border-left: 1px solid var(--vectorcode-notebook-cellBorderColor);
 }
 
 .notebook-text-diff-editor .cell-body .border-container .right-border {
-	border-right: 1px solid var(--vscode-notebook-cellBorderColor);
+	border-right: 1px solid var(--vectorcode-notebook-cellBorderColor);
 }
 
 /** Diff cell active borders */
 .notebook-text-diff-editor .monaco-list-row.focused .cell-body .border-container .top-border,
 .notebook-text-diff-editor .monaco-list-row.focused .cell-body .border-container .bottom-border {
-	border-top: 1px solid var(--vscode-notebook-focusedEditorBorder);
+	border-top: 1px solid var(--vectorcode-notebook-focusedEditorBorder);
 }
 
 .notebook-text-diff-editor .monaco-list-row.focused .cell-body .border-container .left-border {
-	border-left: 1px solid var(--vscode-notebook-focusedEditorBorder);
+	border-left: 1px solid var(--vectorcode-notebook-focusedEditorBorder);
 }
 
 .notebook-text-diff-editor .monaco-list-row.focused .cell-body .border-container .right-border {
-	border-right: 1px solid var(--vscode-notebook-focusedEditorBorder);
+	border-right: 1px solid var(--vectorcode-notebook-focusedEditorBorder);
 }
 
 /** Diff cell diff background */
@@ -384,7 +384,7 @@
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.inserted .output-editor-container .monaco-editor .monaco-editor-background,
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.inserted .metadata-header-container,
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.inserted .output-header-container {
-	background-color: var(--vscode-diffEditor-insertedTextBackground);
+	background-color: var(--vectorcode-diffEditor-insertedTextBackground);
 }
 
 .monaco-workbench .notebook-text-diff-editor .cell-body.full .output-info-container.modified .output-view-container .output-view-container-left div.foreground,
@@ -402,13 +402,13 @@
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.removed .output-editor-container .monaco-editor .monaco-editor-background,
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.removed .metadata-header-container,
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container.removed .output-header-container {
-	background-color: var(--vscode-diffEditor-removedTextBackground);
+	background-color: var(--vectorcode-diffEditor-removedTextBackground);
 }
 
 /** Diff cell editor background */
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container .source-container .monaco-editor .margin,
 .notebook-text-diff-editor .cell-body .cell-diff-editor-container .source-container .monaco-editor .monaco-editor-background {
-	background: var(--vscode-notebook-cellEditorBackground, var(--vscode-editor-background));
+	background: var(--vectorcode-notebook-cellEditorBackground, var(--vectorcode-editor-background));
 }
 
 /** Overlay to hide the unchanged cells */
@@ -421,7 +421,7 @@
 }
 
 .notebook-text-diff-editor .cell-body.full div.diff-hidden-cells .center {
-	color: var(--vscode-diffEditor-unchangedRegionForeground);
+	color: var(--vectorcode-diffEditor-unchangedRegionForeground);
 	overflow: hidden;
 	display: block;
 	white-space: nowrap;
@@ -439,8 +439,8 @@
 
 /** Overlay to unhide the unchanged cells */
 .notebook-text-diff-editor .cell-placeholder-body {
-	background: var(--vscode-diffEditor-unchangedRegionBackground);
-	color: var(--vscode-diffEditor-unchangedRegionForeground);
+	background: var(--vectorcode-diffEditor-unchangedRegionBackground);
+	color: var(--vectorcode-diffEditor-unchangedRegionForeground);
 	min-height: 24px;
 }
 
@@ -465,5 +465,5 @@
 
 .notebook-text-diff-editor .cell-placeholder-body div.diff-hidden-cells .center a:hover .codicon {
 	cursor: pointer;
-	color: var(--vscode-editorLink-activeForeground) !important;
+	color: var(--vectorcode-editorLink-activeForeground) !important;
 }

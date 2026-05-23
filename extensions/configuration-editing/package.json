@@ -55,7 +55,6 @@
           "settings.json",
           "launch.json",
           "tasks.json",
-          "mcp.json",
           "keybindings.json",
           "extensions.json",
           "argv.json",
@@ -123,10 +122,6 @@
       {
         "fileMatch": "/.vscode/tasks.json",
         "url": "vscode://schemas/tasks"
-      },
-      {
-        "fileMatch": "/.vscode/mcp.json",
-        "url": "vscode://schemas/mcp"
       },
       {
         "fileMatch": "%APP_SETTINGS_HOME%/tasks.json",

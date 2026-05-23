@@ -42,16 +42,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	const ctrl = vscode.tests.createTestController('selfhost-test-controller', 'VS Code Tests');
 	const fileChangedEmitter = new vscode.EventEmitter<FileChangeEvent>();
 
-	context.subscriptions.push(vscode.tests.registerTestFollowupProvider({
-		async provideFollowup(_result, test, taskIndex, messageIndex, _token) {
-			return [{
-				title: '$(sparkle) Fix',
-				command: 'github.copilot.tests.fixTestFailure',
-				arguments: [{ source: 'peekFollowup', test, message: test.taskStates[taskIndex].messages[messageIndex] }]
-			}];
-		},
-	}));
-
 	let initialWatchPromise: Promise<vscode.Disposable> | undefined;
 	const resolveHandler = async (test?: vscode.TestItem) => {
 		if (!test) {

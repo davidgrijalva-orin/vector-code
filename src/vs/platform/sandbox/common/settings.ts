@@ -4,19 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * Setting IDs for agent sandboxing.
+ * Setting IDs for terminal sandboxing.
  */
 export const enum AgentSandboxSettingId {
-	AgentSandboxEnabled = 'chat.agent.sandbox.enabled',
-	AgentSandboxAllowUnsandboxedCommands = 'chat.agent.sandbox.allowUnsandboxedCommands',
-	AgentSandboxAutoApproveUnsandboxedCommands = 'chat.agent.sandbox.autoApproveUnsandboxedCommands',
-	AgentSandboxAllowAutoApprove = 'chat.agent.sandbox.allowAutoApprove',
-	AgentSandboxLinuxFileSystem = 'chat.agent.sandbox.fileSystem.linux',
-	AgentSandboxMacFileSystem = 'chat.agent.sandbox.fileSystem.mac',
-	AgentSandboxAdvancedRuntime = 'chat.agent.sandbox.advanced.runtime',
-	DeprecatedAgentSandboxEnabled = 'chat.agent.sandbox',
-	DeprecatedAgentSandboxLinuxFileSystem = 'chat.agent.sandboxFileSystem.linux',
-	DeprecatedAgentSandboxMacFileSystem = 'chat.agent.sandboxFileSystem.mac',
+	AgentSandboxEnabled = 'vectorcode.terminalSandbox.enabled',
+	AgentSandboxAllowUnsandboxedCommands = 'vectorcode.terminalSandbox.allowUnsandboxedCommands',
+	AgentSandboxAutoApproveUnsandboxedCommands = 'vectorcode.terminalSandbox.autoApproveUnsandboxedCommands',
+	AgentSandboxAllowAutoApprove = 'vectorcode.terminalSandbox.allowAutoApprove',
+	AgentSandboxLinuxFileSystem = 'vectorcode.terminalSandbox.fileSystem.linux',
+	AgentSandboxMacFileSystem = 'vectorcode.terminalSandbox.fileSystem.mac',
+	AgentSandboxAdvancedRuntime = 'vectorcode.terminalSandbox.advanced.runtime',
 }
 
 export const enum AgentSandboxEnabledValue {

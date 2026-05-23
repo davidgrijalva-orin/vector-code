@@ -1,5 +1,5 @@
-# VS Code Agents Instructions
+# VectorCode Agents Instructions
 
-This file provides instructions for AI coding agents working with the VS Code codebase.
+This file provides instructions for AI coding agents working with the VectorCode workbench codebase.
 
-For detailed project overview, architecture, coding guidelines, and validation steps, see the [Copilot Instructions](.github/copilot-instructions.md).
+Use the repository source as the authority. Validate TypeScript changes with `npm run compile-check-ts-native` first, then run the narrower extension/client checks that match the files you touched.

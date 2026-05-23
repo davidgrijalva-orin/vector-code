@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/scm.css';
+import '../../vectorCode/browser/media/vectorScm.css';
 import { IDisposable, DisposableStore, combinedDisposable } from '../../../../base/common/lifecycle.js';
 import { autorun, IObservable, observableSignalFromEvent } from '../../../../base/common/observable.js';
 import { append, $ } from '../../../../base/browser/dom.js';

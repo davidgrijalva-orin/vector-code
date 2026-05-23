@@ -52,7 +52,6 @@ export interface IWindowCreationOptions {
 	readonly state: IWindowState;
 	readonly extensionDevelopmentPath?: string[];
 	readonly isExtensionTestHost?: boolean;
-	readonly isSessionsWindow?: boolean;
 }
 
 interface ITouchBarSegment extends electron.SegmentedControlSegment {
@@ -705,13 +704,9 @@ export class CodeWindow extends BaseWindow implements ICodeWindow {
 
 			const webPreferences: electron.WebPreferences = {
 				preload: FileAccess.asFileUri('vs/base/parts/sandbox/electron-browser/preload.js').fsPath,
-				additionalArguments: [`--vscode-window-config=${this.configObjectUrl.resource.toString()}`],
+				additionalArguments: [`--vectorcode-window-config=${this.configObjectUrl.resource.toString()}`],
 				v8CacheOptions: this.environmentMainService.useCodeCache ? 'bypassHeatCheck' : 'none'
 			};
-			if (config.isSessionsWindow) {
-				webPreferences.backgroundThrottling = false; // keep agents window responsive when in background
-			}
-
 			const options = instantiationService.invokeFunction(defaultBrowserWindowOptions, this.windowState, undefined, webPreferences);
 
 			// Create the browser window
@@ -1208,10 +1203,9 @@ export class CodeWindow extends BaseWindow implements ICodeWindow {
 
 		// Load URL
 		let windowUrl: string;
-		if (process.env.VSCODE_DEV && process.env.VSCODE_DEV_SERVER_URL) {
-			windowUrl = process.env.VSCODE_DEV_SERVER_URL; // support URL override for development
-		} else if (configuration.isSessionsWindow) {
-			windowUrl = FileAccess.asBrowserUri(`vs/sessions/electron-browser/sessions${this.environmentMainService.isBuilt ? '' : '-dev'}.html`).toString(true);
+		const devServerUrl = process.env.VECTOR_CODE_DEV_SERVER_URL;
+		if (process.env.VSCODE_DEV && devServerUrl) {
+			windowUrl = devServerUrl; // support dev server URL override
 		} else {
 			windowUrl = FileAccess.asBrowserUri(`vs/code/electron-browser/workbench/workbench${this.environmentMainService.isBuilt ? '' : '-dev'}.html`).toString(true);
 		}

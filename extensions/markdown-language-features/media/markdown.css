@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 html, body {
-	font-family: var(--markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif);
+	font-family: var(--markdown-font-family, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif);
 	font-size: var(--markdown-font-size, 14px);
 	padding: 0 26px;
 	line-height: var(--markdown-line-height, 22px);
@@ -32,21 +32,21 @@ h1, h2, h3, h4, h5, h6 {
 	position: fixed;
 	top: 0;
 	right: 0;
-	color: white;
+	color: var(--vectorcode-button-foreground);
 	margin: 16px;
 	text-align: center;
 	font-size: 12px;
-	font-family: sans-serif;
-	background-color:#444444;
+	font-family: inherit;
+	background-color: var(--vectorcode-button-secondaryBackground);
 	cursor: pointer;
 	padding: 6px;
-	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+	box-shadow: var(--vectorcode-shadow-sm);
 }
 
 #code-csp-warning:hover {
 	text-decoration: none;
-	background-color:#007acc;
-	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+	background-color: var(--vectorcode-button-secondaryHoverBackground);
+	box-shadow: var(--vectorcode-shadow-md);
 }
 
 body.scrollBeyondLastLine {
@@ -63,29 +63,29 @@ body.showEditorSelection .code-line {
 }
 
 .code-line-diff-added {
-	background-color: var(--vscode-diffEditor-insertedTextBackground);
-	box-shadow: -4px 0 0 var(--vscode-diffEditorGutter-insertedLineBackground);
+	background-color: var(--vectorcode-diffEditor-insertedTextBackground);
+	box-shadow: -4px 0 0 var(--vectorcode-diffEditorGutter-insertedLineBackground);
 }
 
 .code-line-diff-deleted {
-	background-color: var(--vscode-diffEditor-removedTextBackground);
-	box-shadow: -4px 0 0 var(--vscode-diffEditorGutter-removedLineBackground);
+	background-color: var(--vectorcode-diffEditor-removedTextBackground);
+	box-shadow: -4px 0 0 var(--vectorcode-diffEditorGutter-removedLineBackground);
 }
 
-.vscode-high-contrast .code-line-diff-added {
-	outline: 1px solid var(--vscode-diffEditor-insertedTextBorder);
+.vectorcode-high-contrast .code-line-diff-added {
+	outline: 1px solid var(--vectorcode-diffEditor-insertedTextBorder);
 }
 
-.vscode-high-contrast .code-line-diff-deleted {
-	outline: 1px solid var(--vscode-diffEditor-removedTextBorder);
+.vectorcode-high-contrast .code-line-diff-deleted {
+	outline: 1px solid var(--vectorcode-diffEditor-removedTextBorder);
 }
 
 ::highlight(diff-inner-added) {
-	background-color: var(--vscode-diffEditor-insertedTextBackground);
+	background-color: var(--vectorcode-diffEditor-insertedTextBackground);
 }
 
 ::highlight(diff-inner-deleted) {
-	background-color: var(--vscode-diffEditor-removedTextBackground);
+	background-color: var(--vectorcode-diffEditor-removedTextBackground);
 }
 
 /* Hide the empty marker spans so they don't affect layout */
@@ -110,7 +110,7 @@ body.showEditorSelection .code-line {
 	left: -12px;
 	right: 0;
 	height: 12px;
-	background-color: var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground));
+	background-color: var(--vectorcode-diffEditorGutter-removedLineBackground, var(--vectorcode-diffEditor-removedTextBackground));
 	clip-path: polygon(
 		0px 0px,
 		4px 4px,
@@ -156,8 +156,8 @@ body.showEditorSelection .code-line {
 	height: 2px;
 	background: repeating-linear-gradient(
 		90deg,
-		var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground)) 0px,
-		var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground)) 4px,
+		var(--vectorcode-diffEditorGutter-removedLineBackground, var(--vectorcode-diffEditor-removedTextBackground)) 0px,
+		var(--vectorcode-diffEditorGutter-removedLineBackground, var(--vectorcode-diffEditor-removedTextBackground)) 4px,
 		transparent 4px,
 		transparent 8px
 	);
@@ -175,7 +175,7 @@ body.showEditorSelection .code-line {
 	left: -12px;
 	width: 4px;
 	z-index: 5;
-	background-color: var(--vscode-editorGutter-modifiedBackground, #1b81a8);
+	background-color: var(--vectorcode-editorGutter-modifiedBackground, var(--vectorcode-shell-accent));
 	cursor: pointer;
 }
 
@@ -198,12 +198,12 @@ body.showEditorSelection .code-line {
 	left: 0;
 	right: 0;
 	z-index: 10;
-	background-color: var(--vscode-editor-background);
-	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder, rgba(127, 127, 127, 0.35)));
+	background-color: var(--vectorcode-editor-background);
+	border: 1px solid var(--vectorcode-editorWidget-border, var(--vectorcode-contrastBorder));
 	border-radius: 3px;
 	max-height: 400px;
 	overflow: auto;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	box-shadow: var(--vectorcode-shadow-lg);
 }
 
 .diff-change-indicator-tooltip pre {
@@ -211,18 +211,18 @@ body.showEditorSelection .code-line {
 	font-size: 0.9em;
 	white-space: pre-wrap;
 	word-break: break-word;
-	color: var(--vscode-editor-foreground);
+	color: var(--vectorcode-editor-foreground);
 }
 
 .diff-tooltip-deleted {
-	background-color: var(--vscode-diffEditor-removedTextBackground);
-	border-left: 4px solid var(--vscode-diffEditorGutter-removedLineBackground, var(--vscode-diffEditor-removedTextBackground));
+	background-color: var(--vectorcode-diffEditor-removedTextBackground);
+	border-left: 4px solid var(--vectorcode-diffEditorGutter-removedLineBackground, var(--vectorcode-diffEditor-removedTextBackground));
 	padding: 4px 8px;
 }
 
 .diff-tooltip-added {
-	background-color: var(--vscode-diffEditor-insertedTextBackground);
-	border-left: 4px solid var(--vscode-diffEditorGutter-insertedLineBackground, var(--vscode-diffEditor-insertedTextBackground));
+	background-color: var(--vectorcode-diffEditor-insertedTextBackground);
+	border-left: 4px solid var(--vectorcode-diffEditorGutter-insertedLineBackground, var(--vectorcode-diffEditor-insertedTextBackground));
 	padding: 4px 8px;
 }
 
@@ -232,13 +232,13 @@ body.showEditorSelection .code-line {
 }
 
 .diff-inline-deleted {
-	background-color: var(--vscode-diffEditor-removedTextBackground);
+	background-color: var(--vectorcode-diffEditor-removedTextBackground);
 	text-decoration: line-through;
-	text-decoration-color: var(--vscode-editor-foreground);
+	text-decoration-color: var(--vectorcode-editor-foreground);
 }
 
 .diff-inline-added {
-	background-color: var(--vscode-diffEditor-insertedTextBackground);
+	background-color: var(--vectorcode-diffEditor-insertedTextBackground);
 }
 
 
@@ -253,7 +253,7 @@ body.showEditorSelection :not(tr,ul,ol).code-line:hover:before {
 	height: 100%;
 }
 
-.vscode-high-contrast.showEditorSelection  :not(tr,ul,ol).code-line .code-line:hover:before {
+.vectorcode-high-contrast.showEditorSelection  :not(tr,ul,ol).code-line .code-line:hover:before {
 	border-left: none;
 }
 
@@ -262,28 +262,28 @@ body.showEditorSelection li.code-line:hover:before {
 	left: -30px;
 }
 
-.vscode-light.showEditorSelection .code-active-line:before {
-	border-left: 3px solid rgba(0, 0, 0, 0.15);
+.vectorcode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid var(--vectorcode-list-inactiveSelectionBackground);
 }
 
-.vscode-light.showEditorSelection .code-line:hover:before {
-	border-left: 3px solid rgba(0, 0, 0, 0.40);
+.vectorcode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid var(--vectorcode-list-hoverBackground);
 }
 
-.vscode-dark.showEditorSelection .code-active-line:before {
-	border-left: 3px solid rgba(255, 255, 255, 0.4);
+.vectorcode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid var(--vectorcode-list-inactiveSelectionBackground);
 }
 
-.vscode-dark.showEditorSelection .code-line:hover:before {
-	border-left: 3px solid rgba(255, 255, 255, 0.60);
+.vectorcode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid var(--vectorcode-list-hoverBackground);
 }
 
-.vscode-high-contrast.showEditorSelection .code-active-line:before {
-	border-left: 3px solid rgba(255, 160, 0, 0.7);
+.vectorcode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid var(--vectorcode-focusBorder);
 }
 
-.vscode-high-contrast.showEditorSelection .code-line:hover:before {
-	border-left: 3px solid rgba(255, 160, 0, 1);
+.vectorcode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid var(--vectorcode-focusBorder);
 }
 
 /* Prevent `sub` and `sup` elements from affecting line height */
@@ -398,7 +398,7 @@ blockquote {
 }
 
 code {
-	font-family: var(--vscode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
+	font-family: var(--vectorcode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
 	font-size: 1em;
 	line-height: 1.357em;
 }
@@ -416,7 +416,7 @@ pre.hljs code > div {
 
 pre code {
 	display: inline-block;
-	color: var(--vscode-editor-foreground);
+	color: var(--vectorcode-editor-foreground);
 	tab-size: 4;
 	background: none;
 }
@@ -424,34 +424,34 @@ pre code {
 /** Theming */
 
 pre {
-	background-color: var(--vscode-textCodeBlock-background);
-	border: 1px solid var(--vscode-widget-border);
+	background-color: var(--vectorcode-textCodeBlock-background);
+	border: 1px solid var(--vectorcode-widget-border);
 }
 
-.vscode-high-contrast h1 {
-	border-color: rgb(0, 0, 0);
+.vectorcode-high-contrast h1 {
+	border-color: var(--vectorcode-contrastBorder);
 }
 
-.vscode-light th {
-	border-color: rgba(0, 0, 0, 0.69);
+.vectorcode-light th {
+	border-color: var(--vectorcode-contrastBorder);
 }
 
-.vscode-dark th {
-	border-color: rgba(255, 255, 255, 0.69);
+.vectorcode-dark th {
+	border-color: var(--vectorcode-contrastBorder);
 }
 
-.vscode-light h1,
-.vscode-light h2,
-.vscode-light hr,
-.vscode-light td {
-	border-color: rgba(0, 0, 0, 0.18);
+.vectorcode-light h1,
+.vectorcode-light h2,
+.vectorcode-light hr,
+.vectorcode-light td {
+	border-color: var(--vectorcode-editorWidget-border);
 }
 
-.vscode-dark h1,
-.vscode-dark h2,
-.vscode-dark hr,
-.vscode-dark td {
-	border-color: rgba(255, 255, 255, 0.18);
+.vectorcode-dark h1,
+.vectorcode-dark h2,
+.vectorcode-dark hr,
+.vectorcode-dark td {
+	border-color: var(--vectorcode-editorWidget-border);
 }
 
 /* Frontmatter rendering */
@@ -463,7 +463,7 @@ table.frontmatter {
 table.frontmatter th,
 table.frontmatter td {
 	padding: 6px 13px;
-	border: 1px solid var(--vscode-widget-border, rgba(127, 127, 127, 0.35));
+	border: 1px solid var(--vectorcode-widget-border, var(--vectorcode-editorWidget-border));
 	text-align: left;
 	vertical-align: top;
 }
@@ -485,9 +485,9 @@ pre.frontmatter {
 .frontmatter-error {
 	margin-bottom: 16px;
 	padding: 8px 13px;
-	border-left: 4px solid var(--vscode-editorError-foreground, #f48771);
-	background: var(--vscode-inputValidation-errorBackground, rgba(244, 135, 113, 0.1));
-	color: var(--vscode-editorError-foreground, #f48771);
+	border-left: 4px solid var(--vectorcode-editorError-foreground, var(--vectorcode-errorForeground));
+	background: var(--vectorcode-inputValidation-errorBackground, var(--vectorcode-error-bg));
+	color: var(--vectorcode-editorError-foreground, var(--vectorcode-errorForeground));
 }
 
 .frontmatter-error pre {

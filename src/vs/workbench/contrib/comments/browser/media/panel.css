@@ -60,8 +60,8 @@
 
 .comments-panel .comments-panel-container .tree-container .comment-thread-container .comment-metadata-container .relevance {
 	border-radius: 2px;
-	background-color: var(--vscode-badge-background);
-	color: var(--vscode-badge-foreground);
+	background-color: var(--vectorcode-badge-background);
+	color: var(--vectorcode-badge-foreground);
 	padding: 0px 4px 1px 4px;
 	font-size: 0.9em;
 	margin-right: 4px;
@@ -146,20 +146,20 @@
 }
 
 .comments-panel .comments-panel-container .text a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .comments-panel .comments-panel-container .text a:hover,
 .comments-panel .comments-panel-container a:active {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .comments-panel .comments-panel-container .text a:focus {
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .comments-panel .comments-panel-container .text code {
-	color: var(--vscode-textPreformat-foreground);
+	color: var(--vectorcode-textPreformat-foreground);
 }
 
 .comments-panel .comments-panel-container .actions {

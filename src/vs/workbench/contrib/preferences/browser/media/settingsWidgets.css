@@ -24,9 +24,9 @@
 }
 
 .settings-editor > .settings-body .settings-tree-container .setting-item-bool .setting-value-checkbox {
-	background-color: var(--vscode-settings-checkboxBackground) !important;
-	color: var(--vscode-settings-checkboxForeground) !important;
-	border-color: var(--vscode-settings-checkboxBorder) !important;
+	background-color: var(--vectorcode-settings-checkboxBackground) !important;
+	color: var(--vectorcode-settings-checkboxForeground) !important;
+	border-color: var(--vectorcode-settings-checkboxBorder) !important;
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item-bool .setting-list-object-input-key-checkbox {
 	margin-left: 4px;
@@ -114,23 +114,23 @@
 	display: flex;
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row:hover {
-	background-color: var(--vscode-list-hoverBackground);
-	color: var(--vscode-list-hoverForeground);
+	background-color: var(--vectorcode-list-hoverBackground);
+	color: var(--vectorcode-list-hoverForeground);
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.selected:focus {
-	background-color: var(--vscode-list-activeSelectionBackground);
-	color: var(--vscode-list-activeSelectionForeground);
+	background-color: var(--vectorcode-list-activeSelectionBackground);
+	color: var(--vectorcode-list-activeSelectionForeground);
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.selected:not(:focus) {
-	background-color: var(--vscode-list-inactiveSelectionBackground);
-	color: var(--vscode-list-inactiveSelectionForeground);
+	background-color: var(--vectorcode-list-inactiveSelectionBackground);
+	color: var(--vectorcode-list-inactiveSelectionForeground);
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.draggable {
 	cursor: pointer;
 	user-select: none;
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.drag-hover {
-	background-color: var(--vscode-list-dropBackground);
+	background-color: var(--vectorcode-list-dropBackground);
 }
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.drag-hover * {
 	pointer-events: none;
@@ -155,7 +155,7 @@
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-object-widget .setting-list-row-header,
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-object-widget .setting-list-object-row:nth-child(odd):not(:hover):not(:focus):not(.selected),
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-object-widget .setting-list-edit-row.setting-list-object-row:nth-child(odd):hover {
-	background-color: rgba(130, 130, 130, 0.04);
+	background-color: var(--vectorcode-list-inactiveSelectionBackground);
 }
 
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row:hover .monaco-action-bar,
@@ -300,19 +300,19 @@
 }
 
 .settings-tabs-widget > .monaco-action-bar .action-item .action-label {
-	color: var(--vscode-panelTitle-inactiveForeground);
+	color: var(--vectorcode-panelTitle-inactiveForeground);
 }
 
 .settings-tabs-widget > .monaco-action-bar .action-item .action-label.checked,
 .settings-tabs-widget > .monaco-action-bar .action-item .action-label:hover {
-	color: var(--vscode-panelTitle-activeForeground);
-	border-bottom: 1px solid var(--vscode-panelTitle-activeBorder);
-	outline: 1px solid var(--vscode-contrastActiveBorder, transparent);
+	color: var(--vectorcode-panelTitle-activeForeground);
+	border-bottom: 1px solid var(--vectorcode-panelTitle-activeBorder);
+	outline: 1px solid var(--vectorcode-contrastActiveBorder, transparent);
 	outline-offset: -1px;
 }
 
 .settings-tabs-widget > .monaco-action-bar .action-item .action-label:focus {
-	border-bottom: 1px solid var(--vscode-focusBorder);
+	border-bottom: 1px solid var(--vectorcode-focusBorder);
 	outline: 1px solid transparent;
 	outline-offset: -1px;
 }
@@ -350,7 +350,7 @@
 }
 
 .monaco-workbench.vs .settings-header-widget > .settings-search-container > .settings-search-input > .monaco-inputbox {
-	border: 1px solid #ddd;
+	border: 1px solid var(--vectorcode-input-border);
 }
 
 .settings-header-widget > .settings-search-container > .settings-search-input > .monaco-inputbox .input {
@@ -387,5 +387,5 @@
 }
 
 .settings-editor > .settings-body .settings-tree-container .setting-item.setting-item-list .setting-list-row.invalid-key .setting-list-object-key {
-	color: var(--vscode-list-errorForeground);
+	color: var(--vectorcode-list-errorForeground);
 }

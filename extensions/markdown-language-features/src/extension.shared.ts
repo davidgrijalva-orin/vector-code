@@ -18,6 +18,8 @@ import { MarkdownContributionProvider } from './markdownExtensions';
 import { MdDocumentRenderer } from './preview/documentRenderer';
 import { MarkdownPreviewManager } from './preview/previewManager';
 import { ExtensionContentSecurityPolicyArbiter } from './preview/security';
+import { registerMarkdownDefaultOpenMode } from './richEditor/defaultOpenMode';
+import { RichMarkdownEditorProvider } from './richEditor/richMarkdownEditor';
 import { loadDefaultTelemetryReporter } from './telemetryReporter';
 import { MdLinkOpener } from './util/openDocumentLink';
 import { registerUpdatePastedLinks } from './languageFeatures/updateLinksOnPaste';
@@ -41,6 +43,10 @@ export function activateShared(
 	const contentProvider = new MdDocumentRenderer(engine, context, cspArbiter, contributions, logger);
 	const previewManager = new MarkdownPreviewManager(contentProvider, logger, contributions, opener);
 	context.subscriptions.push(previewManager);
+	context.subscriptions.push(vscode.window.registerCustomEditorProvider(RichMarkdownEditorProvider.viewType, new RichMarkdownEditorProvider(), {
+		webviewOptions: { enableFindWidget: true }
+	}));
+	context.subscriptions.push(registerMarkdownDefaultOpenMode());
 
 	context.subscriptions.push(registerMarkdownLanguageFeatures(client, commandManager, engine));
 	context.subscriptions.push(registerMarkdownCommands(commandManager, previewManager, telemetryReporter, cspArbiter, engine));

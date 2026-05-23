@@ -10,9 +10,9 @@
 	bottom: 29px; /* 22px status bar height + 7px (attempt to position at same location as a toast) */
 	display: none;
 	overflow: hidden;
-	border: 1px solid var(--vscode-editorWidget-border);
-	border-radius: var(--vscode-cornerRadius-small);
-	box-shadow: var(--vscode-shadow-lg);
+	border: 1px solid var(--vectorcode-editorWidget-border);
+	border-radius: var(--vectorcode-cornerRadius-small);
+	box-shadow: var(--vectorcode-shadow-lg);
 }
 
 .monaco-workbench.nostatusbar > .notifications-center {
@@ -57,23 +57,23 @@
 }
 
 .monaco-workbench > .notifications-center .notifications-list-container .monaco-list-row:not(:last-child) > .notification-list-item {
-	border-bottom: 1px solid var(--vscode-notifications-border);
+	border-bottom: 1px solid var(--vectorcode-notifications-border);
 }
 
 .monaco-workbench > .notifications-center .notifications-list-container .monaco-list-row:last-child {
-	border-radius: 0px 0px var(--vscode-cornerRadius-small) var(--vscode-cornerRadius-small); /* adopt the border radius at the end of the notifications center */
+	border-radius: 0px 0px var(--vectorcode-cornerRadius-small) var(--vectorcode-cornerRadius-small); /* adopt the border radius at the end of the notifications center */
 }
 
 /* Icons */
 
 .monaco-workbench > .notifications-center .codicon.codicon-error {
-	color: var(--vscode-notificationsErrorIcon-foreground) !important;
+	color: var(--vectorcode-notificationsErrorIcon-foreground) !important;
 }
 
 .monaco-workbench > .notifications-center .codicon.codicon-warning {
-	color: var(--vscode-notificationsWarningIcon-foreground) !important;
+	color: var(--vectorcode-notificationsWarningIcon-foreground) !important;
 }
 
 .monaco-workbench > .notifications-center .codicon.codicon-info {
-	color: var(--vscode-notificationsInfoIcon-foreground) !important;
+	color: var(--vectorcode-notificationsInfoIcon-foreground) !important;
 }

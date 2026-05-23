@@ -19,7 +19,9 @@ Native Vector surfaces are expected for:
 - Terminal routing such as sending the current selection or line to the active terminal.
 - Project-aware terminal creation and future terminal state improvements.
 - Mobile app connection through a native Vector relay adapter.
-- Vector runtime status, verification, and run ledger workflows.
+- Verification and run ledger workflows when they are backed by real evidence.
+
+The production mobile relay is the Railway `orin-terminal-relay` project (`5587c49f-6659-462c-b045-0c8a9ed54d25`) in the `production` environment, exposed at `relay-production-e21f.up.railway.app`. QR pairing must mint signed relay JWTs through `/relay/token`; legacy static relay tokens are not production auth.
 
 Stock VS Code agent status and agent-session welcome surfaces should stay hidden by default. Vector Code owns its own runtime and assistant surfaces through first-party workbench contributions.
 

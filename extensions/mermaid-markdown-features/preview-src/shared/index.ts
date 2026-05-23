@@ -160,7 +160,7 @@ export function loadMermaidConfig(): MermaidConfig {
 	const config = loadExtensionConfig();
 	return {
 		startOnLoad: false,
-		theme: (document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+		theme: (document.body.classList.contains('vectorcode-dark') || document.body.classList.contains('vectorcode-high-contrast')
 			? config.darkModeTheme
 			: config.lightModeTheme) as MermaidConfig['theme'],
 	};

@@ -37,7 +37,7 @@
 	outline-width: 1px;
 	outline-style: solid;
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
+	outline-color: var(--vectorcode-focusBorder);
 }
 
 .menubar.compact {
@@ -99,8 +99,8 @@
 
 .menubar:not(.compact) .menubar-menu-button:first-child .toolbar-toggle-more::before,
 .menubar.compact .toolbar-toggle-more::before {
-	content: var(--vscode-icon-menu-content) !important;
-	font-family: var(--vscode-icon-menu-font-family) !important;
+	content: var(--vectorcode-icon-menu-content) !important;
+	font-family: var(--vectorcode-icon-menu-font-family) !important;
 }
 
 /* Match behavior of outline for activity bar icons */

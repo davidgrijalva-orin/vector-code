@@ -9,7 +9,7 @@
 	right: 3px;
 	bottom: 25px; /* 22px status bar height + 3px */
 	display: none;
-	border-radius: var(--vscode-cornerRadius-small);
+	border-radius: var(--vectorcode-cornerRadius-small);
 }
 
 .monaco-workbench.nostatusbar > .notifications-toasts {
@@ -43,7 +43,7 @@
 }
 
 .monaco-workbench > .notifications-toasts .notifications-list-container {
-	box-shadow: var(--vscode-shadow-lg);
+	box-shadow: var(--vectorcode-shadow-lg);
 }
 
 .monaco-workbench > .notifications-toasts .notifications-list-container,
@@ -72,13 +72,13 @@
 /* Icons */
 
 .monaco-workbench > .notifications-toasts .codicon.codicon-error {
-	color: var(--vscode-notificationsErrorIcon-foreground) !important;
+	color: var(--vectorcode-notificationsErrorIcon-foreground) !important;
 }
 
 .monaco-workbench > .notifications-toasts .codicon.codicon-warning {
-	color: var(--vscode-notificationsWarningIcon-foreground) !important;
+	color: var(--vectorcode-notificationsWarningIcon-foreground) !important;
 }
 
 .monaco-workbench > .notifications-toasts .codicon.codicon-info {
-	color: var(--vscode-notificationsInfoIcon-foreground) !important;
+	color: var(--vectorcode-notificationsInfoIcon-foreground) !important;
 }

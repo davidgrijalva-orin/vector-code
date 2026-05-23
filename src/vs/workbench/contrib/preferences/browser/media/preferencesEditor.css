@@ -24,7 +24,7 @@
 			position: relative;
 
 			.suggest-input-container {
-				border: 1px solid #ddd;
+				border: 1px solid var(--vectorcode-input-border);
 			}
 		}
 
@@ -33,7 +33,7 @@
 			display: flex;
 			border-bottom: solid 1px;
 			margin-top: 10px;
-			border-color: var(--vscode-settings-headerBorder);
+			border-color: var(--vectorcode-settings-headerBorder);
 
 			.action-item {
 				max-width: 300px;
@@ -57,36 +57,36 @@
 					padding: 7px 8px 6.5px 8px;
 					opacity: 0.9;
 					border-radius: 0;
-					color: var(--vscode-foreground);
+					color: var(--vectorcode-foreground);
 					overflow: hidden;
 					text-overflow: ellipsis;
 					background: none !important;
-					color: var(--vscode-panelTitle-inactiveForeground);
+					color: var(--vectorcode-panelTitle-inactiveForeground);
 				}
 
 				.action-label.checked {
 					opacity: 1;
-					color: var(--vscode-settings-headerForeground);
-					border-bottom: 1px solid var(--vscode-panelTitle-activeBorder);
-					outline: 1px solid var(--vscode-contrastActiveBorder, transparent);
+					color: var(--vectorcode-settings-headerForeground);
+					border-bottom: 1px solid var(--vectorcode-panelTitle-activeBorder);
+					outline: 1px solid var(--vectorcode-contrastActiveBorder, transparent);
 					outline-offset: -1px;
 				}
 
 				.action-label:hover {
-					color: var(--vscode-panelTitle-activeForeground);
-					border-bottom: 1px solid var(--vscode-panelTitle-activeBorder);
-					outline: 1px solid var(--vscode-contrastActiveBorder, transparent);
+					color: var(--vectorcode-panelTitle-activeForeground);
+					border-bottom: 1px solid var(--vectorcode-panelTitle-activeBorder);
+					outline: 1px solid var(--vectorcode-contrastActiveBorder, transparent);
 					outline-offset: -1px;
 				}
 
 				.action-label:focus {
-					border-bottom: 1px solid var(--vscode-focusBorder);
+					border-bottom: 1px solid var(--vectorcode-focusBorder);
 					outline: 1px solid transparent;
 					outline-offset: -1px;
 				}
 
 				.action-label.checked:not(:focus) {
-					border-bottom-color: var(--vscode-settings-headerForeground);
+					border-bottom-color: var(--vectorcode-settings-headerForeground);
 				}
 
 				.action-label:not(.checked):not(:focus) {

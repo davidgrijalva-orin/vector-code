@@ -12,6 +12,6 @@
 		text-wrap: nowrap;
 		pointer-events: none;
 
-		color: var(--vscode-editor-placeholder-foreground);
+		color: var(--vectorcode-editor-placeholder-foreground);
 	}
 }

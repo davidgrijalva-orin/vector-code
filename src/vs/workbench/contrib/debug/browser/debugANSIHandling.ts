@@ -341,7 +341,7 @@ export function handleANSIOutput(text: string, linkDetector: ILinkDetector, work
 			if (colorType === 'underline') {
 				// for underline colors we just decode the 0-15 color number to theme color, set and return
 				const colorName = ansiColorIdentifiers[colorNumber];
-				changeColor(colorType, `--vscode-debug-ansi-${colorName}`);
+				changeColor(colorType, `--vectorcode-debug-ansi-${colorName}`);
 				return;
 			}
 			// Need to map to one of the four basic color ranges (30-37, 90-97, 40-47, 100-107)
@@ -385,7 +385,7 @@ export function handleANSIOutput(text: string, linkDetector: ILinkDetector, work
 
 		if (colorIndex !== undefined && colorType) {
 			const colorName = ansiColorIdentifiers[colorIndex];
-			changeColor(colorType, `--vscode-debug-ansi-${colorName.replaceAll('.', '-')}`);
+			changeColor(colorType, `--vectorcode-debug-ansi-${colorName.replaceAll('.', '-')}`);
 		}
 	}
 }
@@ -503,7 +503,7 @@ registerThemingParticipant((theme, collector) => {
 				// this uses the default contrast ratio of 4 (from the terminal),
 				// we may want to make this configurable in the future, but this is
 				// good to keep things sane to start with.
-				return `--vscode-debug-ansi-${color.replaceAll('.', '-')}:${bg ? bg.ensureConstrast(actual, 4) : actual}`;
+				return `--vectorcode-debug-ansi-${color.replaceAll('.', '-')}:${bg ? bg.ensureConstrast(actual, 4) : actual}`;
 			})
 			.filter(isDefined);
 

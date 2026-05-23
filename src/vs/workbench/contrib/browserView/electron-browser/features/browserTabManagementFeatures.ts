@@ -44,7 +44,7 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../../pla
 import { IPreferencesService } from '../../../../services/preferences/common/preferences.js';
 import { disposableTimeout } from '../../../../../base/common/async.js';
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { IsSessionsWindowContext, ResourceContextKey } from '../../../../common/contextkeys.js';
+import { ResourceContextKey } from '../../../../common/contextkeys.js';
 import { Schemas } from '../../../../../base/common/network.js';
 
 const CONTEXT_BROWSER_EDITOR_OPEN = new RawContextKey<boolean>('browserEditorOpen', false, localize('browser.editorOpen', "Whether any browser editor is currently open"));
@@ -624,8 +624,7 @@ class LinkOpenedHintPill extends BrowserEditorContribution {
 		editor: BrowserEditor,
 		@IHoverService private readonly hoverService: IHoverService,
 		@IStorageService private readonly storageService: IStorageService,
-		@IPreferencesService private readonly preferencesService: IPreferencesService,
-		@IContextKeyService private readonly contextKeyService: IContextKeyService
+		@IPreferencesService private readonly preferencesService: IPreferencesService
 	) {
 		super(editor);
 
@@ -676,11 +675,6 @@ class LinkOpenedHintPill extends BrowserEditorContribution {
 	}
 
 	protected override subscribeToModel(_model: IBrowserViewModel, _store: DisposableStore, isNew: boolean): void {
-		if (IsSessionsWindowContext.getValue(this.contextKeyService)) {
-			this._setVisible(false);
-			return;
-		}
-
 		const input = this.editor.input;
 		if (input instanceof BrowserEditorInput && input.isDefaultLinkOpen) {
 			const dismissed = this.storageService.getBoolean(LOCALHOST_HINT_DISMISSED_KEY, StorageScope.APPLICATION, false);
@@ -753,7 +747,6 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 				{ comment: ['This is the description for a setting.'], key: 'browser.openLocalhostLinks' },
 				'When enabled, localhost links (`localhost`, `127.0.0.1`, `[::1]`) and all-interfaces links (`0.0.0.0`, `[0:0:0:0:0:0:0:0]`, `[::]`) from the terminal, chat, and other sources will open in the Integrated Browser instead of the system browser.'
 			),
-			agentsWindow: { default: true },
 		}
 	}
 });

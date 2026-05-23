@@ -47,7 +47,6 @@ import { TerminalProfileService } from './terminalProfileService.js';
 import { TerminalService } from './terminalService.js';
 import { TerminalTelemetryContribution } from './terminalTelemetry.js';
 import { TerminalViewPane } from './terminalView.js';
-import { AgentHostTerminalService, IAgentHostTerminalService } from './agentHostTerminalService.js';
 
 // Register services
 registerSingleton(ITerminalLogService, TerminalLogService, InstantiationType.Delayed);
@@ -58,7 +57,6 @@ registerSingleton(ITerminalEditingService, TerminalEditingService, Instantiation
 registerSingleton(ITerminalGroupService, TerminalGroupService, InstantiationType.Delayed);
 registerSingleton(ITerminalInstanceService, TerminalInstanceService, InstantiationType.Delayed);
 registerSingleton(ITerminalProfileService, TerminalProfileService, InstantiationType.Delayed);
-registerSingleton(IAgentHostTerminalService, AgentHostTerminalService, InstantiationType.Delayed);
 
 // Register workbench contributions
 // This contribution blocks startup as it's critical to enable the web embedder window.createTerminal API

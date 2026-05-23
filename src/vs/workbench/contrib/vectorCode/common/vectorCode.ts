@@ -3,19 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { URI } from '../../../../base/common/uri.js';
+import { Event } from '../../../../base/common/event.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 
 export const VECTOR_CODE_VIEW_CONTAINER_ID = 'workbench.view.vectorCode';
 export const VECTOR_CODE_CONTROL_VIEW_ID = 'workbench.views.vectorCode.control';
+export const VECTOR_CODE_PROJECTS_VIEW_ID = 'workbench.views.vectorCode.projects';
 
 export const VECTOR_CODE_OPEN_CONTROL_COMMAND_ID = 'vectorCode.openControl';
 export const VECTOR_CODE_ADD_PROJECT_COMMAND_ID = 'vectorCode.addProjectToWorkspace';
-export const VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID = 'vectorCode.sendSelectionOrLineToTerminal';
-export const VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID = 'vectorCode.openProjectTerminal';
 export const VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID = 'vectorCode.connectMobileApp';
 
 export interface IVectorCodeProjectSummary {
 	readonly name: string;
+	readonly uri: URI;
 	readonly uriLabel: string;
 }
 
@@ -26,10 +28,33 @@ export const enum VectorCodeMobileConnectionState {
 	Connected = 'connected'
 }
 
+export interface IVectorCodeMobilePairingPayload {
+	readonly protocolVersion: 1;
+	readonly desktopId: string;
+	readonly pairingId: string;
+	readonly desktopPublicKey: string;
+	readonly desktopPublicKeyFingerprint: string;
+	readonly pairingToken: string;
+	readonly relayHost: string;
+	readonly userId?: string;
+	readonly relayToken?: string;
+	readonly relayTokenExpiresAt?: string;
+	readonly expiresAt: string;
+}
+
+export interface IVectorCodeMobilePairingSession {
+	readonly payload: IVectorCodeMobilePairingPayload;
+	readonly payloadJson: string;
+	readonly pairingCode: string;
+	readonly qrDataUrl: string;
+}
+
 export interface IVectorCodeMobileConnectionStatus {
 	readonly state: VectorCodeMobileConnectionState;
 	readonly label: string;
 	readonly detail: string;
+	readonly relayHost?: string;
+	readonly pairing?: IVectorCodeMobilePairingSession;
 }
 
 export const IVectorCodeMobileRelayService = createDecorator<IVectorCodeMobileRelayService>('vectorCodeMobileRelayService');
@@ -38,19 +63,20 @@ export interface IVectorCodeMobileRelayService {
 	readonly _serviceBrand: undefined;
 
 	getStatus(): IVectorCodeMobileConnectionStatus;
-	startPairing(): Promise<IVectorCodeMobileConnectionStatus>;
+	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus>;
 }
 
 export const IVectorCodeWorkbenchService = createDecorator<IVectorCodeWorkbenchService>('vectorCodeWorkbenchService');
 
 export interface IVectorCodeWorkbenchService {
 	readonly _serviceBrand: undefined;
+	readonly onDidChangeActiveProject: Event<URI | undefined>;
 
 	getProjectStatusLabel(): string;
 	getProjectSummaries(): readonly IVectorCodeProjectSummary[];
-	getMobileStatusLabel(): string;
+	getActiveProjectUri(): URI | undefined;
+	isProjectSwitching(): boolean;
+	switchProject(projectUri: URI | undefined): Promise<void>;
 	addProjectToWorkspace(): Promise<void>;
-	sendSelectionOrLineToTerminal(): Promise<void>;
-	openProjectTerminal(): Promise<void>;
 	connectMobileApp(): Promise<void>;
 }

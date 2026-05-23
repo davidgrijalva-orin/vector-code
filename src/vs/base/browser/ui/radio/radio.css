@@ -36,34 +36,34 @@
 /* default color styles - based on CSS variables */
 
 .monaco-custom-radio > .monaco-button {
-	color: var(--vscode-radio-inactiveForeground);
-	background-color: var(--vscode-radio-inactiveBackground);
-	border-color: var(--vscode-radio-inactiveBorder, transparent);
+	color: var(--vectorcode-radio-inactiveForeground);
+	background-color: var(--vectorcode-radio-inactiveBackground);
+	border-color: var(--vectorcode-radio-inactiveBorder, transparent);
 }
 
 .monaco-custom-radio > .monaco-button.active:hover,
 .monaco-custom-radio > .monaco-button.active {
-	color: var(--vscode-radio-activeForeground);
-	background-color: var(--vscode-radio-activeBackground);
-	border-color: var(--vscode-radio-activeBorder, transparent);
+	color: var(--vectorcode-radio-activeForeground);
+	background-color: var(--vectorcode-radio-activeBackground);
+	border-color: var(--vectorcode-radio-activeBorder, transparent);
 }
 
 .hc-black .monaco-custom-radio > .monaco-button.active,
 .hc-light .monaco-custom-radio > .monaco-button.active {
-	border-color: var(--vscode-radio-activeBorder, transparent);
+	border-color: var(--vectorcode-radio-activeBorder, transparent);
 }
 
 .hc-black .monaco-custom-radio > .monaco-button:not(.active),
 .hc-light .monaco-custom-radio > .monaco-button:not(.active) {
-	border-color: var(--vscode-radio-inactiveBorder, transparent);
+	border-color: var(--vectorcode-radio-inactiveBorder, transparent);
 }
 
 .hc-black .monaco-custom-radio > .monaco-button:not(.active):hover,
 .hc-light .monaco-custom-radio > .monaco-button:not(.active):hover {
-	outline: 1px dashed var(--vscode-toolbar-hoverOutline);
+	outline: 1px dashed var(--vectorcode-toolbar-hoverOutline);
 	outline-offset: -1px
 }
 
 .monaco-custom-radio > .monaco-button:hover:not(.active) {
-	background-color: var(--vscode-radio-inactiveHoverBackground);
+	background-color: var(--vectorcode-radio-inactiveHoverBackground);
 }

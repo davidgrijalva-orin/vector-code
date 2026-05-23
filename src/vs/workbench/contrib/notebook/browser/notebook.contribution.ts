@@ -67,13 +67,11 @@ import './controller/sectionActions.js';
 import './controller/layoutActions.js';
 import './controller/editActions.js';
 import './controller/cellOutputActions.js';
+import './controller/sendToTerminalActions.js';
 import './controller/apiActions.js';
 import './controller/foldingController.js';
-import './controller/chat/notebook.chat.contribution.js';
 import './controller/variablesActions.js';
 
-// Editor Contribution
-import './contrib/editorHint/emptyCellEditorHint.js';
 import './contrib/clipboard/notebookClipboard.js';
 import './contrib/find/notebookFind.js';
 import './contrib/format/formatting.js';
@@ -97,7 +95,6 @@ import './contrib/debug/notebookCellPausing.js';
 import './contrib/debug/notebookDebugDecorations.js';
 import './contrib/execute/executionEditorProgress.js';
 import './contrib/kernelDetection/notebookKernelDetection.js';
-import './contrib/cellDiagnostics/cellDiagnostics.js';
 import './contrib/multicursor/notebookMulticursor.js';
 import './contrib/multicursor/notebookSelectionHighlight.js';
 import './contrib/notebookVariables/notebookInlineVariables.js';
@@ -303,8 +300,12 @@ export class NotebookContribution extends Disposable implements IWorkbenchContri
 		@IUndoRedoService undoRedoService: IUndoRedoService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@ICodeEditorService private readonly codeEditorService: ICodeEditorService,
+		@INotebookService notebookService: INotebookService,
 	) {
 		super();
+
+		// Ensure contributed notebook editors are registered before startup files resolve.
+		notebookService.getContributedNotebookTypes();
 
 		this.updateCellUndoRedoComparisonKey(configurationService, undoRedoService);
 
@@ -1269,7 +1270,7 @@ configurationRegistry.registerConfiguration({
 			default: 'fullCell'
 		},
 		[NotebookSetting.cellGenerate]: {
-			markdownDescription: nls.localize('notebook.cellGenerate', "Enable experimental generate action to create code cell with inline chat enabled."),
+			markdownDescription: nls.localize('notebook.cellGenerate', "Enable the experimental generate action to create code cells."),
 			type: 'boolean',
 			default: true
 		},

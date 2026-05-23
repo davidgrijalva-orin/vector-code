@@ -52,6 +52,8 @@ const enum EditorAssociationType {
 	MergeEditor
 }
 
+const initialExtensionResolvedEditorPatterns = ['*.ipynb'];
+
 export class EditorResolverService extends Disposable implements IEditorResolverService {
 	readonly _serviceBrand: undefined;
 
@@ -82,7 +84,10 @@ export class EditorResolverService extends Disposable implements IEditorResolver
 	) {
 		super();
 		// Read in the cache on statup
-		this.cache = new Set<string>(JSON.parse(this.storageService.get(EditorResolverService.cacheStorageID, StorageScope.PROFILE, JSON.stringify([]))));
+		this.cache = new Set<string>([
+			...initialExtensionResolvedEditorPatterns,
+			...JSON.parse(this.storageService.get(EditorResolverService.cacheStorageID, StorageScope.PROFILE, JSON.stringify([])))
+		]);
 		this.storageService.remove(EditorResolverService.cacheStorageID, StorageScope.PROFILE);
 
 		this._register(this.storageService.onWillSaveState(() => {

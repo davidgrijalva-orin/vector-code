@@ -103,7 +103,7 @@ async function renderHintsToolbar(options: HintsToolbarOptions): Promise<void> {
 	const { container, disposableStore, theme } = options;
 	container.style.width = '500px';
 	container.style.height = '180px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, {
 		colorTheme: theme,
@@ -162,7 +162,7 @@ async function renderHintsToolbar(options: HintsToolbarOptions): Promise<void> {
 function renderJumpToHint({ container, disposableStore, theme }: ComponentFixtureContext): void {
 	container.style.width = '500px';
 	container.style.height = '200px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
 
@@ -213,7 +213,7 @@ function createLongDistanceEditor(options: {
 	const { container, disposableStore, theme } = options;
 	container.style.width = '600px';
 	container.style.height = '500px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
 
@@ -282,7 +282,7 @@ function createLongDistanceEditor(options: {
 function renderNextFileEdit({ container, disposableStore, theme }: ComponentFixtureContext): void {
 	container.style.width = '500px';
 	container.style.height = '200px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.border = '1px solid var(--vectorcode-editorWidget-border)';
 
 	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
 
@@ -381,7 +381,7 @@ function renderGutterMenu({ container, disposableStore, theme }: ComponentFixtur
 	const editorObs = observableCodeEditor(editor);
 	const menuData = new InlineSuggestionGutterMenuData(
 		undefined,
-		'Copilot',
+		'VectorCode',
 		[],
 		undefined,
 		undefined,
@@ -397,10 +397,10 @@ function renderGutterMenu({ container, disposableStore, theme }: ComponentFixtur
 		).toDisposableLiveElement()
 	);
 
-	container.style.background = 'var(--vscode-editorHoverWidget-background)';
-	container.style.border = '2px solid var(--vscode-editorHoverWidget-border)';
+	container.style.background = 'var(--vectorcode-editorHoverWidget-background)';
+	container.style.border = '2px solid var(--vectorcode-editorHoverWidget-border)';
 	container.style.borderRadius = '3px';
-	container.style.color = 'var(--vscode-editorHoverWidget-foreground)';
+	container.style.color = 'var(--vectorcode-editorHoverWidget-foreground)';
 	container.appendChild(content.element);
 }
 

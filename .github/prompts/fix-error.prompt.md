@@ -50,7 +50,7 @@ After the fix is validated (compilation clean, tests pass):
    - **Manual validation steps**: Concrete, step-by-step instructions a reviewer can follow to reproduce the original error and verify the fix. Include specific setup requirements (e.g., file types to open, settings to change, actions to perform). If the error cannot be easily reproduced manually, explain why and describe what alternative validation was performed (e.g., unit tests, code inspection).
    - **How the fix works**: A brief explanation of the fix approach, with a note per changed file.
 5. **Monitor the PR — BLOCKING**: You MUST NOT complete the task until the monitoring loop below is done.
-   - Wait 2 minutes after each push, then check for Copilot review comments using `gh pr view <number> --json reviews,comments` and `gh api repos/{owner}/{repo}/pulls/{number}/comments`.
+   - Wait 2 minutes after each push, then check for VectorCode review comments using `gh pr view <number> --json reviews,comments` and `gh api repos/{owner}/{repo}/pulls/{number}/comments`.
    - If there are review comments, evaluate each one:
      - If valid, apply the fix in a new commit, push, and **resolve the comment thread** using the GitHub GraphQL API (`resolveReviewThread` mutation with the thread's node ID).
      - If not applicable, leave a reply explaining why.

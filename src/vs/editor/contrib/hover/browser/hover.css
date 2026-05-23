@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-editor .hoverHighlight {
-	background-color: var(--vscode-editor-hoverHighlightBackground);
+	background-color: var(--vectorcode-editor-hoverHighlightBackground);
 }
 
 .monaco-editor .monaco-resizable-hover {
-	border: 1px solid var(--vscode-editorHoverWidget-border);
-	border-radius: var(--vscode-cornerRadius-large);
+	border: 1px solid var(--vectorcode-editorHoverWidget-border);
+	border-radius: var(--vectorcode-cornerRadius-large);
 	box-sizing: content-box;
-	background-color: var(--vscode-editorHoverWidget-background);
+	background-color: var(--vectorcode-editorHoverWidget-background);
 }
 
 .monaco-editor .monaco-resizable-hover > .monaco-hover {
@@ -21,23 +21,23 @@
 }
 
 .monaco-editor .monaco-hover {
-	border: 1px solid var(--vscode-editorHoverWidget-border);
-	border-radius: var(--vscode-cornerRadius-large);
-	color: var(--vscode-editorHoverWidget-foreground);
-	background-color: var(--vscode-editorHoverWidget-background);
-	box-shadow: var(--vscode-shadow-hover);
+	border: 1px solid var(--vectorcode-editorHoverWidget-border);
+	border-radius: var(--vectorcode-cornerRadius-large);
+	color: var(--vectorcode-editorHoverWidget-foreground);
+	background-color: var(--vectorcode-editorHoverWidget-background);
+	box-shadow: var(--vectorcode-shadow-hover);
 }
 
 .monaco-editor .monaco-hover a {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-editor .monaco-hover a:hover {
-	color: var(--vscode-textLink-activeForeground);
+	color: var(--vectorcode-textLink-activeForeground);
 }
 
 .monaco-editor .monaco-hover .hover-row {
-	border-radius: var(--vscode-cornerRadius-large);
+	border-radius: var(--vectorcode-cornerRadius-large);
 	display: flex;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .monaco-editor .monaco-hover .hover-row .verbosity-actions {
-	border-right: 1px solid var(--vscode-editorHoverWidget-border);
+	border-right: 1px solid var(--vectorcode-editorHoverWidget-border);
 	width: 22px;
 	overflow-y: clip;
 }
@@ -73,7 +73,7 @@
 }
 
 .monaco-editor .monaco-hover .hover-row .verbosity-actions-inner .codicon.enabled {
-	color: var(--vscode-textLink-foreground);
+	color: var(--vectorcode-textLink-foreground);
 }
 
 .monaco-editor .monaco-hover .hover-row .verbosity-actions-inner .codicon.disabled {
@@ -81,11 +81,11 @@
 }
 
 .monaco-editor .monaco-hover .hover-row .actions {
-	background-color: var(--vscode-editorHoverWidget-statusBarBackground);
+	background-color: var(--vectorcode-editorHoverWidget-statusBarBackground);
 }
 
 .monaco-editor .monaco-hover code {
-	background-color: var(--vscode-textCodeBlock-background);
+	background-color: var(--vectorcode-textCodeBlock-background);
 }
 
 .monaco-editor .monaco-hover .hover-copy-button {
@@ -106,16 +106,16 @@
 }
 
 .monaco-editor .monaco-hover .hover-copy-button:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
+	background-color: var(--vectorcode-toolbar-hoverBackground);
 	cursor: pointer;
 }
 
 .monaco-editor .monaco-hover .hover-copy-button:focus {
-	outline: 1px solid var(--vscode-focusBorder);
+	outline: 1px solid var(--vectorcode-focusBorder);
 	outline-offset: -1px;
 }
 
 .monaco-editor .monaco-hover .hover-copy-button .codicon {
 	font-size: 16px;
-	color: var(--vscode-foreground);
+	color: var(--vectorcode-foreground);
 }

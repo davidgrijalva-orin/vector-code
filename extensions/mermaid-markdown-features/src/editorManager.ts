@@ -168,14 +168,14 @@ class MermaidPreview extends Disposable {
 		this._webviewPanel.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [
-				vscode.Uri.joinPath(this._extensionUri, 'chat-webview-out')
+				vscode.Uri.joinPath(this._extensionUri, 'webview-out')
 			],
 		};
 
 		this._webviewPanel.webview.html = this._getHtml();
 
 		// Register with the webview manager
-		this._register(this._webviewManager.registerWebview(this.diagramId, this._webviewPanel.webview, this._mermaidSource, undefined, 'editor'));
+		this._register(this._webviewManager.registerWebview(this.diagramId, this._webviewPanel.webview, this._mermaidSource, undefined));
 
 		this._register(this._webviewPanel.onDidChangeViewState(e => {
 			if (e.webviewPanel.active) {
@@ -204,7 +204,7 @@ class MermaidPreview extends Disposable {
 	private _getHtml(): string {
 		const nonce = generateUuid();
 
-		const mediaRoot = vscode.Uri.joinPath(this._extensionUri, 'chat-webview-out');
+		const mediaRoot = vscode.Uri.joinPath(this._extensionUri, 'webview-out');
 		const scriptUri = this._webviewPanel.webview.asWebviewUri(
 			vscode.Uri.joinPath(mediaRoot, 'index-editor.js')
 		);
@@ -249,8 +249,8 @@ class MermaidPreview extends Disposable {
 						display: flex;
 						gap: 2px;
 						z-index: 100;
-						background: var(--vscode-editorWidget-background);
-						border: 1px solid var(--vscode-editorWidget-border);
+						background: var(--vectorcode-editorWidget-background);
+						border: 1px solid var(--vectorcode-editorWidget-border);
 						border-radius: 6px;
 						padding: 3px;
 					}
@@ -261,17 +261,17 @@ class MermaidPreview extends Disposable {
 						width: 26px;
 						height: 26px;
 						background: transparent;
-						color: var(--vscode-icon-foreground);
+						color: var(--vectorcode-icon-foreground);
 						border: none;
 						border-radius: 4px;
 						cursor: pointer;
 					}
 					.zoom-controls button:hover {
-						background: var(--vscode-toolbar-hoverBackground);
+						background: var(--vectorcode-toolbar-hoverBackground);
 					}
 					.zoom-controls button.active {
-						background: var(--vscode-toolbar-activeBackground);
-						color: var(--vscode-focusBorder);
+						background: var(--vectorcode-toolbar-activeBackground);
+						color: var(--vectorcode-focusBorder);
 					}
 				</style>
 			</head>

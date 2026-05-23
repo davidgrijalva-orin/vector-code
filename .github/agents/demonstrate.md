@@ -1,7 +1,7 @@
 ---
 name: Demonstrate
 description: Agent for demonstrating VS Code features
-target: github-copilot
+target: vectorcode
 tools:
 - "view"
 - "create"

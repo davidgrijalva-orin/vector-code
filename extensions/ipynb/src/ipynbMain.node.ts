@@ -6,9 +6,12 @@
 import * as vscode from 'vscode';
 import * as main from './ipynbMain';
 import { NotebookSerializer } from './notebookSerializer.node';
+import { activate as activatePythonNotebookRuntime } from './pythonNotebookRuntime.node';
 
 export function activate(context: vscode.ExtensionContext) {
-	return main.activate(context, new NotebookSerializer(context));
+	const api = main.activate(context, new NotebookSerializer(context));
+	activatePythonNotebookRuntime(context);
+	return api;
 }
 
 export function deactivate() {

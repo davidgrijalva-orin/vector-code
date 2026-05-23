@@ -3,30 +3,75 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EditorContextKeys } from '../../../../editor/common/editorContextKeys.js';
-import { localize, localize2 } from '../../../../nls.js';
-import { Action2, MenuId, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';
+import { localize2 } from '../../../../nls.js';
+import { Codicon } from '../../../../base/common/codicons.js';
+import { Action2, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
+import { TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
+import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
-import { TerminalContextKeys } from '../../terminal/common/terminalContextKey.js';
+import { ITerminalGroupService, ITerminalService } from '../../terminal/browser/terminal.js';
+import { TERMINAL_VIEW_ID } from '../../terminal/common/terminal.js';
 import {
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
 	VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID,
 	VECTOR_CODE_OPEN_CONTROL_COMMAND_ID,
-	VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID,
-	VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
 	VECTOR_CODE_VIEW_CONTAINER_ID
 } from '../common/vectorCode.js';
 
 const vectorCodeCategory = localize2('vectorCodeCategory', 'Vector Code');
-const sendSelectionOrLineTitle = localize2('vectorCodeSendSelectionToTerminalCommand', 'Vector Code: Send Selection or Line to Terminal');
+const projectsCategory = localize2('vectorCodeProjectsCategory', 'Projects');
+
+registerAction2(class OpenVectorCodeTerminalPanelAction extends Action2 {
+	constructor() {
+		super({
+			id: 'vectorCode.openTerminalPanel',
+			title: localize2('vectorCodeOpenTerminalPanel', 'Terminal'),
+			icon: Codicon.terminal,
+			category: vectorCodeCategory,
+			f1: true,
+			menu: {
+				id: MenuId.LayoutControlMenu,
+				group: 'navigation',
+				order: -100
+			}
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const layoutService = accessor.get(IWorkbenchLayoutService);
+		const viewsService = accessor.get(IViewsService);
+		const terminalGroupService = accessor.get(ITerminalGroupService);
+		const terminalService = accessor.get(ITerminalService);
+		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
+
+		if (layoutService.isVisible(Parts.PANEL_PART) && viewsService.isViewVisible(TERMINAL_VIEW_ID)) {
+			layoutService.setPartHidden(true, Parts.PANEL_PART);
+			return;
+		}
+
+		let instance = terminalGroupService.activeInstance;
+		if (!instance && terminalService.isProcessSupportRegistered) {
+			instance = await terminalService.createTerminal({
+				location: TerminalLocation.Panel,
+				cwd: vectorCodeWorkbenchService.getActiveProjectUri()
+			});
+			terminalService.setActiveInstance(instance);
+		}
+		if (!layoutService.isVisible(Parts.PANEL_PART)) {
+			layoutService.setPartHidden(false, Parts.PANEL_PART);
+		}
+		await terminalGroupService.showPanel(true);
+		await instance?.focusWhenReady();
+	}
+});
 
 registerAction2(class OpenVectorCodeControlAction extends Action2 {
 	constructor() {
 		super({
 			id: VECTOR_CODE_OPEN_CONTROL_COMMAND_ID,
-			title: localize2('vectorCodeOpenControl', 'Vector Code: Open Control'),
+			title: localize2('vectorCodeOpenControl', 'Phone Connection: Open Pairing'),
 			category: vectorCodeCategory,
 			f1: true
 		});
@@ -42,8 +87,8 @@ registerAction2(class AddVectorCodeProjectAction extends Action2 {
 	constructor() {
 		super({
 			id: VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
-			title: localize2('vectorCodeAddProjectCommand', 'Vector Code: Add Project to Workspace'),
-			category: vectorCodeCategory,
+			title: localize2('vectorCodeAddProjectCommand', 'Projects: Add Project'),
+			category: projectsCategory,
 			f1: true
 		});
 	}
@@ -54,63 +99,11 @@ registerAction2(class AddVectorCodeProjectAction extends Action2 {
 	}
 });
 
-registerAction2(class SendVectorCodeSelectionToTerminalAction extends Action2 {
-	constructor() {
-		super({
-			id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
-			title: sendSelectionOrLineTitle,
-			category: vectorCodeCategory,
-			f1: true
-		});
-	}
-
-	override async run(accessor: ServicesAccessor): Promise<void> {
-		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
-		await vectorCodeWorkbenchService.sendSelectionOrLineToTerminal();
-	}
-});
-
-MenuRegistry.appendMenuItem(MenuId.EditorContext, {
-	command: {
-		id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
-		title: sendSelectionOrLineTitle
-	},
-	group: 'navigation',
-	order: 1.5,
-	when: EditorContextKeys.editorTextFocus
-});
-
-MenuRegistry.appendMenuItem(MenuId.MenubarTerminalMenu, {
-	command: {
-		id: VECTOR_CODE_SEND_SELECTION_TO_TERMINAL_COMMAND_ID,
-		title: localize({ key: 'miVectorCodeSendSelectionToTerminal', comment: ['&& denotes a mnemonic'] }, 'Vector Code: Send &&Selection or Line')
-	},
-	group: '3_run',
-	order: 5,
-	when: TerminalContextKeys.processSupported
-});
-
-registerAction2(class OpenVectorCodeProjectTerminalAction extends Action2 {
-	constructor() {
-		super({
-			id: VECTOR_CODE_OPEN_PROJECT_TERMINAL_COMMAND_ID,
-			title: localize2('vectorCodeOpenProjectTerminalCommand', 'Vector Code: Open Project Terminal'),
-			category: vectorCodeCategory,
-			f1: true
-		});
-	}
-
-	override async run(accessor: ServicesAccessor): Promise<void> {
-		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
-		await vectorCodeWorkbenchService.openProjectTerminal();
-	}
-});
-
 registerAction2(class ConnectVectorCodeMobileAction extends Action2 {
 	constructor() {
 		super({
 			id: VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID,
-			title: localize2('vectorCodeConnectMobileCommand', 'Vector Code: Connect Mobile App'),
+			title: localize2('vectorCodeConnectMobileCommand', 'Phone Connection: Create Pairing QR'),
 			category: vectorCodeCategory,
 			f1: true
 		});

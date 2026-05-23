@@ -15,7 +15,6 @@ const helpCategories = {
 	o: localize('optionsUpperCase', "Options"),
 	e: localize('extensionsManagement', "Extensions Management"),
 	t: localize('troubleshooting', "Troubleshooting"),
-	m: localize('mcp', "Model Context Protocol")
 };
 
 export interface Option<OptionType> {
@@ -45,35 +44,12 @@ export type OptionDescriptions<T> = {
 	Subcommand<T[P]>
 };
 
-export const NATIVE_CLI_COMMANDS = ['tunnel', 'serve-web', 'agent'] as const;
+export const NATIVE_CLI_COMMANDS = ['tunnel', 'serve-web'] as const;
 
 export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
-	'chat': {
-		type: 'subcommand',
-		description: 'Pass in a prompt to run in a chat session in the current working directory.',
-		options: {
-			'_': { type: 'string[]', description: localize('prompt', "The prompt to use as chat.") },
-			'mode': { type: 'string', cat: 'o', alias: 'm', args: 'mode', description: localize('chatMode', "The mode to use for the chat session. Available options: 'ask', 'edit', 'agent', or the identifier of a custom mode. Defaults to 'agent'.") },
-			'add-file': { type: 'string[]', cat: 'o', alias: 'a', args: 'path', description: localize('addFile', "Add files as context to the chat session.") },
-			'maximize': { type: 'boolean', cat: 'o', description: localize('chatMaximize', "Maximize the chat session view.") },
-			'reuse-window': { type: 'boolean', cat: 'o', alias: 'r', description: localize('reuseWindowForChat', "Force to use the last active window for the chat session.") },
-			'new-window': { type: 'boolean', cat: 'o', alias: 'n', description: localize('newWindowForChat', "Force to open an empty window for the chat session.") },
-			'profile': { type: 'string', 'cat': 'o', args: 'profileName', description: localize('profileName', "Opens the provided folder or workspace with the given profile and associates the profile with the workspace. If the profile does not exist, a new empty one is created.") },
-			'help': { type: 'boolean', alias: 'h', description: localize('help', "Print usage.") }
-		}
-	},
 	'serve-web': {
 		type: 'subcommand',
 		description: 'Run a server that displays the editor UI in browsers.',
-		options: {
-			'cli-data-dir': { type: 'string', args: 'dir', description: localize('cliDataDir', "Directory where CLI metadata should be stored.") },
-			'disable-telemetry': { type: 'boolean' },
-			'telemetry-level': { type: 'string' },
-		}
-	},
-	'agent': {
-		type: 'subcommand',
-		description: 'Start and interact with AI agent hosts.',
 		options: {
 			'cli-data-dir': { type: 'string', args: 'dir', description: localize('cliDataDir', "Directory where CLI metadata should be stored.") },
 			'disable-telemetry': { type: 'boolean' },
@@ -108,7 +84,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'goto': { type: 'boolean', cat: 'o', alias: 'g', args: 'file:line[:character]', description: localize('goto', "Open a file at the path on the specified line and character position.") },
 	'new-window': { type: 'boolean', cat: 'o', alias: 'n', description: localize('newWindow', "Force to open a new window.") },
 	'reuse-window': { type: 'boolean', cat: 'o', alias: 'r', description: localize('reuseWindow', "Force to open a file or folder in an already opened window.") },
-	'agents': { type: 'boolean', cat: 'o', deprecates: ['sessions'], description: localize('agents', "Opens the agents window.") },
 	'wait': { type: 'boolean', cat: 'o', alias: 'w', description: localize('wait', "Wait for the files to be closed before returning.") },
 	'waitMarkerFilePath': { type: 'string' },
 	'locale': { type: 'string', cat: 'o', args: 'locale', description: localize('locale', "The locale to use (e.g. en-US or zh-TW).") },
@@ -121,9 +96,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'builtin-extensions-dir': { type: 'string' },
 	'shared-data-dir': { type: 'string' },
 	'list-extensions': { type: 'boolean', cat: 'e', description: localize('listExtensions', "List the installed extensions.") },
-	'agent-plugins-dir': { type: 'string' },
-	'agents-user-data-dir': { type: 'string' },
-	'agents-extensions-dir': { type: 'string' },
 	'show-versions': { type: 'boolean', cat: 'e', description: localize('showVersions', "Show versions of installed extensions, when using --list-extensions.") },
 	'category': { type: 'string', allowEmptyValue: true, cat: 'e', description: localize('category', "Filters installed extensions by provided category, when using --list-extensions."), args: 'category' },
 	'install-extension': { type: 'string[]', cat: 'e', args: 'ext-id | path', description: localize('installExtension', "Installs or updates an extension. The argument is either an extension id or a path to a VSIX. The identifier of an extension is '${publisher}.${name}'. Use '--force' argument to update to latest version. To install a specific version provide '@${version}'. For example: 'vscode.csharp@1.2.3'.") },
@@ -132,7 +104,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'update-extensions': { type: 'boolean', cat: 'e', description: localize('updateExtensions', "Update the installed extensions.") },
 	'enable-proposed-api': { type: 'string[]', allowEmptyValue: true, cat: 'e', args: 'ext-id', description: localize('experimentalApis', "Enables proposed API features for extensions. Can receive one or more extension IDs to enable individually.") },
 
-	'add-mcp': { type: 'string[]', cat: 'm', args: 'json', description: localize('addMcp', "Adds a Model Context Protocol server definition to the user profile. Accepts JSON input in the form '{\"name\":\"server-name\",\"command\":...}'") },
 
 	'version': { type: 'boolean', cat: 't', alias: 'v', description: localize('version', "Print version.") },
 	'verbose': { type: 'boolean', cat: 't', global: true, description: localize('verbose', "Print verbose output (implies --wait).") },
@@ -171,8 +142,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'debugRenderer': { type: 'boolean' },
 	'inspect-ptyhost': { type: 'string', allowEmptyValue: true },
 	'inspect-brk-ptyhost': { type: 'string', allowEmptyValue: true },
-	'inspect-agenthost': { type: 'string', allowEmptyValue: true },
-	'inspect-brk-agenthost': { type: 'string', allowEmptyValue: true },
 	'inspect-sharedprocess': { type: 'string', allowEmptyValue: true },
 	'inspect-brk-sharedprocess': { type: 'string', allowEmptyValue: true },
 	'export-default-configuration': { type: 'string' },
@@ -461,17 +430,16 @@ function wrapText(text: string, columns: number): string[] {
 	return lines;
 }
 
-export function buildHelpMessage(productName: string, executableName: string, version: string, options: OptionDescriptions<unknown> | Record<string, Option<'boolean'> | Option<'string'> | Option<'string[]'> | Subcommand<Record<string, unknown>>>, capabilities?: { noPipe?: boolean; noInputFiles?: boolean; isChat?: boolean }): string {
+export function buildHelpMessage(productName: string, executableName: string, version: string, options: OptionDescriptions<unknown> | Record<string, Option<'boolean'> | Option<'string'> | Option<'string[]'> | Subcommand<Record<string, unknown>>>, capabilities?: { noPipe?: boolean; noInputFiles?: boolean }): string {
 	const columns = (process.stdout).isTTY && (process.stdout).columns || 80;
-	const inputFiles = capabilities?.noInputFiles ? '' : capabilities?.isChat ? ` [${localize('cliPrompt', 'prompt')}]` : ` [${localize('paths', 'paths')}...]`;
-	const subcommand = capabilities?.isChat ? ' chat' : '';
+	const inputFiles = capabilities?.noInputFiles ? '' : ` [${localize('paths', 'paths')}...]`;
 
 	const help = [`${productName} ${version}`];
 	help.push('');
-	help.push(`${localize('usage', "Usage")}: ${executableName}${subcommand} [${localize('options', "options")}]${inputFiles}`);
+	help.push(`${localize('usage', "Usage")}: ${executableName} [${localize('options', "options")}]${inputFiles}`);
 	help.push('');
 	if (capabilities?.noPipe !== true) {
-		help.push(buildStdinMessage(executableName, capabilities?.isChat));
+		help.push(buildStdinMessage(executableName));
 		help.push('');
 	}
 	const optionsByCategory: { [P in keyof typeof helpCategories]?: Record<string, Option<'boolean'> | Option<'string'> | Option<'string[]'>> } = {};
@@ -512,23 +480,12 @@ export function buildHelpMessage(productName: string, executableName: string, ve
 	return help.join('\n');
 }
 
-export function buildStdinMessage(executableName: string, isChat?: boolean): string {
-	let example: string;
+export function buildStdinMessage(executableName: string): string {
 	if (isWindows) {
-		if (isChat) {
-			example = `echo Hello World | ${executableName} chat <prompt> -`;
-		} else {
-			example = `echo Hello World | ${executableName} -`;
-		}
-	} else {
-		if (isChat) {
-			example = `ps aux | grep code | ${executableName} chat <prompt> -`;
-		} else {
-			example = `ps aux | grep code | ${executableName} -`;
-		}
+		return localize('stdinUsage', "To read from stdin, append '-' (e.g. '{0}')", `echo Hello World | ${executableName} -`);
 	}
 
-	return localize('stdinUsage', "To read from stdin, append '-' (e.g. '{0}')", example);
+	return localize('stdinUsage', "To read from stdin, append '-' (e.g. '{0}')", `ps aux | grep code | ${executableName} -`);
 }
 
 export function buildVersionMessage(version: string | undefined, commit: string | undefined): string {

@@ -15,7 +15,7 @@ import '../../../browser/media/style.css';
 // Import auxiliaryBarPart.css here (before any contrib/chat CSS) so the cascade
 // matches the product: chat.css loads later and overrides the auxiliarybar
 // rules where applicable. Fixtures that wrap content in `.part.auxiliarybar`
-// rely on these rules to recolor inline editors with `--vscode-sideBar-background`.
+// rely on these rules to recolor inline editors with `--vectorcode-sideBar-background`.
 import '../../../browser/parts/auxiliarybar/media/auxiliaryBarPart.css';
 
 // Theme
@@ -31,7 +31,7 @@ import { ExtensionData } from '../../../services/themes/common/workbenchThemeSer
 
 // Instantiation
 import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
-import { ServiceIdentifier } from '../../../../platform/instantiation/common/instantiation.js';
+import { createDecorator, ServiceIdentifier } from '../../../../platform/instantiation/common/instantiation.js';
 import { ServiceCollection } from '../../../../platform/instantiation/common/serviceCollection.js';
 import { TestInstantiationService } from '../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 
@@ -60,7 +60,6 @@ import { TestTreeSitterLibraryService } from '../../../../editor/test/common/ser
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
 import { TestAccessibilityService } from '../../../../platform/accessibility/test/common/testAccessibilityService.js';
 import { IActionViewItemService, NullActionViewItemService } from '../../../../platform/actions/browser/actionViewItemService.js';
-import { IChatPhoneInputPresenter } from '../../../contrib/chat/browser/widget/input/chatPhoneInputPresenter.js';
 import { IMenuService } from '../../../../platform/actions/common/actions.js';
 import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { TestClipboardService } from '../../../../platform/clipboard/test/common/testClipboardService.js';
@@ -95,13 +94,6 @@ import { IAnyWorkspaceIdentifier } from '../../../../platform/workspace/common/w
 import { TestMenuService } from '../workbenchTestServices.js';
 import { IAccessibilitySignalService } from '../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
 import { IResolvedTextEditorModel, ITextModelService } from '../../../../editor/common/services/resolverService.js';
-// eslint-disable-next-line local/code-import-patterns
-import { IAgentFeedbackService } from '../../../../sessions/contrib/agentFeedback/browser/agentFeedbackService.js';
-import { IChatEditingService } from '../../../contrib/chat/common/editing/chatEditingService.js';
-// eslint-disable-next-line local/code-import-patterns
-import { ISessionsManagementService } from '../../../../sessions/services/sessions/common/sessionsManagement.js';
-// eslint-disable-next-line local/code-import-patterns
-import { ICodeReviewService, CodeReviewStateKind, PRReviewStateKind } from '../../../../sessions/contrib/codeReview/browser/codeReviewService.js';
 import { constObservable } from '../../../../base/common/observable.js';
 
 // Editor
@@ -150,6 +142,56 @@ sourceMapSupport.install({
 		return null;
 	},
 });
+
+export const IAgentFeedbackService = createDecorator<IAgentFeedbackService>('agentFeedbackService');
+export interface IAgentFeedbackService {
+	readonly _serviceBrand: undefined;
+	readonly onDidChangeFeedback: Event<unknown>;
+	readonly onDidChangeNavigation: Event<unknown>;
+	addFeedback(...args: unknown[]): unknown;
+	removeFeedback(...args: unknown[]): void;
+	updateFeedback(...args: unknown[]): void;
+	getFeedback(...args: unknown[]): unknown[];
+	getMostRecentSessionForResource(...args: unknown[]): unknown;
+	revealFeedback(...args: unknown[]): Promise<void>;
+	revealSessionComment(...args: unknown[]): Promise<void>;
+	getNextFeedback(...args: unknown[]): unknown;
+	getNextNavigableItem(...args: unknown[]): unknown;
+	setNavigationAnchor(...args: unknown[]): void;
+	getNavigationBearing(...args: unknown[]): { activeIdx: number; totalCount: number };
+	clearFeedback(...args: unknown[]): void;
+	addFeedbackAndSubmit(...args: unknown[]): Promise<void>;
+}
+
+export const ISessionsManagementService = createDecorator<ISessionsManagementService>('sessionsManagementService');
+export interface ISessionsManagementService {
+	readonly _serviceBrand: undefined;
+	readonly activeSession: ReturnType<typeof constObservable<undefined>>;
+	getSession(...args: unknown[]): unknown;
+	getSessions(): unknown[];
+}
+
+export const enum CodeReviewStateKind {
+	Idle = 'idle',
+}
+
+export const enum PRReviewStateKind {
+	None = 'none',
+}
+
+export const ICodeReviewService = createDecorator<ICodeReviewService>('codeReviewService');
+export interface ICodeReviewService {
+	readonly _serviceBrand: undefined;
+	getReviewState(...args: unknown[]): ReturnType<typeof constObservable<{ kind: CodeReviewStateKind.Idle }>>;
+	getPRReviewState(...args: unknown[]): ReturnType<typeof constObservable<{ kind: PRReviewStateKind.None }>>;
+	hasReview(...args: unknown[]): boolean;
+	requestReview(...args: unknown[]): void;
+	removeComment(...args: unknown[]): void;
+	updateComment(...args: unknown[]): void;
+	dismissReview(...args: unknown[]): void;
+	resolvePRReviewThread(...args: unknown[]): Promise<void>;
+	markPRReviewCommentConverted(...args: unknown[]): void;
+}
 
 /**
  * A storage service that never stores anything and always returns the default/fallback value.
@@ -582,8 +624,8 @@ export function createEditorServices(disposables: DisposableStore, options?: Cre
 		onDidChangePolicyData: new Emitter<null>().event,
 		policyData: null,
 		currentDefaultAccount: null,
-		copilotTokenInfo: null,
-		onDidChangeCopilotTokenInfo: new Emitter<null>().event,
+		accountTokenInfo: null,
+		onDidChangeAccountTokenInfo: new Emitter<null>().event,
 		getDefaultAccount: async () => null,
 		getDefaultAccountAuthenticationProvider: () => ({ id: 'test', name: 'Test', scopes: [], enterprise: false }),
 		resolveGitHubUrl: (path: string) => `https://github.com/${path}`,
@@ -635,13 +677,6 @@ export function createEditorServices(disposables: DisposableStore, options?: Cre
 		getNavigationBearing: () => ({ activeIdx: -1, totalCount: 0 }),
 		clearFeedback: () => { },
 		addFeedbackAndSubmit: async () => { },
-	});
-
-	definePartialInstance(IChatEditingService, {
-		_serviceBrand: undefined,
-		editingSessionsObs: constObservable([]),
-		startOrContinueGlobalEditingSession: () => undefined!,
-		getEditingSession: () => undefined,
 	});
 
 	definePartialInstance(ISessionsManagementService, {
@@ -741,17 +776,6 @@ export function registerWorkbenchServices(registration: ServiceRegistration): vo
 	registration.define(IMenuService, TestMenuService);
 	registration.define(IActionViewItemService, NullActionViewItemService);
 
-	// No-op phone presenter so chat-input fixtures don't crash on
-	// `chatPhoneInputPresenter.enabled.get()`. The real impl is in
-	// `vs/sessions` and only attaches in the agents window — desktop
-	// fixtures see the no-op (`enabled === false`, sheet calls resolve
-	// immediately) which matches desktop runtime behavior.
-	registration.defineInstance(IChatPhoneInputPresenter, {
-		_serviceBrand: undefined,
-		enabled: constObservable(false),
-		showCombinedModeAndModelSheet: () => Promise.resolve(),
-		setImpl: () => ({ dispose: () => { } }),
-	});
 }
 
 

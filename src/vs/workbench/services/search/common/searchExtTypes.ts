@@ -321,27 +321,9 @@ export class TextSearchContext2 {
 }
 
 /**
-/**
- * Keyword suggestion for AI search.
- */
-export class AISearchKeyword {
-	/**
-	 * @param keyword The keyword associated with the search.
-	 */
-	constructor(public keyword: string) { }
-}
-
-/**
  * A result payload for a text search, pertaining to matches within a single file.
  */
 export type TextSearchResult2 = TextSearchMatch2 | TextSearchContext2;
-
-/**
- * A result payload for an AI search.
- * This can be a {@link TextSearchMatch2 match} or a {@link AISearchKeyword keyword}.
- * The result can be a match or a keyword.
-*/
-export type AISearchResult = TextSearchResult2 | AISearchKeyword;
 
 /**
  * A FileSearchProvider provides search results for files in the given folder that match a query string. It can be invoked by quickaccess or other extensions.
@@ -384,85 +366,6 @@ export interface TextSearchComplete2 {
 	/**
 	 * Whether the search hit the limit on the maximum number of search results.
 	 * `maxResults` on {@linkcode TextSearchOptions} specifies the max number of results.
-	 * - If exactly that number of matches exist, this should be false.
-	 * - If `maxResults` matches are returned and more exist, this should be true.
-	 * - If search hits an internal limit which is less than `maxResults`, this should be true.
-	 */
-	limitHit?: boolean;
-
-	/**
-	 * Additional information regarding the state of the completed search.
-	 *
-	 * Messages with "Information" style support links in markdown syntax:
-	 * - Click to [run a command](command:workbench.action.OpenQuickPick)
-	 * - Click to [open a website](https://aka.ms)
-	 *
-	 * Commands may optionally return { triggerSearch: true } to signal to the editor that the original search should run be again.
-	 */
-	message?: TextSearchCompleteMessage2[];
-}
-
-/**
- * A message regarding a completed search.
- */
-export interface TextSearchCompleteMessage2 {
-	/**
-	 * Markdown text of the message.
-	 */
-	text: string;
-	/**
-	 * Whether the source of the message is trusted, command links are disabled for untrusted message sources.
-	 * Messaged are untrusted by default.
-	 */
-	trusted?: boolean;
-	/**
-	 * The message type, this affects how the message will be rendered.
-	 */
-	type: TextSearchCompleteMessageType;
-}
-
-
-/**
- * A FileSearchProvider provides search results for files in the given folder that match a query string. It can be invoked by quickaccess or other extensions.
- *
- * A FileSearchProvider is the more powerful of two ways to implement file search in VS Code. Use a FileSearchProvider if you wish to search within a folder for
- * all files that match the user's query.
- *
- * The FileSearchProvider will be invoked on every keypress in quickaccess. When `workspace.findFiles` is called, it will be invoked with an empty query string,
- * and in that case, every file in the folder should be returned.
- */
-export interface FileSearchProvider2 {
-	/**
-	 * Provide the set of files that match a certain file path pattern.
-	 * @param query The parameters for this query.
-	 * @param options A set of options to consider while searching files.
-	 * @param progress A progress callback that must be invoked for all results.
-	 * @param token A cancellation token.
-	 */
-	provideFileSearchResults(pattern: string, options: FileSearchProviderOptions, token: CancellationToken): ProviderResult<URI[]>;
-}
-
-/**
- * A TextSearchProvider provides search results for text results inside files in the workspace.
- */
-export interface TextSearchProvider2 {
-	/**
-	 * Provide results that match the given text pattern.
-	 * @param query The parameters for this query.
-	 * @param options A set of options to consider while searching.
-	 * @param progress A progress callback that must be invoked for all results.
-	 * @param token A cancellation token.
-	 */
-	provideTextSearchResults(query: TextSearchQuery2, options: TextSearchProviderOptions, progress: IProgress<TextSearchResult2>, token: CancellationToken): ProviderResult<TextSearchComplete2>;
-}
-
-/**
- * Information collected when text search is complete.
- */
-export interface TextSearchComplete2 {
-	/**
-	 * Whether the search hit the limit on the maximum number of search results.
-	 * `maxResults` on {@link TextSearchOptions} specifies the max number of results.
 	 * - If exactly that number of matches exist, this should be false.
 	 * - If `maxResults` matches are returned and more exist, this should be true.
 	 * - If search hits an internal limit which is less than `maxResults`, this should be true.
@@ -543,27 +446,4 @@ export interface TextSearchCompleteMessage {
 	 * The message type, this affects how the message will be rendered.
 	 */
 	type: TextSearchCompleteMessageType;
-}
-
-
-/**
- * An AITextSearchProvider provides additional AI text search results in the workspace.
- */
-export interface AITextSearchProvider {
-
-	/**
-	 * The name of the AI searcher. Will be displayed as `{name} Results` in the Search View.
-	 */
-	readonly name?: string;
-
-	/**
-	 * WARNING: VERY EXPERIMENTAL.
-	 *
-	 * Provide results that match the given text pattern.
-	 * @param query The parameter for this query.
-	 * @param options A set of options to consider while searching.
-	 * @param progress A progress callback that must be invoked for all results.
-	 * @param token A cancellation token.
-	 */
-	provideAITextSearchResults(query: string, options: TextSearchProviderOptions, progress: IProgress<TextSearchResult2>, token: CancellationToken): ProviderResult<TextSearchComplete2>;
 }

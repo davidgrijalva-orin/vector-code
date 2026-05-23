@@ -5,10 +5,10 @@
 
 .defineKeybindingWidget {
 	padding: 10px;
-	border-radius: var(--vscode-cornerRadius-large);
+	border-radius: var(--vectorcode-cornerRadius-large);
 	position: absolute;
-	box-shadow: var(--vscode-shadow-lg);
-	border: 1px solid var(--vscode-editorWidget-border);
+	box-shadow: var(--vectorcode-shadow-lg);
+	border: 1px solid var(--vectorcode-editorWidget-border);
 }
 
 .defineKeybindingWidget .message {
@@ -45,11 +45,11 @@
 
 /* Editor decorations */
 .monaco-editor .keybindingInfo {
-	box-shadow:	inset 0 0 0 1px #B9B9B9;
-	background-color: rgba(100, 100, 250, 0.2);
+	box-shadow:	inset 0 0 0 1px var(--vectorcode-focusBorder);
+	background-color: var(--vectorcode-selection-active);
 }
 
 .monaco-editor .keybindingError {
-	box-shadow:	inset 0 0 0 1px #B9B9B9;
-	background-color: rgba(250, 100, 100, 0.2);
+	box-shadow:	inset 0 0 0 1px var(--vectorcode-errorForeground);
+	background-color: var(--vectorcode-error-bg);
 }

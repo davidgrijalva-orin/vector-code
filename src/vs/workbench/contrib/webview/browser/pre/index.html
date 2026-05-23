@@ -63,7 +63,7 @@
 			let isFocused = document.hasFocus();
 			setInterval(() => {
 				const target = getActiveFrame();
-				const isCurrentlyFocused = document.hasFocus() || !!(target && target.contentDocument && target.contentDocument.body.classList.contains('vscode-context-menu-visible'));
+				const isCurrentlyFocused = document.hasFocus() || !!(target && target.contentDocument && target.contentDocument.body.classList.contains('vectorcode-context-menu-visible'));
 				if (isCurrentlyFocused === isFocused) {
 					return;
 				}
@@ -101,18 +101,18 @@
 		const defaultStyles = document.createElement('style');
 		defaultStyles.id = '_defaultStyles';
 		defaultStyles.textContent = `
-		@layer vscode-default {
+		@layer vectorcode-default {
 			html {
-				scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-editor-background);
+				scrollbar-color: var(--vectorcode-scrollbarSlider-background) var(--vectorcode-editor-background);
 			}
 
 			body {
 				overscroll-behavior-x: none;
 				background-color: transparent;
-				color: var(--vscode-editor-foreground);
-				font-family: var(--vscode-font-family);
-				font-weight: var(--vscode-font-weight);
-				font-size: var(--vscode-font-size);
+				color: var(--vectorcode-editor-foreground);
+				font-family: var(--vectorcode-font-family);
+				font-weight: var(--vectorcode-font-weight);
+				font-size: var(--vectorcode-font-size);
 				margin: 0;
 				padding: 0 20px;
 			}
@@ -123,7 +123,7 @@
 			}
 
 			a, a code {
-				color: var(--vscode-textLink-foreground);
+				color: var(--vectorcode-textLink-foreground);
 			}
 
 			p > a {
@@ -131,7 +131,7 @@
 			}
 
 			a:hover {
-				color: var(--vscode-textLink-activeForeground);
+				color: var(--vectorcode-textLink-activeForeground);
 			}
 
 			a:focus,
@@ -144,8 +144,8 @@
 
 			code {
 				font-family: var(--monaco-monospace-font);
-				color: var(--vscode-textPreformat-foreground);
-				background-color: var(--vscode-textPreformat-background);
+				color: var(--vectorcode-textPreformat-foreground);
+				background-color: var(--vectorcode-textPreformat-background);
 				padding: 1px 3px;
 				border-radius: 4px;
 			}
@@ -155,19 +155,19 @@
 			}
 
 			blockquote {
-				background: var(--vscode-textBlockQuote-background);
-				border-color: var(--vscode-textBlockQuote-border);
+				background: var(--vectorcode-textBlockQuote-background);
+				border-color: var(--vectorcode-textBlockQuote-border);
 			}
 
 			kbd {
-				background-color: var(--vscode-keybindingLabel-background);
-				color: var(--vscode-keybindingLabel-foreground);
+				background-color: var(--vectorcode-keybindingLabel-background);
+				color: var(--vectorcode-keybindingLabel-foreground);
 				border-style: solid;
 				border-width: 1px;
 				border-radius: 3px;
-				border-color: var(--vscode-keybindingLabel-border);
-				border-bottom-color: var(--vscode-keybindingLabel-bottomBorder);
-				box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow);
+				border-color: var(--vectorcode-keybindingLabel-border);
+				border-bottom-color: var(--vectorcode-keybindingLabel-bottomBorder);
+				box-shadow: inset 0 -1px 0 var(--vectorcode-widget-shadow);
 				vertical-align: middle;
 				padding: 1px 3px;
 			}
@@ -178,23 +178,23 @@
 			}
 
 			::-webkit-scrollbar-corner {
-				background-color: var(--vscode-editor-background);
+				background-color: var(--vectorcode-editor-background);
 			}
 
 			::-webkit-scrollbar-thumb {
-				background-color: var(--vscode-scrollbarSlider-background);
+				background-color: var(--vectorcode-scrollbarSlider-background);
 			}
 			::-webkit-scrollbar-thumb:hover {
-				background-color: var(--vscode-scrollbarSlider-hoverBackground);
+				background-color: var(--vectorcode-scrollbarSlider-hoverBackground);
 			}
 			::-webkit-scrollbar-thumb:active {
-				background-color: var(--vscode-scrollbarSlider-activeBackground);
+				background-color: var(--vectorcode-scrollbarSlider-activeBackground);
 			}
 			::highlight(find-highlight) {
-				background-color: var(--vscode-editor-findMatchHighlightBackground);
+				background-color: var(--vectorcode-editor-findMatchHighlightBackground);
 			}
 			::highlight(current-find-highlight) {
-				background-color: var(--vscode-editor-findMatchBackground);
+				background-color: var(--vectorcode-editor-findMatchBackground);
 			}
 		}`;
 
@@ -218,7 +218,7 @@
 
 						return () => {
 							if (acquired && !${allowMultipleAPIAcquire}) {
-								throw new Error('An instance of the VS Code API has already been acquired');
+								throw new Error('An instance of the Vector Code API has already been acquired');
 							}
 							acquired = true;
 							return Object.freeze({
@@ -257,7 +257,7 @@
 				.then(async registration => {
 					if (navigator.serviceWorker.controller) {
 						// A previous SW is already controlling. Force an update
-						// check so we don't serve stale resources after a VS Code
+						// check so we don't serve stale resources after a Vector Code
 						// update. register() resolves before the update check
 						// completes, so we must call update() explicitly to wait
 						// for the download + byte-comparison to finish.
@@ -485,28 +485,26 @@
 			}
 
 			if (body) {
-				body.classList.remove('vscode-light', 'vscode-dark', 'vscode-high-contrast', 'vscode-high-contrast-light', 'vscode-reduce-motion', 'vscode-using-screen-reader');
+				body.classList.remove('vectorcode-light', 'vectorcode-dark', 'vectorcode-high-contrast', 'vectorcode-high-contrast-light', 'vectorcode-reduce-motion', 'vectorcode-using-screen-reader');
 
 				if (initData.activeTheme) {
 					body.classList.add(initData.activeTheme);
-					if (initData.activeTheme === 'vscode-high-contrast-light') {
-						// backwards compatibility
-						body.classList.add('vscode-high-contrast');
+					if (initData.activeTheme === 'vectorcode-high-contrast-light') {
+						body.classList.add('vectorcode-high-contrast');
 					}
 				}
 
 				if (initData.reduceMotion) {
-					body.classList.add('vscode-reduce-motion');
+					body.classList.add('vectorcode-reduce-motion');
 				}
 
 				if (initData.screenReader) {
-					body.classList.add('vscode-using-screen-reader');
+					body.classList.add('vectorcode-using-screen-reader');
 				}
 
-				body.dataset.vscodeThemeKind = initData.activeTheme;
-				/** @deprecated data-vscode-theme-name will be removed, use data-vscode-theme-id instead */
-				body.dataset.vscodeThemeName = initData.themeLabel || '';
-				body.dataset.vscodeThemeId = initData.themeId || '';
+				body.dataset.vectorcodeThemeKind = initData.activeTheme;
+				body.dataset.vectorcodeThemeName = initData.themeLabel || '';
+				body.dataset.vectorcodeThemeId = initData.themeId || '';
 			}
 
 			if (initData.styles) {
@@ -517,7 +515,7 @@
 					const property = documentStyle[i];
 
 					// Don't remove properties that the webview might have added separately
-					if (property && property.startsWith('--vscode-')) {
+					if (property && property.startsWith('--vectorcode-')) {
 						documentStyle.removeProperty(property);
 					}
 				}
@@ -589,7 +587,7 @@
 		 */
 		const handleInnerKeydown = (e) => {
 			// If the keypress would trigger a browser event, such as copy or paste,
-			// make sure we block the browser from dispatching it. Instead VS Code
+			// make sure we block the browser from dispatching it. Instead Vector Code
 			// handles these events and will dispatch a copy/paste back to the webview
 			// if needed
 			if (isUndoRedo(e) || isPrint(e) || isFindEvent(e) || isSaveEvent(e)) {
@@ -1220,11 +1218,11 @@
 
 			});
 
-			// propagate vscode-context-menu-visible class
+			// propagate vectorcode-context-menu-visible class
 			hostMessaging.onMessage('set-context-menu-visible', (_event, data) => {
 				const target = getActiveFrame();
 				if (target && target.contentDocument) {
-					target.contentDocument.body.classList.toggle('vscode-context-menu-visible', data.visible);
+					target.contentDocument.body.classList.toggle('vectorcode-context-menu-visible', data.visible);
 				}
 			});
 

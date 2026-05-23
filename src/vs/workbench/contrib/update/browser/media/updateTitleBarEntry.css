@@ -24,6 +24,15 @@
 	position: relative;
 }
 
+.monaco-action-bar .update-indicator .indicator-icon {
+	align-items: center;
+	display: inline-flex;
+	height: 16px;
+	justify-content: center;
+	margin-right: 6px;
+	width: 16px;
+}
+
 /* Prominent state (action required) — primary button style */
 .monaco-action-bar .update-indicator.prominent {
 	background-color: var(--vectorcode-button-background);

@@ -677,6 +677,8 @@ body,
 	--vectorcode-topbar-account: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%2011.5a3.15%203.15%200%201%200%200-6.3%203.15%203.15%200%200%200%200%206.3zM5.8%2018.8c.9-2.7%203-4.2%206.2-4.2s5.3%201.5%206.2%204.2'%20fill='none'%20stroke='black'%20stroke-width='1.22'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
 	--vectorcode-topbar-settings: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5.5%207.2h7.1M16.1%207.2h2.4M5.5%2012h2.4M11.4%2012h7.1M5.5%2016.8h8.5M17.4%2016.8h1.1M12.6%207.2a1.75%201.75%200%201%200%203.5%200%201.75%201.75%200%200%200-3.5%200zM7.9%2012a1.75%201.75%200%201%200%203.5%200%201.75%201.75%200%200%200-3.5%200zM14%2016.8a1.7%201.7%200%201%200%203.4%200%201.7%201.7%200%200%200-3.4%200z'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
 	--vectorcode-topbar-terminal: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M5.4%207.1h13.2v9.8H5.4zM7.9%2010l2.2%202-2.2%202M11.8%2014h4.1'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-download: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%205.4v8.1M8.7%2010.2%2012%2013.5l3.3-3.3M6.5%2017.8h11'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+	--vectorcode-topbar-update-ready: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M17.8%209.2A5.8%205.8%200%201%200%2018%2012M17.8%206.1v3.1h-3.1'%20fill='none'%20stroke='black'%20stroke-width='1.18'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .monaco-workbench .part.titlebar {
@@ -766,11 +768,16 @@ body,
 .monaco-workbench .part.titlebar .codicon-arrow-right { --vectorcode-icon-mask: var(--vectorcode-topbar-arrow-right); }
 .monaco-workbench .part.titlebar .codicon-search { --vectorcode-icon-mask: var(--vectorcode-topbar-search); }
 .monaco-workbench .part.titlebar .codicon-terminal { --vectorcode-icon-mask: var(--vectorcode-topbar-terminal); }
+.monaco-workbench .part.titlebar .codicon-cloud-download,
+.monaco-workbench .part.titlebar .codicon-download { --vectorcode-icon-mask: var(--vectorcode-topbar-download); }
+.monaco-workbench .part.titlebar .codicon-loading,
+.monaco-workbench .part.titlebar .codicon-sync { --vectorcode-icon-mask: var(--vectorcode-topbar-update-ready); }
 .monaco-workbench .activitybar > .content > div:not(.composite-bar) .codicon-accounts-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-topbar-account); }
 .monaco-workbench .activitybar > .content > div:not(.composite-bar) .codicon-settings-view-bar-icon { --vectorcode-icon-mask: var(--vectorcode-topbar-settings); }
 
 .monaco-workbench .part.activitybar .action-label.codicon::before,
 .monaco-workbench .part.titlebar .action-label.codicon::before,
+.monaco-workbench .part.titlebar .update-indicator .indicator-icon.codicon::before,
 .monaco-workbench .part.titlebar .search-icon.codicon::before {
 	background: currentColor;
 	content: "" !important;
@@ -785,6 +792,7 @@ body,
 }
 
 .monaco-workbench .part.titlebar .action-label.codicon::before,
+.monaco-workbench .part.titlebar .update-indicator .indicator-icon.codicon::before,
 .monaco-workbench .part.titlebar .search-icon.codicon::before,
 .monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label.codicon::before {
 	flex-basis: 18px;
@@ -796,7 +804,8 @@ body,
 }
 
 .monaco-workbench .part.activitybar .action-label.codicon,
-.monaco-workbench .part.titlebar .action-label.codicon {
+.monaco-workbench .part.titlebar .action-label.codicon,
+.monaco-workbench .part.titlebar .update-indicator .indicator-icon.codicon {
 	align-items: center;
 	display: flex !important;
 	justify-content: center;
@@ -804,6 +813,7 @@ body,
 
 .monaco-workbench .part.activitybar .action-label.codicon::after,
 .monaco-workbench .part.titlebar .action-label.codicon::after,
+.monaco-workbench .part.titlebar .update-indicator .indicator-icon.codicon::after,
 .monaco-workbench .part.titlebar .search-icon.codicon::after {
 	display: none !important;
 }
@@ -3742,7 +3752,49 @@ body,
 	width: 28px !important;
 }
 
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .update-indicator {
+	align-items: center !important;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	color: #aeb8b4 !important;
+	display: flex !important;
+	height: 28px !important;
+	justify-content: center !important;
+	margin: 0 !important;
+	overflow: visible !important;
+	padding: 0 !important;
+	position: relative !important;
+	width: 28px !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .update-indicator .indicator-icon {
+	height: 28px !important;
+	margin: 0 !important;
+	width: 28px !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .update-indicator .indicator-label {
+	display: none !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .update-indicator.prominent::after {
+	background: #8fc8c3;
+	border: 1px solid #101716;
+	border-radius: 999px;
+	content: "";
+	height: 6px;
+	position: absolute;
+	right: 4px;
+	top: 4px;
+	width: 6px;
+}
+
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-item:hover .action-label.codicon {
+	color: #e4ece9 !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .action-toolbar-container .action-item:hover .update-indicator {
 	color: #e4ece9 !important;
 }
 

@@ -7,11 +7,13 @@ import * as dom from '../../../../base/browser/dom.js';
 import { BaseActionViewItem, IBaseActionViewItemOptions } from '../../../../base/browser/ui/actionbar/actionViewItems.js';
 import { IManagedHoverContent } from '../../../../base/browser/ui/hover/hover.js';
 import { IAction, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../base/common/actions.js';
+import { Codicon } from '../../../../base/common/codicons.js';
 import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { isWeb } from '../../../../base/common/platform.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize } from '../../../../nls.js';
 import { IActionViewItemService } from '../../../../platform/actions/browser/actionViewItemService.js';
-import { Action2, IMenuItem, MenuId, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';
+import { Action2, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IHoverService } from '../../../../platform/hover/browser/hover.js';
@@ -38,19 +40,6 @@ const UPDATE_TITLE_BAR_SETTING = 'update.titleBar';
 const ACTIONABLE_STATES: readonly StateType[] = [StateType.AvailableForDownload, StateType.Downloaded, StateType.Ready];
 const DETAILED_STATES: readonly StateType[] = [...ACTIONABLE_STATES, StateType.CheckingForUpdates, StateType.Downloading, StateType.Updating, StateType.Overwriting];
 
-/**
- * Optional secondary placement for the update indicator (e.g. used by the Agents
- * app). Limited to one because the contribution tracks a single rendered entry.
- */
-let additionalMenuPlacement: { readonly menuId: MenuId; readonly item: Omit<IMenuItem, 'command'> } | undefined;
-
-export function registerUpdateTitleBarMenuPlacement(menuId: MenuId, item: Omit<IMenuItem, 'command'> = {}): void {
-	if (additionalMenuPlacement) {
-		throw new Error('An additional update title bar menu placement is already registered');
-	}
-	additionalMenuPlacement = { menuId, item };
-}
-
 registerAction2(class UpdateIndicatorTitleBarAction extends Action2 {
 	constructor() {
 		super({
@@ -58,8 +47,9 @@ registerAction2(class UpdateIndicatorTitleBarAction extends Action2 {
 			title: localize('updateIndicatorTitleBarAction', 'Update'),
 			f1: false,
 			menu: [{
-				id: MenuId.TitleBarAdjacentCenter,
-				order: 0,
+				id: MenuId.TitleBar,
+				group: 'navigation',
+				order: 8500,
 				when: ContextKeyExpr.and(UPDATE_TITLE_BAR_CONTEXT, InEditorZenModeContext.negate(), ContextKeyExpr.not('inDebugMode')),
 			}]
 		});
@@ -110,27 +100,10 @@ export class UpdateTitleBarContribution extends Disposable implements IWorkbench
 		}));
 
 		this._register(actionViewItemService.register(
-			MenuId.TitleBarAdjacentCenter,
+			MenuId.TitleBar,
 			UPDATE_TITLE_BAR_ACTION_ID,
 			(action, options) => this.createEntry(instantiationService, action, options)
 		));
-
-		if (additionalMenuPlacement) {
-			const { menuId, item } = additionalMenuPlacement;
-			MenuRegistry.appendMenuItem(menuId, {
-				...item,
-				command: {
-					id: UPDATE_TITLE_BAR_ACTION_ID,
-					title: localize('updateIndicatorTitleBarAction', 'Update'),
-				},
-				when: item.when ? ContextKeyExpr.and(UPDATE_TITLE_BAR_CONTEXT, item.when) : UPDATE_TITLE_BAR_CONTEXT,
-			});
-			this._register(actionViewItemService.register(
-				menuId,
-				UPDATE_TITLE_BAR_ACTION_ID,
-				(action, options) => this.createEntry(instantiationService, action, options)
-			));
-		}
 
 		void this.onStateChange(true);
 	}
@@ -157,7 +130,7 @@ export class UpdateTitleBarContribution extends Disposable implements IWorkbench
 		}
 
 		if (ACTIONABLE_STATES.includes(this.state.type)) {
-			await this.setContextWhenChatIdle(true);
+			this.context.set(true);
 		} else {
 			this.context.set(false);
 		}
@@ -202,10 +175,24 @@ export class UpdateTitleBarContribution extends Disposable implements IWorkbench
 		}
 	}
 
-	private async setContextWhenChatIdle(value: boolean) {
-		this.context.set(value);
-	}
+}
 
+function getUpdateIndicatorIcon(state: State): ThemeIcon {
+	switch (state.type) {
+		case StateType.AvailableForDownload:
+			return Codicon.cloudDownload;
+		case StateType.Downloaded:
+		case StateType.Ready:
+		case StateType.Restarting:
+			return Codicon.sync;
+		case StateType.CheckingForUpdates:
+		case StateType.Downloading:
+		case StateType.Updating:
+		case StateType.Overwriting:
+			return Codicon.loading;
+		default:
+			return Codicon.download;
+	}
 }
 
 /**
@@ -296,8 +283,12 @@ export class UpdateTitleBarEntry extends BaseActionViewItem {
 		}
 
 		dom.clearNode(this.content);
-		this.content.classList.remove('prominent', 'progress-indefinite', 'progress-percent', 'update-disabled');
+		this.content.classList.remove('prominent', 'progress-indefinite', 'progress-percent', 'update-disabled', 'update-downloadable', 'update-ready');
 		this.content.style.removeProperty('--update-progress');
+
+		const icon = dom.append(this.content, dom.$('.indicator-icon'));
+		icon.classList.add(...ThemeIcon.asClassNameArray(getUpdateIndicatorIcon(state)));
+		icon.setAttribute('aria-hidden', 'true');
 
 		const label = dom.append(this.content, dom.$('.indicator-label'));
 		switch (state.type) {
@@ -317,10 +308,16 @@ export class UpdateTitleBarEntry extends BaseActionViewItem {
 				break;
 
 			case StateType.AvailableForDownload:
+				label.textContent = localize('updateIndicator.download', "Download");
+				this.content.classList.add('prominent');
+				this.content.classList.add('update-downloadable');
+				break;
+
 			case StateType.Downloaded:
 			case StateType.Ready:
-				label.textContent = localize('updateIndicator.update', "Update");
+				label.textContent = localize('updateIndicator.restart', "Restart");
 				this.content.classList.add('prominent');
+				this.content.classList.add('update-ready');
 				break;
 
 			case StateType.Downloading:
@@ -342,6 +339,11 @@ export class UpdateTitleBarEntry extends BaseActionViewItem {
 				label.textContent = localize('updateIndicator.update', "Update");
 				break;
 		}
+
+		const accessibilityLabel = label.textContent ?? localize('updateIndicator.update', "Update");
+		this.content.title = accessibilityLabel;
+		this.content.setAttribute('aria-label', accessibilityLabel);
+		this.element?.setAttribute('aria-label', accessibilityLabel);
 	}
 
 	private renderProgressState(content: HTMLElement, percentage?: number) {

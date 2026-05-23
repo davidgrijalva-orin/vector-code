@@ -26,6 +26,8 @@ v0.2.0
 
 The packaged app embeds the build commit and product version during the existing package step. The update feed compares the embedded commit with the latest released commit for the requested platform and channel.
 
+When the update service reports a downloadable or ready-to-install update, Vector Code shows a compact download/update action in the top-right chrome, between Settings and Terminal. Closing the terminal panel does not affect update detection; the action only appears when the update state is actionable.
+
 ## Feed Manifest
 
 The feed source should be published by CI after signed artifacts are uploaded:

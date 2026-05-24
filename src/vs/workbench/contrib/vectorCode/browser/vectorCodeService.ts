@@ -153,17 +153,18 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		const projectsToRead = projectKeyToRead
 			? projects.filter(project => project.uri.toString() === projectKeyToRead)
 			: projects.slice(0, 1);
-		for (const project of projects) {
-			filesByProject[project.uri.toString()] = [];
-			fileTreeTruncatedByProject[project.uri.toString()] = false;
-		}
 		await Promise.all(projectsToRead.map(async project => {
 			const tree = await this.getMobileFileTree(project.uri);
 			const projectKey = project.uri.toString();
 			filesByProject[projectKey] = [...tree.nodes];
 			fileTreeTruncatedByProject[projectKey] = tree.truncated;
 		}));
-		return this.createMobileWorkspaceSnapshotWithTerminalRawOutput(projects, filesByProject, fileTreeTruncatedByProject);
+		return this.createMobileWorkspaceSnapshotWithTerminalRawOutput(
+			projects,
+			filesByProject,
+			fileTreeTruncatedByProject,
+			new Set(projectsToRead.map(project => project.uri.toString()))
+		);
 	}
 
 	private createMobileWorkspaceSnapshot(projects: readonly IVectorCodeProjectSummary[], filesByProject: Record<string, IVectorCodeMobileRemoteFileNode[]>, fileTreeTruncatedByProject: Record<string, boolean>): IVectorCodeMobileRemoteWorkspaceSnapshot {
@@ -196,12 +197,14 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		};
 	}
 
-	private async createMobileWorkspaceSnapshotWithTerminalRawOutput(projects: readonly IVectorCodeProjectSummary[], filesByProject: Record<string, IVectorCodeMobileRemoteFileNode[]>, fileTreeTruncatedByProject: Record<string, boolean>): Promise<IVectorCodeMobileRemoteWorkspaceSnapshot> {
+	private async createMobileWorkspaceSnapshotWithTerminalRawOutput(projects: readonly IVectorCodeProjectSummary[], filesByProject: Record<string, IVectorCodeMobileRemoteFileNode[]>, fileTreeTruncatedByProject: Record<string, boolean>, rawOutputProjectKeys: ReadonlySet<string>): Promise<IVectorCodeMobileRemoteWorkspaceSnapshot> {
 		const snapshot = this.createMobileWorkspaceSnapshot(projects, filesByProject, fileTreeTruncatedByProject);
 		const terminalsByProject: Record<string, IVectorCodeMobileRemoteTerminalTab[]> = {};
 		await Promise.all(projects.map(async project => {
 			const projectKey = project.uri.toString();
-			terminalsByProject[projectKey] = await this.getMobileTerminalTabsWithRawOutput(projectKey);
+			terminalsByProject[projectKey] = rawOutputProjectKeys.has(projectKey)
+				? await this.getMobileTerminalTabsWithRawOutput(projectKey)
+				: this.getMobileTerminalTabs(projectKey);
 		}));
 		return {
 			...snapshot,

@@ -237,6 +237,41 @@ func verifyVectorCodeMobile() async throws {
     precondition(sentEnvelopes.contains { $0.payloadJSON.contains("\"rename\"") && $0.payloadJSON.contains("\"server\"") })
     precondition(sentEnvelopes.last?.payloadJSON.contains("\"close\"") == true)
 
+    let partialRemoteSnapshot = VectorCodeRemoteWorkspaceSnapshot(
+        activeProjectId: "job-board",
+        projects: VectorCodeRemoteWorkspaceSnapshot.sample.projects,
+        filesByProject: [
+            "job-board": [
+                VectorCodeFileNode(name: "REMOTE.md", path: "REMOTE.md", kind: .file),
+            ],
+        ],
+        editorsByProject: remoteSnapshot.editorsByProject,
+        terminalsByProject: remoteSnapshot.terminalsByProject
+    )
+    let partialRelayClient = VectorCodeRelayLoopbackClient(snapshot: partialRemoteSnapshot)
+    let partialWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: partialRelayClient)
+    let partialModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: partialWorkspaceClient)
+    try partialModel.pair(from: payloadJSON, phoneId: "phone-partial")
+    partialModel.connectToDesktop()
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    precondition(partialModel.isRemoteConnected)
+    precondition(partialModel.snapshot.filesByProject["job-board"]?.first?.name == "REMOTE.md")
+    precondition(partialModel.snapshot.filesByProject["neuron"]?.contains { $0.name == "README.md" } == true)
+
+    let flakyRelayClient = VectorCodeConnectThenFailingStateRelayClient(snapshot: remoteSnapshot)
+    let flakyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: flakyRelayClient)
+    let flakyModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: flakyWorkspaceClient)
+    try flakyModel.pair(from: payloadJSON, phoneId: "phone-flaky")
+    flakyModel.connectToDesktop()
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    precondition(flakyModel.isRemoteConnected)
+    flakyModel.refreshWorkspace()
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    precondition(!flakyModel.isRemoteConnected)
+    precondition(flakyModel.statusText == "Refresh failed")
+    let flakyDisconnectCount = await flakyRelayClient.currentDisconnectCount()
+    precondition(flakyDisconnectCount == 1)
+
     let staleRelayClient = VectorCodeStaleRelayClient(snapshot: remoteSnapshot)
     let staleWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: staleRelayClient)
     let staleRecoveredSnapshot = try await staleWorkspaceClient.readState(projectId: "job-board")
@@ -361,6 +396,46 @@ private actor VectorCodeStaleRelayClient: VectorCodeRelayClientProtocol {
                 action: .terminalOutput,
                 payload: stalePayload
             )
+        }
+
+        let payload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: JSONEncoder().encode(snapshot))
+        return VectorCodeRemoteEnvelope(
+            kind: .response,
+            requestId: requestId ?? "state-response",
+            action: .stateRead,
+            payload: payload
+        )
+    }
+}
+
+private actor VectorCodeConnectThenFailingStateRelayClient: VectorCodeRelayClientProtocol {
+    private let snapshot: VectorCodeRemoteWorkspaceSnapshot
+    private var requestId: String?
+    private var stateReadCount = 0
+    private(set) var disconnectCount = 0
+
+    init(snapshot: VectorCodeRemoteWorkspaceSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func connect(configuration: VectorCodeRelayConfiguration) async throws {}
+
+    func disconnect() async {
+        disconnectCount += 1
+    }
+
+    func currentDisconnectCount() -> Int {
+        disconnectCount
+    }
+
+    func send<Payload>(_ envelope: VectorCodeRemoteEnvelope<Payload>) async throws where Payload: Decodable, Payload: Encodable, Payload: Sendable {
+        requestId = envelope.requestId
+    }
+
+    func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
+        stateReadCount += 1
+        guard stateReadCount == 1 else {
+            throw VectorCodeVerifierRelayError.connectFailed
         }
 
         let payload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: JSONEncoder().encode(snapshot))

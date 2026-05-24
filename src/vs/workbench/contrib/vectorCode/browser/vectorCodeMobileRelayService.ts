@@ -64,7 +64,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 
 	getStatus(): IVectorCodeMobileConnectionStatus {
 		if (this._lastStatus) {
-			if (this._lastStatus.pairing && Date.parse(this._lastStatus.pairing.payload.expiresAt) <= Date.now()) {
+			if (this._lastStatus.state !== VectorCodeMobileConnectionState.Connected && this._lastStatus.pairing && Date.parse(this._lastStatus.pairing.payload.expiresAt) <= Date.now()) {
 				this._lastStatus = {
 					state: VectorCodeMobileConnectionState.Disconnected,
 					label: localize('vectorCodeMobilePairingExpired', 'QR expired'),
@@ -339,8 +339,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 				state: VectorCodeMobileConnectionState.Connected,
 				label: localize('vectorCodeMobilePhoneConnected', 'Phone connected'),
 				detail: localize('vectorCodeMobilePhoneConnectedDetail', 'Mobile app is connected.'),
-				relayHost: connection.payload.relayHost,
-				pairing: this._lastStatus?.pairing
+				relayHost: connection.payload.relayHost
 			};
 			return;
 		}

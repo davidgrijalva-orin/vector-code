@@ -649,15 +649,16 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         let currentProjectId = selectedProjectId
         let dirtyEditor = selectedEditor?.isDirty == true ? selectedEditor : nil
         let dirtyDraft = dirtyEditor == nil ? nil : editorDraft
-        snapshot = nextSnapshot
+        let mergedSnapshot = Self.mergeProjectScopedSnapshot(current: snapshot, next: nextSnapshot)
+        snapshot = mergedSnapshot
         if let dirtyEditor, let dirtyDraft {
             restoreDirtyEditor(dirtyEditor, draft: dirtyDraft)
         }
         let nextProjectId: String?
-        if let currentProjectId, nextSnapshot.projects.contains(where: { $0.id == currentProjectId }) {
+        if let currentProjectId, mergedSnapshot.projects.contains(where: { $0.id == currentProjectId }) {
             nextProjectId = currentProjectId
         } else {
-            nextProjectId = nextSnapshot.activeProjectId ?? nextSnapshot.projects.first?.id
+            nextProjectId = mergedSnapshot.activeProjectId ?? mergedSnapshot.projects.first?.id
         }
         selectedProjectId = nextProjectId
         selectedEditorId = nextProjectId.flatMap { restoredEditorId(for: $0) }
@@ -674,6 +675,36 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         } else if viewport == .projects {
             viewport = .files
         }
+    }
+
+    private static func mergeProjectScopedSnapshot(
+        current: VectorCodeRemoteWorkspaceSnapshot,
+        next: VectorCodeRemoteWorkspaceSnapshot
+    ) -> VectorCodeRemoteWorkspaceSnapshot {
+        var merged = next
+        let projectIds = Set(next.projects.map(\.id))
+
+        merged.filesByProject = current.filesByProject.filter { projectIds.contains($0.key) }
+        for (projectId, files) in next.filesByProject where projectIds.contains(projectId) {
+            merged.filesByProject[projectId] = files
+        }
+
+        merged.fileTreeTruncatedByProject = current.fileTreeTruncatedByProject.filter { projectIds.contains($0.key) }
+        for (projectId, truncated) in next.fileTreeTruncatedByProject where projectIds.contains(projectId) {
+            merged.fileTreeTruncatedByProject[projectId] = truncated
+        }
+
+        merged.editorsByProject = current.editorsByProject.filter { projectIds.contains($0.key) }
+        for (projectId, editors) in next.editorsByProject where projectIds.contains(projectId) {
+            merged.editorsByProject[projectId] = editors
+        }
+
+        merged.terminalsByProject = current.terminalsByProject.filter { projectIds.contains($0.key) }
+        for (projectId, terminals) in next.terminalsByProject where projectIds.contains(projectId) {
+            merged.terminalsByProject[projectId] = terminals
+        }
+
+        return merged
     }
 
     private func restoreDirtyEditor(_ dirtyEditor: VectorCodeEditorTab, draft: String) {
@@ -696,7 +727,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             openLocalFile(node, project: project, content: response.content, language: response.language, version: response.version)
             statusText = "Connected"
         } catch {
-            statusText = "File unavailable"
+            await handleRemoteFailure(error, statusText: "File unavailable")
         }
     }
 
@@ -708,7 +739,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             updateEditor(projectId: projectId, editorId: editor.id, content: content, isDirty: false, version: response.version)
             statusText = "Saved"
         } catch {
-            statusText = "Save failed"
+            await handleRemoteFailure(error, statusText: "Save failed")
         }
     }
 
@@ -720,7 +751,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             await refreshRemoteWorkspace()
             statusText = "Renamed"
         } catch {
-            statusText = "Rename failed"
+            await handleRemoteFailure(error, statusText: "Rename failed")
         }
     }
 
@@ -732,7 +763,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             await refreshRemoteWorkspace()
             statusText = "Copied"
         } catch {
-            statusText = "Copy failed"
+            await handleRemoteFailure(error, statusText: "Copy failed")
         }
     }
 
@@ -744,7 +775,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             replaceFolderChildren(projectId: projectId, path: path, children: response.nodes, truncated: response.truncated)
             statusText = "Connected"
         } catch {
-            statusText = "Folder unavailable"
+            await handleRemoteFailure(error, statusText: "Folder unavailable")
         }
     }
 
@@ -760,7 +791,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             viewport = .terminal
             statusText = "Connected"
         } catch {
-            statusText = "Terminal unavailable"
+            await handleRemoteFailure(error, statusText: "Terminal unavailable")
         }
     }
 
@@ -787,7 +818,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             replaceTerminalOutput(projectId: projectId, terminalId: terminalId, output: terminalOutput.output, rawOutput: terminalOutput.rawOutput)
             statusText = "Connected"
         } catch {
-            statusText = "Terminal input failed"
+            await handleRemoteFailure(error, statusText: "Terminal input failed")
         }
     }
 
@@ -831,7 +862,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             }
             statusText = response.accepted ? "Connected" : "Terminal action rejected"
         } catch {
-            statusText = "Terminal action failed"
+            await handleRemoteFailure(error, statusText: "Terminal action failed")
         }
     }
 
@@ -844,7 +875,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             applySnapshot(nextSnapshot)
             statusText = "Connected"
         } catch {
-            statusText = "Refresh failed"
+            await handleRemoteFailure(error, statusText: "Refresh failed")
         }
     }
 
@@ -858,8 +889,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
                 statusText = "Connected"
             }
         } catch {
-            if updateStatus {
-                statusText = "Terminal output failed"
+            if updateStatus || Self.shouldDisconnectAfterRemoteFailure(error) {
+                await handleRemoteFailure(error, statusText: "Terminal output failed")
             }
         }
     }
@@ -890,6 +921,36 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return remembered
         }
         return terminals.first?.id
+    }
+
+    private func handleRemoteFailure(_ error: Error, statusText: String) async {
+        self.statusText = statusText
+        guard Self.shouldDisconnectAfterRemoteFailure(error) else {
+            return
+        }
+        await remoteWorkspaceClient.disconnect()
+        isRemoteConnected = false
+    }
+
+    private static func shouldDisconnectAfterRemoteFailure(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return false
+        }
+
+        if error is VectorCodeRemoteSyncError || error is VectorCodeRelayClientError {
+            return true
+        }
+
+        guard let clientError = error as? VectorCodeRemoteWorkspaceClientError else {
+            return true
+        }
+
+        switch clientError {
+        case .remoteError:
+            return false
+        case .missingPayload, .invalidResponse, .unexpectedAction, .unexpectedRequestId:
+            return true
+        }
     }
 
     private static func withTimeout<Value: Sendable>(

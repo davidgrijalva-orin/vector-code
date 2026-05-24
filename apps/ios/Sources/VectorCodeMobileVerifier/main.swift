@@ -120,6 +120,62 @@ func verifyVectorCodeMobile() async throws {
     model.closeTerminal(model.selectedTerminal!)
     precondition(model.selectedTerminals.count == 1)
 
+    let collisionSnapshot = VectorCodeRemoteWorkspaceSnapshot(
+        activeProjectId: "job-board",
+        projects: VectorCodeRemoteWorkspaceSnapshot.sample.projects,
+        filesByProject: VectorCodeRemoteWorkspaceSnapshot.sample.filesByProject,
+        editorsByProject: [
+            "job-board": [
+                VectorCodeEditorTab(id: "shared-editor", projectId: "job-board", path: "README.md", title: "README.md", language: "markdown", content: "# job"),
+            ],
+            "neuron": [
+                VectorCodeEditorTab(id: "shared-editor", projectId: "neuron", path: "README.md", title: "README.md", language: "markdown", content: "# neuron"),
+                VectorCodeEditorTab(id: "neuron-next", projectId: "neuron", path: "NEXT.md", title: "NEXT.md", language: "markdown", content: "# next"),
+            ],
+        ],
+        terminalsByProject: [
+            "job-board": [
+                VectorCodeTerminalTab(id: "shared-terminal", projectId: "job-board", title: "job", cwd: "~/OrinTech/job_board", isActive: true),
+            ],
+            "neuron": [
+                VectorCodeTerminalTab(id: "shared-terminal", projectId: "neuron", title: "neuron", cwd: "~/OrinTech/NEURON", isActive: true),
+                VectorCodeTerminalTab(id: "neuron-next", projectId: "neuron", title: "next", cwd: "~/OrinTech/NEURON"),
+            ],
+        ]
+    )
+    let editorCollisionModel = VectorCodeMobileWorkspaceModel(snapshot: collisionSnapshot)
+    let backgroundEditor = editorCollisionModel.snapshot.editorsByProject["neuron"]?.first
+    precondition(backgroundEditor != nil)
+    editorCollisionModel.closeEditor(backgroundEditor!)
+    precondition(editorCollisionModel.selectedProject?.id == "job-board")
+    precondition(editorCollisionModel.selectedEditorId == "shared-editor")
+    precondition(editorCollisionModel.selectedEditor?.projectId == "job-board")
+    precondition(editorCollisionModel.editorDraft == "# job")
+
+    let terminalCollisionRelayClient = VectorCodeRelayLoopbackClient(snapshot: collisionSnapshot)
+    let terminalCollisionWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: terminalCollisionRelayClient)
+    let terminalCollisionModel = VectorCodeMobileWorkspaceModel(snapshot: collisionSnapshot, remoteWorkspaceClient: terminalCollisionWorkspaceClient)
+    try terminalCollisionModel.pair(from: payloadJSON, phoneId: "phone-terminal-collision")
+    terminalCollisionModel.connectToDesktop()
+    try await waitUntil("terminal collision model connected") {
+        terminalCollisionModel.isRemoteConnected
+    }
+    let backgroundTerminal = terminalCollisionModel.snapshot.terminalsByProject["neuron"]?.first
+    precondition(backgroundTerminal != nil)
+    terminalCollisionModel.closeTerminal(backgroundTerminal!)
+    precondition(terminalCollisionModel.selectedProject?.id == "job-board")
+    precondition(terminalCollisionModel.selectedTerminalId == "shared-terminal")
+    precondition(terminalCollisionModel.selectedTerminal?.projectId == "job-board")
+    try await waitUntil("background terminal close stays scoped to source project") {
+        let envelopes = await terminalCollisionRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .terminalControl
+                && $0.projectId == "neuron"
+                && $0.payloadString("terminalId") == "shared-terminal"
+                && $0.payloadString("command") == "close"
+        }
+    }
+
     let terminalInput = VectorCodeTerminalInputRequest(terminalId: "terminal-1", input: "pnpm test", submit: false)
     let envelope = VectorCodeRemoteEnvelope(action: .terminalInput, projectId: "job-board", payload: terminalInput)
     let envelopeData = try JSONEncoder().encode(envelope)

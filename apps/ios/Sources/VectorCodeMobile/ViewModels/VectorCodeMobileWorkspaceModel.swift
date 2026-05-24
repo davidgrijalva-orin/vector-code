@@ -326,17 +326,28 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
+        let closesSelectedProjectEditor = selectedProjectId == editor.projectId && selectedEditorId == editor.id
+        let closesRememberedProjectEditor = selectedEditorByProject[editor.projectId] == editor.id
         snapshot.editorsByProject[editor.projectId]?.remove(at: index)
         let remainingEditors = snapshot.editorsByProject[editor.projectId] ?? []
-        if selectedEditorId == editor.id {
-            let nextEditor = remainingEditors.indices.contains(index) ? remainingEditors[index] : remainingEditors.last
+        let nextEditor = remainingEditors.indices.contains(index) ? remainingEditors[index] : remainingEditors.last
+        if closesSelectedProjectEditor {
             selectedEditorId = nextEditor?.id
             editorDraft = nextEditor?.content ?? ""
         }
-        if let selectedEditorId {
-            selectedEditorByProject[editor.projectId] = selectedEditorId
-        } else {
+
+        if closesRememberedProjectEditor {
+            if let nextEditor {
+                selectedEditorByProject[editor.projectId] = nextEditor.id
+            } else {
+                selectedEditorByProject.removeValue(forKey: editor.projectId)
+            }
+        } else if let rememberedEditorId = selectedEditorByProject[editor.projectId],
+                  !remainingEditors.contains(where: { $0.id == rememberedEditorId }) {
             selectedEditorByProject.removeValue(forKey: editor.projectId)
+        }
+
+        if selectedProjectId == editor.projectId && selectedEditorId == nil {
             editorDraft = ""
         }
     }
@@ -544,19 +555,28 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
+        let closesSelectedProjectTerminal = selectedProjectId == terminal.projectId && selectedTerminalId == terminal.id
+        let closesRememberedProjectTerminal = selectedTerminalByProject[terminal.projectId] == terminal.id
         snapshot.terminalsByProject[terminal.projectId]?.remove(at: index)
         let remainingTerminals = snapshot.terminalsByProject[terminal.projectId] ?? []
-        if selectedTerminalId == terminal.id {
-            let nextTerminal = remainingTerminals.indices.contains(index) ? remainingTerminals[index] : remainingTerminals.last
+        let nextTerminal = remainingTerminals.indices.contains(index) ? remainingTerminals[index] : remainingTerminals.last
+        if closesSelectedProjectTerminal {
             selectedTerminalId = nextTerminal?.id
         }
-        if let selectedTerminalId {
-            selectedTerminalByProject[terminal.projectId] = selectedTerminalId
-            if let nextTerminal = remainingTerminals.first(where: { $0.id == selectedTerminalId }) {
-                selectTerminal(nextTerminal)
+
+        if closesRememberedProjectTerminal {
+            if let nextTerminal {
+                selectedTerminalByProject[terminal.projectId] = nextTerminal.id
+            } else {
+                selectedTerminalByProject.removeValue(forKey: terminal.projectId)
             }
-        } else {
+        } else if let rememberedTerminalId = selectedTerminalByProject[terminal.projectId],
+                  !remainingTerminals.contains(where: { $0.id == rememberedTerminalId }) {
             selectedTerminalByProject.removeValue(forKey: terminal.projectId)
+        }
+
+        if closesSelectedProjectTerminal, let nextTerminal {
+            selectTerminal(nextTerminal)
         }
     }
 

@@ -62,6 +62,16 @@ func verifyVectorCodeMobile() async throws {
     precondition(restoredModel.relayConfiguration == nil)
     precondition(restoredModel.snapshot.projects.isEmpty)
 
+    let failingRelayClient = VectorCodeFailingRelayClient()
+    let failingWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: failingRelayClient)
+    let failingModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: failingWorkspaceClient)
+    try failingModel.pair(from: payloadJSON, phoneId: "phone-fail")
+    failingModel.connectToDesktop()
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    precondition(failingModel.statusText == "Paired. Desktop not ready.")
+    let failingDisconnectCount = await failingRelayClient.currentDisconnectCount()
+    precondition(failingDisconnectCount == 1)
+
     let model = VectorCodeMobileWorkspaceModel(snapshot: .sample)
     precondition(model.snapshot.projects.count == 2)
     precondition(model.selectedProject?.id == "job-board")
@@ -87,16 +97,18 @@ func verifyVectorCodeMobile() async throws {
 
     model.selectTerminal(model.selectedTerminals[0])
     model.sendTerminalInput("  pwd", submit: false)
-    precondition(model.selectedTerminal?.output.last == "$   pwd [pasted]")
+    precondition(model.statusText == "Desktop not connected")
+    precondition(model.selectedTerminal?.output.last == "david@Mac NEURON % swift test")
     model.createTerminal()
-    precondition(model.selectedTerminals.count == 2)
+    precondition(model.statusText == "Desktop not connected")
+    precondition(model.selectedTerminals.count == 1)
     precondition(model.selectedTerminal?.isActive == true)
     model.renameTerminal(model.selectedTerminal!, title: "mobile")
-    precondition(model.selectedTerminal?.title == "mobile")
+    precondition(model.selectedTerminal?.title == "zsh")
     model.clearTerminal(model.selectedTerminal!)
-    precondition(model.selectedTerminal?.output.isEmpty == true)
+    precondition(model.selectedTerminal?.output.isEmpty == false)
     model.interruptTerminal(model.selectedTerminal!)
-    precondition(model.selectedTerminal?.output.last == "^C")
+    precondition(model.selectedTerminal?.output.last == "david@Mac NEURON % swift test")
     let rememberedNeuronTerminalId = model.selectedTerminal?.id
     let jobBoard = model.snapshot.projects.first { $0.id == "job-board" }!
     model.switchProject(jobBoard)
@@ -359,4 +371,32 @@ private actor VectorCodeStaleRelayClient: VectorCodeRelayClientProtocol {
             payload: payload
         )
     }
+}
+
+private actor VectorCodeFailingRelayClient: VectorCodeRelayClientProtocol {
+    private(set) var disconnectCount = 0
+
+    func connect(configuration: VectorCodeRelayConfiguration) async throws {
+        throw VectorCodeVerifierRelayError.connectFailed
+    }
+
+    func disconnect() async {
+        disconnectCount += 1
+    }
+
+    func currentDisconnectCount() -> Int {
+        disconnectCount
+    }
+
+    func send<Payload>(_ envelope: VectorCodeRemoteEnvelope<Payload>) async throws where Payload: Decodable, Payload: Encodable, Payload: Sendable {
+        throw VectorCodeVerifierRelayError.connectFailed
+    }
+
+    func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
+        throw VectorCodeVerifierRelayError.connectFailed
+    }
+}
+
+private enum VectorCodeVerifierRelayError: Error {
+    case connectFailed
 }

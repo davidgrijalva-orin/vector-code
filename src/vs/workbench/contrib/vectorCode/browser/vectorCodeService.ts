@@ -142,11 +142,22 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		return this.createMobileWorkspaceSnapshot(projects, filesByProject, fileTreeTruncatedByProject);
 	}
 
-	private async getMobileWorkspaceSnapshotWithFiles(): Promise<IVectorCodeMobileRemoteWorkspaceSnapshot> {
+	private async getMobileWorkspaceSnapshotWithFiles(requestedProjectId?: string): Promise<IVectorCodeMobileRemoteWorkspaceSnapshot> {
 		const projects = this.getProjectSummaries();
 		const filesByProject: Record<string, IVectorCodeMobileRemoteFileNode[]> = {};
 		const fileTreeTruncatedByProject: Record<string, boolean> = {};
-		await Promise.all(projects.map(async project => {
+		const activeProjectKey = this.activeProjectUri?.toString();
+		const projectKeyToRead = requestedProjectId && projects.some(project => project.uri.toString() === requestedProjectId)
+			? requestedProjectId
+			: activeProjectKey;
+		const projectsToRead = projectKeyToRead
+			? projects.filter(project => project.uri.toString() === projectKeyToRead)
+			: projects.slice(0, 1);
+		for (const project of projects) {
+			filesByProject[project.uri.toString()] = [];
+			fileTreeTruncatedByProject[project.uri.toString()] = false;
+		}
+		await Promise.all(projectsToRead.map(async project => {
 			const tree = await this.getMobileFileTree(project.uri);
 			const projectKey = project.uri.toString();
 			filesByProject[projectKey] = [...tree.nodes];
@@ -258,7 +269,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	private async handleVectorCodeMobileRemoteRequest(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
 		switch (request.action) {
 			case VectorCodeMobileRemoteAction.StateRead:
-				return this.createMobileRemoteResponse(request, await this.getMobileWorkspaceSnapshotWithFiles());
+				return this.createMobileRemoteResponse(request, await this.getMobileWorkspaceSnapshotWithFiles(request.projectId));
 			case VectorCodeMobileRemoteAction.FileTreeRead:
 				return this.handleMobileFileTreeRead(request);
 			case VectorCodeMobileRemoteAction.FileRead:
@@ -953,7 +964,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	}
 
 	private async readMobileFileTreeChildren(rootUri: URI, folderUri: URI, parentPath: string, depth: number): Promise<{ readonly nodes: IVectorCodeMobileRemoteFileNode[]; readonly truncated: boolean }> {
-		if (depth >= VECTOR_CODE_MOBILE_FILE_TREE_MAX_DEPTH) {
+		if (depth > VECTOR_CODE_MOBILE_FILE_TREE_MAX_DEPTH) {
 			return { nodes: [], truncated: true };
 		}
 
@@ -990,13 +1001,12 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 				const childPath = parentPath ? `${parentPath}/${name}` : name;
 				if (type & FileType.Directory) {
-					const childTree = await this.readMobileFileTreeChildren(rootUri, childUri, childPath, depth + 1);
 					return {
 						name,
 						path: childPath,
 						kind: 'folder' as const,
-						children: childTree.nodes,
-						childrenTruncated: childTree.truncated
+						children: [],
+						childrenTruncated: depth < VECTOR_CODE_MOBILE_FILE_TREE_MAX_DEPTH
 					};
 				}
 

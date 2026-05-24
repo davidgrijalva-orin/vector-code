@@ -199,17 +199,18 @@ private struct VectorCodeFileRow: View {
     }
 
     private func toggleFolder() {
-        if expanded, node.childrenTruncated {
-            model.loadFolderChildren(node)
+        if expanded {
+            if node.childrenTruncated, node.children.isEmpty {
+                model.loadFolderChildren(node)
+                return
+            }
+            collapsedFolderPaths.insert(node.path)
             return
         }
-        if collapsedFolderPaths.contains(node.path) {
-            collapsedFolderPaths.remove(node.path)
-            if node.childrenTruncated {
-                model.loadFolderChildren(node)
-            }
-        } else {
-            collapsedFolderPaths.insert(node.path)
+
+        collapsedFolderPaths.remove(node.path)
+        if node.childrenTruncated {
+            model.loadFolderChildren(node)
         }
     }
 

@@ -147,6 +147,9 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     public func clearPairing() {
         remoteSyncTask?.cancel()
         remoteSyncTask = nil
+        Task { [remoteWorkspaceClient] in
+            await remoteWorkspaceClient.disconnect()
+        }
         pairingStore.clear()
         pairingPayload = nil
         relayConfiguration = nil
@@ -175,6 +178,11 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
         editorDraft = snapshot.editorsByProject[project.id]?.first { $0.id == selectedEditorId }?.content ?? ""
         viewport = .files
+        if isRemoteConnected, snapshot.filesByProject[project.id]?.isEmpty != false {
+            Task { [weak self] in
+                await self?.loadRemoteFolderChildren(projectId: project.id, path: "")
+            }
+        }
     }
 
     public func openFile(_ node: VectorCodeFileNode) {
@@ -287,23 +295,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        let terminalCount = snapshot.terminalsByProject[project.id]?.count ?? 0
-        let terminal = VectorCodeTerminalTab(
-            id: "\(project.id):terminal-\(terminalCount + 1)",
-            projectId: project.id,
-            title: "zsh \(terminalCount + 1)",
-            cwd: project.path,
-            isActive: true
-        )
-        if let indices = snapshot.terminalsByProject[project.id]?.indices {
-            for index in indices {
-                snapshot.terminalsByProject[project.id]?[index].isActive = false
-            }
-        }
-        snapshot.terminalsByProject[project.id, default: []].append(terminal)
-        selectedTerminalId = terminal.id
-        selectedTerminalByProject[project.id] = terminal.id
-        viewport = .terminal
+        statusText = "Desktop not connected"
     }
 
     public func sendTerminalInput(_ input: String, submit: Bool) {
@@ -312,7 +304,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
 
         guard isRemoteConnected else {
-            appendLocalTerminalEcho(input, submit: submit)
+            statusText = "Desktop not connected"
             return
         }
 
@@ -415,12 +407,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        updateTerminal(terminal, title: trimmedTitle)
-        statusText = isRemoteConnected ? "Renaming terminal" : "Renamed locally"
         guard isRemoteConnected else {
+            statusText = "Desktop not connected"
             return
         }
 
+        updateTerminal(terminal, title: trimmedTitle)
+        statusText = "Renaming terminal"
         Task { [weak self] in
             await self?.controlRemoteTerminal(terminal, command: .rename, title: trimmedTitle)
         }
@@ -435,11 +428,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func closeTerminal(_ terminal: VectorCodeTerminalTab) {
-        removeLocalTerminal(terminal)
-        statusText = isRemoteConnected ? "Closing terminal" : "Closed locally"
         guard isRemoteConnected else {
+            statusText = "Desktop not connected"
             return
         }
+
+        removeLocalTerminal(terminal)
+        statusText = "Closing terminal"
 
         Task { [weak self] in
             await self?.controlRemoteTerminal(terminal, command: .close)
@@ -447,38 +442,29 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func clearTerminal(_ terminal: VectorCodeTerminalTab) {
-        replaceTerminalOutput(projectId: terminal.projectId, terminalId: terminal.id, output: [])
-        statusText = isRemoteConnected ? "Clearing terminal" : "Cleared locally"
         guard isRemoteConnected else {
+            statusText = "Desktop not connected"
             return
         }
 
+        replaceTerminalOutput(projectId: terminal.projectId, terminalId: terminal.id, output: [])
+        statusText = "Clearing terminal"
         Task { [weak self] in
             await self?.controlRemoteTerminal(terminal, command: .clear)
         }
     }
 
     public func interruptTerminal(_ terminal: VectorCodeTerminalTab) {
-        appendTerminalLine(projectId: terminal.projectId, terminalId: terminal.id, line: "^C")
-        statusText = isRemoteConnected ? "Interrupting terminal" : "Interrupted locally"
         guard isRemoteConnected else {
+            statusText = "Desktop not connected"
             return
         }
 
+        appendTerminalLine(projectId: terminal.projectId, terminalId: terminal.id, line: "^C")
+        statusText = "Interrupting terminal"
         Task { [weak self] in
             await self?.controlRemoteTerminal(terminal, command: .interrupt)
         }
-    }
-
-    public func appendLocalTerminalEcho(_ input: String, submit: Bool) {
-        guard let projectId = selectedProject?.id, let terminalId = selectedTerminal?.id else {
-            return
-        }
-        guard let index = snapshot.terminalsByProject[projectId]?.firstIndex(where: { $0.id == terminalId }) else {
-            return
-        }
-        let suffix = submit ? "" : " [pasted]"
-        snapshot.terminalsByProject[projectId]?[index].output.append("$ \(input)\(suffix)")
     }
 
     public func sendTerminalData(_ data: String) {
@@ -487,7 +473,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
 
         guard isRemoteConnected else {
-            appendLocalTerminalEcho(data, submit: false)
+            statusText = "Desktop not connected"
             return
         }
 
@@ -580,6 +566,12 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     private func replaceFolderChildren(projectId: String, path: String, children: [VectorCodeFileNode], truncated: Bool) {
+        if path.isEmpty {
+            snapshot.filesByProject[projectId] = children
+            snapshot.fileTreeTruncatedByProject[projectId] = truncated
+            return
+        }
+
         guard var roots = snapshot.filesByProject[projectId] else {
             return
         }
@@ -642,9 +634,11 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             isRemoteConnected = true
             statusText = "Connected"
         } catch is CancellationError {
+            await remoteWorkspaceClient.disconnect()
             isRemoteConnected = false
             statusText = "Ready to connect"
         } catch {
+            await remoteWorkspaceClient.disconnect()
             isRemoteConnected = false
             statusText = "Paired. Desktop not ready."
         }
@@ -842,9 +836,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     private func refreshRemoteWorkspace() async {
+        let projectId = selectedProjectId
         do {
             let nextSnapshot = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readState()
+                try await remoteWorkspaceClient.readState(projectId: projectId)
             }
             applySnapshot(nextSnapshot)
             statusText = "Connected"

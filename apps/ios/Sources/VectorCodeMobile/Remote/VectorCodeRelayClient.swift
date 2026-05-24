@@ -20,6 +20,11 @@ public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
     }
 
     public func connect(configuration: VectorCodeRelayConfiguration) async throws {
+        task?.cancel(with: .normalClosure, reason: nil)
+        task = nil
+        self.configuration = nil
+        sequence = 0
+
         var request = URLRequest(url: configuration.webSocketURL)
         if let authorizationHeader = configuration.authorizationHeader {
             request.setValue(authorizationHeader, forHTTPHeaderField: "Authorization")

@@ -1,6 +1,26 @@
 import Foundation
 
 public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
+    private enum CodingKeys: String, CodingKey {
+        case protocolVersion
+        case desktopId
+        case pairingId
+        case desktopPublicKey
+        case desktopPublicKeyFingerprint
+        case pairingToken
+        case relayHost
+        case userId
+        case relayToken
+        case relayTokenExpiresAt
+        case expiresAt
+    }
+
+    private static let canonicalRelayHost = "relay.vectorcode.app"
+    private static let legacyRelayHosts: Set<String> = [
+        "relay-production-e21f.up.railway.app",
+        "sskpzvaw.up.railway.app",
+    ]
+
     public let protocolVersion: Int
     public let desktopId: String
     public let pairingId: String
@@ -32,11 +52,28 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
         self.desktopPublicKey = desktopPublicKey
         self.desktopPublicKeyFingerprint = desktopPublicKeyFingerprint
         self.pairingToken = pairingToken
-        self.relayHost = relayHost
+        self.relayHost = Self.normalizeRelayHost(relayHost)
         self.userId = userId
         self.relayToken = relayToken
         self.relayTokenExpiresAt = relayTokenExpiresAt
         self.expiresAt = expiresAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            protocolVersion: try container.decode(Int.self, forKey: .protocolVersion),
+            desktopId: try container.decode(String.self, forKey: .desktopId),
+            pairingId: try container.decode(String.self, forKey: .pairingId),
+            desktopPublicKey: try container.decode(String.self, forKey: .desktopPublicKey),
+            desktopPublicKeyFingerprint: try container.decode(String.self, forKey: .desktopPublicKeyFingerprint),
+            pairingToken: try container.decode(String.self, forKey: .pairingToken),
+            relayHost: try container.decode(String.self, forKey: .relayHost),
+            userId: try container.decodeIfPresent(String.self, forKey: .userId),
+            relayToken: try container.decodeIfPresent(String.self, forKey: .relayToken),
+            relayTokenExpiresAt: try container.decodeIfPresent(String.self, forKey: .relayTokenExpiresAt),
+            expiresAt: try container.decode(String.self, forKey: .expiresAt)
+        )
     }
 
     public static func decode(from json: String) throws -> VectorCodePairingPayload {
@@ -97,6 +134,26 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
             throw VectorCodePairingError.missingField("relayHost")
         }
         _ = try VectorCodeISO8601.date(from: expiresAt, field: "expiresAt")
+    }
+
+    private static func normalizeRelayHost(_ value: String) -> String {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedValue.isEmpty else {
+            return trimmedValue
+        }
+
+        let hostInput: String
+        if let components = URLComponents(string: trimmedValue), let host = components.host {
+            hostInput = components.port.map { "\(host):\($0)" } ?? host
+        } else {
+            hostInput = trimmedValue
+        }
+
+        let lowercasedHost = hostInput.lowercased()
+        if legacyRelayHosts.contains(lowercasedHost) {
+            return canonicalRelayHost
+        }
+        return lowercasedHost
     }
 }
 

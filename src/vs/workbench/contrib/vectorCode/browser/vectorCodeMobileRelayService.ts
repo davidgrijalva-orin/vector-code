@@ -20,6 +20,10 @@ const VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY = 'vectorCode.mobile.relayHost';
 const VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY = 'vectorCode.mobile.relayIssuerToken';
 const VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.activeRelaySession';
 const VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST = 'relay.vectorcode.app';
+const VECTOR_CODE_MOBILE_LEGACY_RELAY_HOSTS = new Set([
+	'relay-production-e21f.up.railway.app',
+	'sskpzvaw.up.railway.app'
+]);
 const VECTOR_CODE_MOBILE_PAIRING_TTL_MS = 5 * 60_000;
 const VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS = 60_000;
@@ -505,6 +509,25 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		try {
 			const candidate = JSON.parse(rawSession) as unknown;
 			if (isStoredRelaySession(candidate)) {
+				const relayHost = normalizeRelayHost(candidate.payload.relayHost);
+				if (!relayHost) {
+					await this.clearActiveRelaySession();
+					return undefined;
+				}
+				if (relayHost !== candidate.payload.relayHost) {
+					const migratedSession = {
+						...candidate,
+						payload: {
+							...candidate.payload,
+							relayHost
+						}
+					};
+					await this.storeActiveRelaySession(migratedSession.payload, {
+						relayToken: migratedSession.desktopRelayToken,
+						relayTokenExpiresAt: migratedSession.desktopRelayTokenExpiresAt
+					});
+					return migratedSession;
+				}
 				return candidate;
 			}
 		} catch {
@@ -548,7 +571,11 @@ function normalizeRelayHost(value?: string | null): string | undefined {
 
 	try {
 		const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(rawValue) ? rawValue : `wss://${rawValue}`);
-		const relayHost = url.port ? `${url.hostname}:${url.port}` : url.hostname;
+		const hostname = url.hostname.toLowerCase();
+		const relayHost = url.port ? `${hostname}:${url.port}` : hostname;
+		if (VECTOR_CODE_MOBILE_LEGACY_RELAY_HOSTS.has(hostname)) {
+			return VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
+		}
 		return /^[A-Za-z0-9.-]+(?::\d{2,5})?$/.test(relayHost) ? relayHost : undefined;
 	} catch {
 		return undefined;

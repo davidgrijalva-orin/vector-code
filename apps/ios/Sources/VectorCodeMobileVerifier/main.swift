@@ -28,9 +28,26 @@ func verifyVectorCodeMobile() async throws {
 
     let relayConfiguration = try VectorCodeRelayConfiguration(pairingPayload: payload, phoneId: "phone-1")
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("/relay"))
+    precondition(relayConfiguration.webSocketURL.host == "relay.vectorcode.app")
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("role=phone"))
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("deviceId=phone-1"))
     precondition(relayConfiguration.authorizationHeader == "Bearer relay-token")
+
+    let legacyRelayPayload = VectorCodePairingPayload(
+        desktopId: "desktop-1",
+        pairingId: "pairing-legacy",
+        desktopPublicKey: "public-key",
+        desktopPublicKeyFingerprint: "fingerprint",
+        pairingToken: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        relayHost: "relay-production-e21f.up.railway.app",
+        userId: "default",
+        relayToken: "relay-token",
+        relayTokenExpiresAt: relayTokenExpiresAt,
+        expiresAt: expiresAt
+    )
+    precondition(legacyRelayPayload.relayHost == "relay.vectorcode.app")
+    let legacyRelayConfiguration = try VectorCodeRelayConfiguration(pairingPayload: legacyRelayPayload, phoneId: "phone-1")
+    precondition(legacyRelayConfiguration.webSocketURL.host == "relay.vectorcode.app")
 
     let emptyModel = VectorCodeMobileWorkspaceModel()
     precondition(emptyModel.snapshot.projects.isEmpty)

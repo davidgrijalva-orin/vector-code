@@ -150,8 +150,8 @@ public struct VectorCodeTerminalView: View {
     }
 
     private func submitInput() {
-        let command = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !command.isEmpty else {
+        let command = input
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
         model.sendTerminalInput(command, submit: true)
@@ -190,7 +190,7 @@ public struct VectorCodeTerminalView: View {
             terminal: terminal,
             fallbackText: terminal.output.joined(separator: "\r\n"),
             onInput: { data in
-                model.sendTerminalData(data)
+                model.sendTerminalData(data, terminal: terminal)
             },
             onResize: { cols, rows in
                 model.resizeTerminal(terminal, cols: cols, rows: rows)

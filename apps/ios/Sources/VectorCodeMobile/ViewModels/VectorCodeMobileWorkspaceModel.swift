@@ -406,6 +406,9 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         guard !trimmedTitle.isEmpty else {
             return
         }
+        guard hasTerminal(terminal) else {
+            return
+        }
 
         guard isRemoteConnected else {
             statusText = "Desktop not connected"
@@ -428,6 +431,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func closeTerminal(_ terminal: VectorCodeTerminalTab) {
+        guard hasTerminal(terminal) else {
+            return
+        }
+
         guard isRemoteConnected else {
             statusText = "Desktop not connected"
             return
@@ -442,6 +449,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func clearTerminal(_ terminal: VectorCodeTerminalTab) {
+        guard hasTerminal(terminal) else {
+            return
+        }
+
         guard isRemoteConnected else {
             statusText = "Desktop not connected"
             return
@@ -455,6 +466,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func interruptTerminal(_ terminal: VectorCodeTerminalTab) {
+        guard hasTerminal(terminal) else {
+            return
+        }
+
         guard isRemoteConnected else {
             statusText = "Desktop not connected"
             return
@@ -467,8 +482,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    public func sendTerminalData(_ data: String) {
-        guard !data.isEmpty, let projectId = selectedProject?.id, let terminalId = selectedTerminal?.id else {
+    public func sendTerminalData(_ data: String, terminal: VectorCodeTerminalTab? = nil) {
+        let projectId = terminal?.projectId ?? selectedProject?.id
+        let terminalId = terminal?.id ?? selectedTerminal?.id
+        guard !data.isEmpty, let projectId, let terminalId else {
+            return
+        }
+        guard hasTerminal(projectId: projectId, terminalId: terminalId) else {
             return
         }
 
@@ -490,7 +510,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func resizeTerminal(_ terminal: VectorCodeTerminalTab, cols: Int, rows: Int) {
-        guard isRemoteConnected, cols > 0, rows > 0 else {
+        guard isRemoteConnected, cols > 0, rows > 0, hasTerminal(terminal) else {
             return
         }
 
@@ -509,6 +529,14 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         if let isActive {
             snapshot.terminalsByProject[terminal.projectId]?[index].isActive = isActive
         }
+    }
+
+    private func hasTerminal(_ terminal: VectorCodeTerminalTab) -> Bool {
+        hasTerminal(projectId: terminal.projectId, terminalId: terminal.id)
+    }
+
+    private func hasTerminal(projectId: String, terminalId: String) -> Bool {
+        snapshot.terminalsByProject[projectId]?.contains(where: { $0.id == terminalId }) == true
     }
 
     private func removeLocalTerminal(_ terminal: VectorCodeTerminalTab) {
@@ -563,6 +591,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
         snapshot.terminalsByProject[projectId]?[index].output.append(line)
+        guard let rawOutput = snapshot.terminalsByProject[projectId]?[index].rawOutput else {
+            return
+        }
+        snapshot.terminalsByProject[projectId]?[index].rawOutput = rawOutput.isEmpty ? line : "\(rawOutput)\r\n\(line)"
     }
 
     private func replaceFolderChildren(projectId: String, path: String, children: [VectorCodeFileNode], truncated: Bool) {
@@ -620,6 +652,26 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return newName
         }
         return "\(path[..<path.index(after: slashIndex)])\(newName)"
+    }
+
+    private static func parentFolderPath(for path: String) -> String {
+        let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let slashIndex = normalizedPath.lastIndex(of: "/") else {
+            return ""
+        }
+        return String(normalizedPath[..<slashIndex])
+    }
+
+    private static func ancestorFolderPaths(for path: String) -> [String] {
+        let parentPath = parentFolderPath(for: path)
+        guard !parentPath.isEmpty else {
+            return []
+        }
+
+        let parts = parentPath.split(separator: "/").map(String.init)
+        return parts.indices.map { index in
+            parts[...index].joined(separator: "/")
+        }
     }
 
     private func loadRemoteWorkspace(configuration: VectorCodeRelayConfiguration) async {
@@ -701,10 +753,30 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
         merged.terminalsByProject = current.terminalsByProject.filter { projectIds.contains($0.key) }
         for (projectId, terminals) in next.terminalsByProject where projectIds.contains(projectId) {
-            merged.terminalsByProject[projectId] = terminals
+            merged.terminalsByProject[projectId] = mergeTerminalTabs(current: current.terminalsByProject[projectId] ?? [], next: terminals)
         }
 
         return merged
+    }
+
+    private static func mergeTerminalTabs(current: [VectorCodeTerminalTab], next: [VectorCodeTerminalTab]) -> [VectorCodeTerminalTab] {
+        var currentById: [String: VectorCodeTerminalTab] = [:]
+        for terminal in current {
+            currentById[terminal.id] = terminal
+        }
+
+        return next.map { terminal in
+            guard terminal.rawOutput == nil,
+                  let previous = currentById[terminal.id],
+                  previous.output == terminal.output,
+                  let previousRawOutput = previous.rawOutput else {
+                return terminal
+            }
+
+            var merged = terminal
+            merged.rawOutput = previousRawOutput
+            return merged
+        }
     }
 
     private func restoreDirtyEditor(_ dirtyEditor: VectorCodeEditorTab, draft: String) {
@@ -748,7 +820,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             _ = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
                 try await remoteWorkspaceClient.moveFile(projectId: projectId, path: path, targetPath: targetPath)
             }
-            await refreshRemoteWorkspace()
+            await refreshRemoteFileTreeAfterMutation(projectId: projectId, changedPath: targetPath)
+            if Self.parentFolderPath(for: path) != Self.parentFolderPath(for: targetPath) {
+                await refreshRemoteFileTreeAfterMutation(projectId: projectId, changedPath: path)
+            }
             statusText = "Renamed"
         } catch {
             await handleRemoteFailure(error, statusText: "Rename failed")
@@ -757,13 +832,25 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
     private func copyRemoteFile(sourceProjectId: String, path: String, targetProjectId: String, targetPath: String) async {
         do {
-            _ = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
+            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
                 try await remoteWorkspaceClient.copyFile(projectId: sourceProjectId, path: path, targetProjectId: targetProjectId, targetPath: targetPath)
             }
-            await refreshRemoteWorkspace()
+            await refreshRemoteFileTreeAfterMutation(projectId: response.targetProjectId, changedPath: response.targetPath)
             statusText = "Copied"
         } catch {
             await handleRemoteFailure(error, statusText: "Copy failed")
+        }
+    }
+
+    private func refreshRemoteFileTreeAfterMutation(projectId: String, changedPath: String) async {
+        let ancestorPaths = Self.ancestorFolderPaths(for: changedPath)
+        if ancestorPaths.isEmpty {
+            await refreshRemoteWorkspace(projectId: projectId)
+            return
+        }
+
+        for path in ancestorPaths {
+            await loadRemoteFolderChildren(projectId: projectId, path: path)
         }
     }
 
@@ -823,18 +910,18 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func refreshTerminalOutput(projectId: String, terminalId: String) async {
-        guard isRemoteConnected else {
+        guard isRemoteConnected, hasTerminal(projectId: projectId, terminalId: terminalId) else {
             return
         }
         await refreshRemoteTerminalOutput(projectId: projectId, terminalId: terminalId, updateStatus: true)
     }
 
     public func pollTerminalOutput(projectId: String, terminalId: String) async {
-        guard isRemoteConnected else {
+        guard isRemoteConnected, hasTerminal(projectId: projectId, terminalId: terminalId) else {
             return
         }
         while !Task.isCancelled {
-            guard selectedProjectId == projectId, selectedTerminalId == terminalId else {
+            guard selectedProjectId == projectId, selectedTerminalId == terminalId, hasTerminal(projectId: projectId, terminalId: terminalId) else {
                 return
             }
             await refreshRemoteTerminalOutput(projectId: projectId, terminalId: terminalId, updateStatus: false)
@@ -866,8 +953,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    private func refreshRemoteWorkspace() async {
-        let projectId = selectedProjectId
+    private func refreshRemoteWorkspace(projectId requestedProjectId: String? = nil) async {
+        let projectId = requestedProjectId ?? selectedProjectId
         do {
             let nextSnapshot = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
                 try await remoteWorkspaceClient.readState(projectId: projectId)

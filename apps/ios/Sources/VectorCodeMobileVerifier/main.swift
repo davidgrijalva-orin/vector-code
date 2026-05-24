@@ -67,7 +67,9 @@ func verifyVectorCodeMobile() async throws {
     let failingModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: failingWorkspaceClient)
     try failingModel.pair(from: payloadJSON, phoneId: "phone-fail")
     failingModel.connectToDesktop()
-    try? await Task.sleep(nanoseconds: 100_000_000)
+    try await waitUntil("failing model reports desktop not ready") {
+        failingModel.statusText == "Paired. Desktop not ready."
+    }
     precondition(failingModel.statusText == "Paired. Desktop not ready.")
     let failingDisconnectCount = await failingRelayClient.currentDisconnectCount()
     precondition(failingDisconnectCount == 1)
@@ -237,6 +239,148 @@ func verifyVectorCodeMobile() async throws {
     precondition(sentEnvelopes.contains { $0.payloadJSON.contains("\"rename\"") && $0.payloadJSON.contains("\"server\"") })
     precondition(sentEnvelopes.last?.payloadJSON.contains("\"close\"") == true)
 
+    let copyRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample)
+    let copyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: copyRelayClient)
+    let copyModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: copyWorkspaceClient)
+    try copyModel.pair(from: payloadJSON, phoneId: "phone-copy")
+    copyModel.connectToDesktop()
+    try await waitUntil("copy model connected") {
+        copyModel.isRemoteConnected
+    }
+    precondition(copyModel.isRemoteConnected)
+    let copySource = copyModel.snapshot.filesByProject["job-board"]?.first { $0.path == "README.md" }
+    let copyDestinationProject = copyModel.snapshot.projects.first { $0.id == "neuron" }
+    precondition(copySource != nil)
+    precondition(copyDestinationProject != nil)
+    copyModel.copyFile(copySource!, to: copyDestinationProject!, destinationPath: "COPIED.md")
+    try await waitUntil("top-level copy refreshed destination project") {
+        let envelopes = await copyRelayClient.sentEnvelopes
+        return envelopes.last?.action == .stateRead && envelopes.last?.projectId == "neuron"
+    }
+    let copyEnvelopes = await copyRelayClient.sentEnvelopes
+    precondition(copyEnvelopes.contains { $0.action == .fileCopy && $0.projectId == "job-board" && $0.payloadString("targetProjectId") == "neuron" })
+    precondition(copyEnvelopes.last?.action == .stateRead)
+    precondition(copyEnvelopes.last?.projectId == "neuron")
+    copyModel.copyFile(copySource!, to: copyDestinationProject!, destinationPath: "products/COPIED.md")
+    try await waitUntil("nested copy refreshed destination folder") {
+        let envelopes = await copyRelayClient.sentEnvelopes
+        return envelopes.last?.action == .fileTreeRead
+            && envelopes.last?.projectId == "neuron"
+            && envelopes.last?.payloadString("path") == "products"
+    }
+    let nestedCopyEnvelopes = await copyRelayClient.sentEnvelopes
+    precondition(nestedCopyEnvelopes.contains { $0.action == .fileCopy && $0.payloadString("targetPath") == "products/COPIED.md" })
+    precondition(nestedCopyEnvelopes.last?.action == .fileTreeRead)
+    precondition(nestedCopyEnvelopes.last?.projectId == "neuron")
+    precondition(nestedCopyEnvelopes.last?.payloadString("path") == "products")
+
+    var unloadedNestedCopySnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
+    unloadedNestedCopySnapshot.filesByProject["neuron"] = [
+        VectorCodeFileNode(name: "products", path: "products", kind: .folder, childrenTruncated: true),
+        VectorCodeFileNode(name: "README.md", path: "README.md", kind: .file),
+    ]
+    let deepCopyRelayClient = VectorCodeRelayLoopbackClient(snapshot: unloadedNestedCopySnapshot)
+    let deepCopyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: deepCopyRelayClient)
+    let deepCopyModel = VectorCodeMobileWorkspaceModel(snapshot: unloadedNestedCopySnapshot, remoteWorkspaceClient: deepCopyWorkspaceClient)
+    try deepCopyModel.pair(from: payloadJSON, phoneId: "phone-deep-copy")
+    deepCopyModel.connectToDesktop()
+    try await waitUntil("deep copy model connected") {
+        deepCopyModel.isRemoteConnected
+    }
+    deepCopyModel.copyFile(copySource!, to: copyDestinationProject!, destinationPath: "products/audio-lab/COPIED.md")
+    try await waitUntil("deep nested copy refreshed destination folder chain") {
+        let envelopes = await deepCopyRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .fileTreeRead
+                && $0.projectId == "neuron"
+                && $0.payloadString("path") == "products"
+        } && envelopes.contains {
+            $0.action == .fileTreeRead
+                && $0.projectId == "neuron"
+                && $0.payloadString("path") == "products/audio-lab"
+        }
+    }
+    let deepCopyEnvelopes = await deepCopyRelayClient.sentEnvelopes
+    precondition(deepCopyEnvelopes.contains { $0.action == .fileCopy && $0.payloadString("targetPath") == "products/audio-lab/COPIED.md" })
+    precondition(containsFile(deepCopyModel.snapshot.filesByProject["neuron"] ?? [], path: "products/audio-lab/COPIED.md"))
+
+    let rawRouteRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample)
+    let rawRouteWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: rawRouteRelayClient)
+    let rawRouteModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: rawRouteWorkspaceClient)
+    try rawRouteModel.pair(from: payloadJSON, phoneId: "phone-raw-route")
+    rawRouteModel.connectToDesktop()
+    try await waitUntil("raw route model connected") {
+        rawRouteModel.isRemoteConnected
+    }
+    let inactiveTerminal = rawRouteModel.snapshot.terminalsByProject["job-board"]?.first { $0.id == "job-board:terminal-2" }
+    precondition(inactiveTerminal != nil)
+    rawRouteModel.sendTerminalData("\u{001B}[A", terminal: inactiveTerminal!)
+    try await waitUntil("native terminal input routed to explicit terminal") {
+        let envelopes = await rawRouteRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .terminalInput
+                && $0.projectId == "job-board"
+                && $0.payloadString("terminalId") == "job-board:terminal-2"
+                && $0.payloadString("input") == "\u{001B}[A"
+                && $0.payloadString("mode") == "raw"
+        }
+    }
+    rawRouteModel.sendTerminalInput("  pwd ", submit: true)
+    try await waitUntil("submitted terminal command preserves whitespace") {
+        let envelopes = await rawRouteRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .terminalInput
+                && $0.payloadString("input") == "  pwd "
+                && $0.payloadBool("submit") == true
+                && $0.payloadString("mode") == "command"
+        }
+    }
+    let staleTerminal = VectorCodeTerminalTab(
+        id: "job-board:closed-terminal",
+        projectId: "job-board",
+        title: "closed",
+        cwd: "~/OrinTech/job_board"
+    )
+    let rawRouteEnvelopeCount = await rawRouteRelayClient.sentEnvelopes.count
+    rawRouteModel.sendTerminalData("\u{001B}[B", terminal: staleTerminal)
+    rawRouteModel.resizeTerminal(staleTerminal, cols: 120, rows: 32)
+    rawRouteModel.renameTerminal(staleTerminal, title: "stale")
+    rawRouteModel.clearTerminal(staleTerminal)
+    rawRouteModel.interruptTerminal(staleTerminal)
+    rawRouteModel.closeTerminal(staleTerminal)
+    await rawRouteModel.refreshTerminalOutput(projectId: staleTerminal.projectId, terminalId: staleTerminal.id)
+    try await Task.sleep(nanoseconds: 100_000_000)
+    let rawRouteEnvelopeCountAfterStaleActions = await rawRouteRelayClient.sentEnvelopes.count
+    precondition(rawRouteEnvelopeCountAfterStaleActions == rawRouteEnvelopeCount)
+
+    var rawInterruptSnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
+    if var terminals = rawInterruptSnapshot.terminalsByProject["job-board"] {
+        terminals[0].rawOutput = "\u{001B}[32mdavid@Mac job_board %\u{001B}[0m"
+        rawInterruptSnapshot.terminalsByProject["job-board"] = terminals
+    }
+    let rawInterruptRelayClient = VectorCodeRelayLoopbackClient(snapshot: rawInterruptSnapshot)
+    let rawInterruptWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: rawInterruptRelayClient)
+    let rawInterruptModel = VectorCodeMobileWorkspaceModel(snapshot: rawInterruptSnapshot, remoteWorkspaceClient: rawInterruptWorkspaceClient)
+    try rawInterruptModel.pair(from: payloadJSON, phoneId: "phone-raw-interrupt")
+    rawInterruptModel.connectToDesktop()
+    try await waitUntil("raw interrupt model connected") {
+        rawInterruptModel.isRemoteConnected
+    }
+    precondition(rawInterruptModel.selectedTerminal?.rawOutput?.contains("\u{001B}[32m") == true)
+    rawInterruptModel.interruptTerminal(rawInterruptModel.selectedTerminal!)
+    precondition(rawInterruptModel.selectedTerminal?.output.last == "^C")
+    precondition(rawInterruptModel.selectedTerminal?.rawOutput?.contains("^C") == true)
+
+    var cachedPartialSnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
+    if var neuronTerminals = cachedPartialSnapshot.terminalsByProject["neuron"] {
+        neuronTerminals[0].rawOutput = "\u{001B}[32mdavid@Mac NEURON % swift test\u{001B}[0m"
+        cachedPartialSnapshot.terminalsByProject["neuron"] = neuronTerminals
+    }
+    var partialTerminalsByProject = cachedPartialSnapshot.terminalsByProject
+    if var neuronTerminals = partialTerminalsByProject["neuron"] {
+        neuronTerminals[0].rawOutput = nil
+        partialTerminalsByProject["neuron"] = neuronTerminals
+    }
     let partialRemoteSnapshot = VectorCodeRemoteWorkspaceSnapshot(
         activeProjectId: "job-board",
         projects: VectorCodeRemoteWorkspaceSnapshot.sample.projects,
@@ -246,27 +390,34 @@ func verifyVectorCodeMobile() async throws {
             ],
         ],
         editorsByProject: remoteSnapshot.editorsByProject,
-        terminalsByProject: remoteSnapshot.terminalsByProject
+        terminalsByProject: partialTerminalsByProject
     )
     let partialRelayClient = VectorCodeRelayLoopbackClient(snapshot: partialRemoteSnapshot)
     let partialWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: partialRelayClient)
-    let partialModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: partialWorkspaceClient)
+    let partialModel = VectorCodeMobileWorkspaceModel(snapshot: cachedPartialSnapshot, remoteWorkspaceClient: partialWorkspaceClient)
     try partialModel.pair(from: payloadJSON, phoneId: "phone-partial")
     partialModel.connectToDesktop()
-    try? await Task.sleep(nanoseconds: 100_000_000)
+    try await waitUntil("partial model connected") {
+        partialModel.isRemoteConnected
+    }
     precondition(partialModel.isRemoteConnected)
     precondition(partialModel.snapshot.filesByProject["job-board"]?.first?.name == "REMOTE.md")
     precondition(partialModel.snapshot.filesByProject["neuron"]?.contains { $0.name == "README.md" } == true)
+    precondition(partialModel.snapshot.terminalsByProject["neuron"]?.first?.rawOutput?.contains("\u{001B}[32m") == true)
 
     let flakyRelayClient = VectorCodeConnectThenFailingStateRelayClient(snapshot: remoteSnapshot)
     let flakyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: flakyRelayClient)
     let flakyModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: flakyWorkspaceClient)
     try flakyModel.pair(from: payloadJSON, phoneId: "phone-flaky")
     flakyModel.connectToDesktop()
-    try? await Task.sleep(nanoseconds: 100_000_000)
+    try await waitUntil("flaky model initially connected") {
+        flakyModel.isRemoteConnected
+    }
     precondition(flakyModel.isRemoteConnected)
     flakyModel.refreshWorkspace()
-    try? await Task.sleep(nanoseconds: 100_000_000)
+    try await waitUntil("flaky model disconnects after failed refresh") {
+        !flakyModel.isRemoteConnected
+    }
     precondition(!flakyModel.isRemoteConnected)
     precondition(flakyModel.statusText == "Refresh failed")
     let flakyDisconnectCount = await flakyRelayClient.currentDisconnectCount()
@@ -288,10 +439,35 @@ do {
     exit(1)
 }
 
+@MainActor
+private func waitUntil(_ description: String, timeoutSeconds: TimeInterval = 2, predicate: () async -> Bool) async throws {
+    let deadline = Date().addingTimeInterval(timeoutSeconds)
+    while Date() < deadline {
+        if await predicate() {
+            return
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+    }
+    throw VectorCodeVerifierError.timeout(description)
+}
+
+private func containsFile(_ nodes: [VectorCodeFileNode], path: String) -> Bool {
+    for node in nodes {
+        if node.kind == .file && node.path == path {
+            return true
+        }
+        if containsFile(node.children, path: path) {
+            return true
+        }
+    }
+    return false
+}
+
 private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
     private let snapshot: VectorCodeRemoteWorkspaceSnapshot
     private(set) var lastSentEnvelope: VectorCodeSentEnvelope?
     private(set) var sentEnvelopes: [VectorCodeSentEnvelope] = []
+    private var lastCopyTargetPath: String?
 
     init(snapshot: VectorCodeRemoteWorkspaceSnapshot) {
         self.snapshot = snapshot
@@ -306,6 +482,9 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
         let sentEnvelope = VectorCodeSentEnvelope(action: envelope.action, projectId: envelope.projectId, requestId: envelope.requestId, payloadJSON: payloadJSON)
         lastSentEnvelope = sentEnvelope
         sentEnvelopes.append(sentEnvelope)
+        if sentEnvelope.action == .fileCopy {
+            lastCopyTargetPath = sentEnvelope.payloadString("targetPath")
+        }
     }
 
     func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
@@ -318,12 +497,38 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
                 action: .fileRead
             )
         case .fileTreeRead:
+            if lastSentEnvelope?.payloadString("path") == "products/audio-lab" {
+                return try response(
+                    VectorCodeFileTreeResponse(nodes: [VectorCodeFileNode(name: "COPIED.md", path: "products/audio-lab/COPIED.md", kind: .file)]),
+                    action: .fileTreeRead
+                )
+            }
+            if lastSentEnvelope?.payloadString("path") == "products" {
+                if lastCopyTargetPath == "products/audio-lab/COPIED.md" {
+                    return try response(
+                        VectorCodeFileTreeResponse(nodes: [
+                            VectorCodeFileNode(name: "audio-lab", path: "products/audio-lab", kind: .folder, childrenTruncated: true),
+                        ]),
+                        action: .fileTreeRead
+                    )
+                }
+                return try response(
+                    VectorCodeFileTreeResponse(nodes: [VectorCodeFileNode(name: "COPIED.md", path: "products/COPIED.md", kind: .file)]),
+                    action: .fileTreeRead
+                )
+            }
             return try response(
                 VectorCodeFileTreeResponse(nodes: [VectorCodeFileNode(name: "main.swift", path: "src/main.swift", kind: .file)]),
                 action: .fileTreeRead
             )
         case .fileWrite:
             return try response(VectorCodeFileWriteResponse(path: "README.md", version: "v2"), action: .fileWrite)
+        case .fileCopy:
+            let targetPath = lastCopyTargetPath ?? "COPIED.md"
+            return try response(
+                VectorCodeFileCopyResponse(path: "README.md", targetPath: targetPath, targetProjectId: "neuron"),
+                action: .fileCopy
+            )
         case .terminalCreate:
             return try response(
                 VectorCodeTerminalTab(id: "terminal-2", projectId: "job-board", title: "zsh 2", cwd: "~/OrinTech/job_board", isActive: true),
@@ -346,12 +551,12 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
     ) throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
         let data = try JSONEncoder().encode(payload)
         let decodedPayload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: data)
-            return VectorCodeRemoteEnvelope(
-                kind: .response,
-                requestId: lastSentEnvelope?.requestId ?? "loopback-response",
-                action: action,
-                payload: decodedPayload
-            )
+        return VectorCodeRemoteEnvelope(
+            kind: .response,
+            requestId: lastSentEnvelope?.requestId ?? "loopback-response",
+            action: action,
+            payload: decodedPayload
+        )
     }
 }
 
@@ -360,6 +565,29 @@ private struct VectorCodeSentEnvelope: Sendable {
     let projectId: String?
     let requestId: String
     let payloadJSON: String
+
+    func payloadString(_ key: String) -> String? {
+        guard case .string(let value)? = payloadValue(key) else {
+            return nil
+        }
+        return value
+    }
+
+    func payloadBool(_ key: String) -> Bool? {
+        guard case .bool(let value)? = payloadValue(key) else {
+            return nil
+        }
+        return value
+    }
+
+    private func payloadValue(_ key: String) -> VectorCodeJSONValue? {
+        guard let data = payloadJSON.data(using: .utf8),
+              let envelope = try? JSONDecoder().decode(VectorCodeRemoteEnvelope<VectorCodeJSONValue>.self, from: data),
+              case .object(let payload)? = envelope.payload else {
+            return nil
+        }
+        return payload[key]
+    }
 }
 
 private actor VectorCodeStaleRelayClient: VectorCodeRelayClientProtocol {
@@ -474,4 +702,15 @@ private actor VectorCodeFailingRelayClient: VectorCodeRelayClientProtocol {
 
 private enum VectorCodeVerifierRelayError: Error {
     case connectFailed
+}
+
+private enum VectorCodeVerifierError: Error, LocalizedError {
+    case timeout(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .timeout(let description):
+            "Timed out waiting for \(description)."
+        }
+    }
 }

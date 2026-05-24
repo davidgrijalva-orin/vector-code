@@ -26,7 +26,7 @@ import { REVEAL_IN_EXPLORER_COMMAND_ID } from '../../files/browser/fileConstants
 import { VIEW_ID as EXPLORER_FILE_VIEW_ID, VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import { ITerminalGroupService, ITerminalInstance, ITerminalService } from '../../terminal/browser/terminal.js';
 import { TERMINAL_VIEW_ID } from '../../terminal/common/terminal.js';
-import { IVectorCodeMobileRelayService, IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID } from '../common/vectorCode.js';
+import { IVectorCodeMobileRelayService, IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
 import { IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRemoteEditorTab, IVectorCodeMobileRemoteFileCopyResponse, IVectorCodeMobileRemoteFileMoveResponse, IVectorCodeMobileRemoteFileNode, IVectorCodeMobileRemoteFileReadResponse, IVectorCodeMobileRemoteFileTreeResponse, IVectorCodeMobileRemoteFileWriteResponse, IVectorCodeMobileRemoteTerminalControlResponse, IVectorCodeMobileRemoteTerminalInputResponse, IVectorCodeMobileRemoteTerminalOutputResponse, IVectorCodeMobileRemoteTerminalTab, IVectorCodeMobileRemoteWorkspaceSnapshot, VectorCodeMobileRemoteAction, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
 
 const SET_ACTIVE_PROJECT_ROOT_COMMAND_ID = 'workbench.files.action.setActiveProjectRoot';
@@ -229,6 +229,11 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 	async connectMobileApp(): Promise<void> {
 		await this.viewsService.openViewContainer(VECTOR_CODE_VIEW_CONTAINER_ID, true);
+		const currentStatus = this.mobileRelayService.getStatus();
+		if (currentStatus.state === VectorCodeMobileConnectionState.Connected || currentStatus.state === VectorCodeMobileConnectionState.Pairing) {
+			this.notificationService.info(currentStatus.detail);
+			return;
+		}
 		const status = await this.mobileRelayService.startPairing();
 		this.notificationService.info(status.detail);
 	}

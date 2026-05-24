@@ -207,11 +207,26 @@ class VectorCodeControlView extends ViewPane {
 		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Refresh QR'), Codicon.refresh);
 		const pairingContainer = append(mobile.card, $('.vector-code-control__pairing'));
 		const pairingDisposables = this._register(new DisposableStore());
+		let currentStatus = mobileStatus;
+
+		const canRefreshPairing = (status: IVectorCodeMobileConnectionStatus): boolean => {
+			return status.state === VectorCodeMobileConnectionState.Disconnected
+				|| (status.state === VectorCodeMobileConnectionState.Pairing && Boolean(status.pairing));
+		};
+
+		const updateStartButton = (status: IVectorCodeMobileConnectionStatus, busy = false): void => {
+			startButton.disabled = busy || !canRefreshPairing(status);
+			startButton.title = startButton.disabled && !busy
+				? localize('vectorCodeMobileRefreshQrDisabled', 'Refresh QR is unavailable while the current phone bridge is active.')
+				: '';
+		};
 
 		const renderStatus = (status: IVectorCodeMobileConnectionStatus): void => {
+			currentStatus = status;
 			pairingDisposables.clear();
 			mobile.status.textContent = status.label;
 			detail.textContent = status.detail;
+			updateStartButton(status);
 			clearNode(pairingContainer);
 			pairingContainer.classList.toggle('vector-code-control__pairing--locked', status.state !== VectorCodeMobileConnectionState.Pairing);
 
@@ -247,6 +262,7 @@ class VectorCodeControlView extends ViewPane {
 
 		const renderBusy = () => {
 			pairingDisposables.clear();
+			updateStartButton(currentStatus, true);
 			mobile.status.textContent = localize('vectorCodeMobilePairingCreating', 'Creating QR...');
 			detail.textContent = localize('vectorCodeMobilePairingCreatingDetail', 'Creating a secure phone pairing session.');
 			clearNode(pairingContainer);
@@ -256,7 +272,9 @@ class VectorCodeControlView extends ViewPane {
 		};
 
 		const refreshPairing = async (notifyOnError: boolean): Promise<void> => {
-			startButton.disabled = true;
+			if (!canRefreshPairing(currentStatus)) {
+				return;
+			}
 			renderBusy();
 			try {
 				renderStatus(await this.mobileRelayService.startPairing());
@@ -268,13 +286,14 @@ class VectorCodeControlView extends ViewPane {
 				if (notifyOnError) {
 					this.notificationService.error(message);
 				}
-			} finally {
-				startButton.disabled = false;
+				updateStartButton(currentStatus);
 			}
 		};
 
 		renderStatus(mobileStatus);
-		void refreshPairing(false);
+		if (mobileStatus.state === VectorCodeMobileConnectionState.Disconnected && !mobileStatus.pairing) {
+			void refreshPairing(false);
+		}
 		this._register(addDisposableListener(startButton, EventType.CLICK, () => {
 			void refreshPairing(true);
 		}));

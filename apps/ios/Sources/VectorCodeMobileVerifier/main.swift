@@ -13,7 +13,7 @@ func verifyVectorCodeMobile() async throws {
         desktopPublicKey: "public-key",
         desktopPublicKeyFingerprint: "fingerprint",
         pairingToken: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        relayHost: "relay-production-e21f.up.railway.app",
+        relayHost: "relay.vectorcode.app",
         userId: "default",
         relayToken: "relay-token",
         relayTokenExpiresAt: relayTokenExpiresAt,

@@ -12,7 +12,7 @@ const feed = parseVectorUpdateFeed({
       timestamp: 200,
       assets: {
         'darwin-universal': {
-          url: 'https://releases.vectorcode.com/0.1.1/Vector-Code-darwin-universal.zip',
+          url: 'https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-universal.zip',
           sha256hash: 'abc'
         }
       }
@@ -24,7 +24,7 @@ const feed = parseVectorUpdateFeed({
       timestamp: 100,
       assets: {
         'darwin-arm64': {
-          url: 'https://releases.vectorcode.com/0.1.0/Vector-Code-darwin-arm64.zip'
+          url: 'https://vectorcode.app/releases/0.1.0/Vector-Code-darwin-arm64.zip'
         }
       }
     }
@@ -51,7 +51,7 @@ describe('resolveVectorUpdate', () => {
         version: 'new-commit',
         productVersion: '0.1.1',
         timestamp: 200,
-        url: 'https://releases.vectorcode.com/0.1.1/Vector-Code-darwin-universal.zip',
+        url: 'https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-universal.zip',
         sha256hash: 'abc'
       }
     });

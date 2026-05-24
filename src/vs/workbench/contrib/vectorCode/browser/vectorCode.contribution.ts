@@ -9,7 +9,6 @@ import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.j
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
-import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -152,8 +151,10 @@ class VectorCodeLayoutContribution extends Disposable implements IWorkbenchContr
 
 	constructor(
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
+		@IVectorCodeWorkbenchService private readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 	) {
 		super();
+		this.vectorCodeWorkbenchService.getProjectStatusLabel();
 		this.hideAuxiliaryBar();
 		this._register(this.layoutService.onDidChangePartVisibility(event => {
 			if (event.partId === Parts.AUXILIARYBAR_PART && event.visible) {
@@ -173,7 +174,6 @@ class VectorCodeControlView extends ViewPane {
 
 	constructor(
 		options: IViewletViewOptions,
-		@IClipboardService private readonly clipboardService: IClipboardService,
 		@IVectorCodeMobileRelayService private readonly mobileRelayService: IVectorCodeMobileRelayService,
 		@INotificationService private readonly notificationService: INotificationService,
 		@IKeybindingService keybindingService: IKeybindingService,
@@ -202,9 +202,6 @@ class VectorCodeControlView extends ViewPane {
 		const mobileStatus = this.mobileRelayService.getStatus();
 		const mobile = this.renderStatusCard(container, Codicon.deviceMobile, localize('vectorCodeMobile', 'Phone Bridge'), mobileStatus.label);
 		mobile.card.classList.add('vector-code-control__mobile');
-		const fields = append(mobile.card, $('.vector-code-control__fields'));
-		const relayHostInput = this.renderInputField(fields, 'vector-code-mobile-relay-host', localize('vectorCodeMobileRelayHost', 'Relay Host'), localize('vectorCodeMobileRelayHostPlaceholder', 'relay.example.com or 192.168.1.10:8787'), mobileStatus.relayHost);
-		const relayIssuerTokenInput = this.renderInputField(fields, 'vector-code-mobile-relay-issuer-token', localize('vectorCodeMobileRelayIssuerToken', 'Relay Issuer Token'), localize('vectorCodeMobileRelayIssuerTokenPlaceholder', 'Required for the Railway relay'), undefined, 'password');
 		const detail = append(mobile.card, $('.vector-code-control__mobile-detail'));
 		const actions = append(mobile.card, $('.vector-code-control__card-actions'));
 		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Refresh QR'), Codicon.refresh);
@@ -226,7 +223,7 @@ class VectorCodeControlView extends ViewPane {
 			const pairingState = append(pairingContainer, $('.vector-code-control__pairing-state'));
 			pairingState.textContent = status.state === VectorCodeMobileConnectionState.Pairing
 				? localize('vectorCodeMobilePairingScanReady', 'Ready for phone scan')
-				: localize('vectorCodeMobilePairingIssuerNeeded', 'Issuer token needed');
+				: localize('vectorCodeMobilePairingSetupNeeded', 'Connection setup needed');
 
 			const qr = document.createElement('img');
 			qr.className = 'vector-code-control__qr';
@@ -236,28 +233,22 @@ class VectorCodeControlView extends ViewPane {
 
 			const meta = append(pairingContainer, $('.vector-code-control__pairing-meta'));
 			const expiresAt = append(meta, $('.vector-code-control__pairing-expires'));
-			expiresAt.textContent = localize('vectorCodeMobilePairingExpires', 'Expires: {0}', new Date(pairing.payload.expiresAt).toLocaleTimeString());
+			expiresAt.textContent = localize('vectorCodeMobilePairingExpires', 'Scan by: {0}', new Date(pairing.payload.expiresAt).toLocaleTimeString());
 			const tokenState = append(meta, $('.vector-code-control__pairing-token-state'));
 			tokenState.textContent = pairing.payload.relayToken
-				? localize('vectorCodeMobilePairingRelayTokenMinted', 'Phone relay token: signed')
-				: localize('vectorCodeMobilePairingRelayTokenMissing', 'Phone relay token: not minted');
+				? localize('vectorCodeMobilePairingSecureSessionReady', 'Secure session ready')
+				: localize('vectorCodeMobilePairingSecureSessionMissing', 'Secure session unavailable');
 
 			const pairingCode = append(pairingContainer, $('.vector-code-control__pairing-code'));
 			pairingCode.textContent = pairing.pairingCode;
 			pairingCode.title = localize('vectorCodeMobilePairingCodeTitle', 'Pairing code');
 
-			const pairingActions = append(pairingContainer, $('.vector-code-control__card-actions'));
-			const copyPayloadButton = this.renderButton(pairingActions, localize('vectorCodeMobileCopyPayload', 'Copy Pairing Data'), Codicon.copy);
-			copyPayloadButton.title = localize('vectorCodeMobileCopyPayloadTitle', 'Copy the raw pairing data for support or debugging.');
-			pairingDisposables.add(addDisposableListener(copyPayloadButton, EventType.CLICK, () => {
-				void this.clipboardService.writeText(pairing.payloadJson);
-			}));
 		};
 
 		const renderBusy = () => {
 			pairingDisposables.clear();
 			mobile.status.textContent = localize('vectorCodeMobilePairingCreating', 'Creating QR...');
-			detail.textContent = localize('vectorCodeMobilePairingCreatingDetail', 'Checking the Railway relay and minting a short-lived pairing token when authorized.');
+			detail.textContent = localize('vectorCodeMobilePairingCreatingDetail', 'Creating a secure phone pairing session.');
 			clearNode(pairingContainer);
 			pairingContainer.classList.remove('vector-code-control__pairing--locked');
 			const pending = append(pairingContainer, $('.vector-code-control__qr-pending'));
@@ -268,7 +259,7 @@ class VectorCodeControlView extends ViewPane {
 			startButton.disabled = true;
 			renderBusy();
 			try {
-				renderStatus(await this.mobileRelayService.startPairing(relayHostInput.value, relayIssuerTokenInput.value));
+				renderStatus(await this.mobileRelayService.startPairing());
 			} catch (error) {
 				const message = error instanceof Error ? error.message : localize('vectorCodeMobilePairingFailed', 'Unable to create a QR pairing session.');
 				mobile.status.textContent = localize('vectorCodeMobilePairingFailedShort', 'QR creation failed');
@@ -287,19 +278,6 @@ class VectorCodeControlView extends ViewPane {
 		this._register(addDisposableListener(startButton, EventType.CLICK, () => {
 			void refreshPairing(true);
 		}));
-	}
-
-	private renderInputField(container: HTMLElement, id: string, labelText: string, placeholder: string, value?: string, type = 'text'): HTMLInputElement {
-		const field = append(container, $('.vector-code-control__field'));
-		const label = append(field, $('label.vector-code-control__label')) as HTMLLabelElement;
-		label.htmlFor = id;
-		label.textContent = labelText;
-		const input = append(field, $('input.vector-code-control__input')) as HTMLInputElement;
-		input.id = id;
-		input.type = type;
-		input.placeholder = placeholder;
-		input.value = value ?? '';
-		return input;
 	}
 
 	private renderStatusCard(container: HTMLElement, icon: ThemeIcon, title: string, status: string): IVectorCodeStatusCard {

@@ -64,6 +64,8 @@ import { ILifecycleMainService, LifecycleMainPhase, ShutdownReason } from '../..
 import { ILoggerService, ILogService } from '../../platform/log/common/log.js';
 import { IMenubarMainService, MenubarMainService } from '../../platform/menubar/electron-main/menubarMainService.js';
 import { INativeHostMainService, NativeHostMainService } from '../../platform/native/electron-main/nativeHostMainService.js';
+import { IVectorCodeMobileRelayBridgeService, VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL } from '../../platform/vectorCodeMobile/common/vectorCodeMobileRelayBridge.js';
+import { VectorCodeMobileRelayBridgeMainService } from '../../platform/vectorCodeMobile/electron-main/vectorCodeMobileRelayBridgeMainService.js';
 import { IMeteredConnectionService } from '../../platform/meteredConnection/common/meteredConnection.js';
 import { METERED_CONNECTION_CHANNEL } from '../../platform/meteredConnection/common/meteredConnectionIpc.js';
 import { MeteredConnectionChannel } from '../../platform/meteredConnection/electron-main/meteredConnectionChannel.js';
@@ -1048,6 +1050,7 @@ export class CodeApplication extends Disposable {
 
 		// Native Host
 		services.set(INativeHostMainService, new SyncDescriptor(NativeHostMainService, undefined, false /* proxied to other processes */));
+		services.set(IVectorCodeMobileRelayBridgeService, new SyncDescriptor(VectorCodeMobileRelayBridgeMainService, undefined, false /* proxied to other processes */));
 
 		// Metered Connection
 		const meteredConnectionService = new MeteredConnectionMainService(this.configurationService);
@@ -1221,6 +1224,9 @@ export class CodeApplication extends Disposable {
 		const nativeHostChannel = ProxyChannel.fromService(this.nativeHostMainService, disposables);
 		mainProcessElectronServer.registerChannel('nativeHost', nativeHostChannel);
 		sharedProcessClient.then(client => client.registerChannel('nativeHost', nativeHostChannel));
+
+		const vectorCodeMobileRelayBridgeChannel = ProxyChannel.fromService(accessor.get(IVectorCodeMobileRelayBridgeService), disposables);
+		mainProcessElectronServer.registerChannel(VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL, vectorCodeMobileRelayBridgeChannel);
 
 		// Web Content Extractor
 		const webContentExtractorChannel = ProxyChannel.fromService(accessor.get(IWebContentExtractorService), disposables);

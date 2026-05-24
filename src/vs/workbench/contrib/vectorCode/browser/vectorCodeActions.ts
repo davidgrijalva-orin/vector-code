@@ -7,11 +7,7 @@ import { localize2 } from '../../../../nls.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { Action2, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
-import { TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
-import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
-import { ITerminalGroupService, ITerminalService } from '../../terminal/browser/terminal.js';
-import { TERMINAL_VIEW_ID } from '../../terminal/common/terminal.js';
 import {
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
@@ -40,30 +36,8 @@ registerAction2(class OpenVectorCodeTerminalPanelAction extends Action2 {
 	}
 
 	override async run(accessor: ServicesAccessor): Promise<void> {
-		const layoutService = accessor.get(IWorkbenchLayoutService);
-		const viewsService = accessor.get(IViewsService);
-		const terminalGroupService = accessor.get(ITerminalGroupService);
-		const terminalService = accessor.get(ITerminalService);
 		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
-
-		if (layoutService.isVisible(Parts.PANEL_PART) && viewsService.isViewVisible(TERMINAL_VIEW_ID)) {
-			layoutService.setPartHidden(true, Parts.PANEL_PART);
-			return;
-		}
-
-		let instance = terminalGroupService.activeInstance;
-		if (!instance && terminalService.isProcessSupportRegistered) {
-			instance = await terminalService.createTerminal({
-				location: TerminalLocation.Panel,
-				cwd: vectorCodeWorkbenchService.getActiveProjectUri()
-			});
-			terminalService.setActiveInstance(instance);
-		}
-		if (!layoutService.isVisible(Parts.PANEL_PART)) {
-			layoutService.setPartHidden(false, Parts.PANEL_PART);
-		}
-		await terminalGroupService.showPanel(true);
-		await instance?.focusWhenReady();
+		await vectorCodeWorkbenchService.toggleActiveProjectTerminalPanel();
 	}
 });
 

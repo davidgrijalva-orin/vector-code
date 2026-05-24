@@ -8,15 +8,15 @@
       "timestamp": 1779553124000,
       "assets": {
         "darwin-arm64": {
-          "url": "https://releases.vectorcode.com/0.1.1/Vector-Code-darwin-arm64.zip",
+          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-arm64.zip",
           "sha256hash": "..."
         },
         "darwin-universal": {
-          "url": "https://releases.vectorcode.com/0.1.1/Vector-Code-darwin-universal.zip",
+          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-universal.zip",
           "sha256hash": "..."
         },
         "linux-arm64": {
-          "url": "https://releases.vectorcode.com/0.1.1/Vector-Code-linux-arm64.tar.gz",
+          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-linux-arm64.tar.gz",
           "sha256hash": "..."
         }
       }

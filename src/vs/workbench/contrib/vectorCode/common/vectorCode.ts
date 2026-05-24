@@ -5,7 +5,9 @@
 
 import { URI } from '../../../../base/common/uri.js';
 import { Event } from '../../../../base/common/event.js';
+import { IDisposable } from '../../../../base/common/lifecycle.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import type { IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRemoteWorkspaceSnapshot } from './vectorCodeMobileProtocol.js';
 
 export const VECTOR_CODE_VIEW_CONTAINER_ID = 'workbench.view.vectorCode';
 export const VECTOR_CODE_CONTROL_VIEW_ID = 'workbench.views.vectorCode.control';
@@ -64,6 +66,11 @@ export interface IVectorCodeMobileRelayService {
 
 	getStatus(): IVectorCodeMobileConnectionStatus;
 	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus>;
+	registerRequestHandler(handler: IVectorCodeMobileRemoteRequestHandler): IDisposable;
+}
+
+export interface IVectorCodeMobileRemoteRequestHandler {
+	handleVectorCodeMobileRemoteRequest(envelope: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope>;
 }
 
 export const IVectorCodeWorkbenchService = createDecorator<IVectorCodeWorkbenchService>('vectorCodeWorkbenchService');
@@ -75,8 +82,10 @@ export interface IVectorCodeWorkbenchService {
 	getProjectStatusLabel(): string;
 	getProjectSummaries(): readonly IVectorCodeProjectSummary[];
 	getActiveProjectUri(): URI | undefined;
+	getMobileWorkspaceSnapshot(): IVectorCodeMobileRemoteWorkspaceSnapshot;
 	isProjectSwitching(): boolean;
 	switchProject(projectUri: URI | undefined): Promise<void>;
 	addProjectToWorkspace(): Promise<void>;
 	connectMobileApp(): Promise<void>;
+	toggleActiveProjectTerminalPanel(): Promise<void>;
 }

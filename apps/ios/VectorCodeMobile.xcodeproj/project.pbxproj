@@ -1,0 +1,418 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B10000000000000000000101 /* VectorCodeMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000201 /* VectorCodeMobileApp.swift */; };
+		B10000000000000000000102 /* VectorCodeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000202 /* VectorCodeTheme.swift */; };
+		B10000000000000000000103 /* VectorCodePairingPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000203 /* VectorCodePairingPayload.swift */; };
+		B10000000000000000000104 /* VectorCodeWorkspaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000204 /* VectorCodeWorkspaceModels.swift */; };
+		B10000000000000000000105 /* VectorCodeMobileProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000205 /* VectorCodeMobileProtocol.swift */; };
+		B10000000000000000000106 /* VectorCodeRelayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000206 /* VectorCodeRelayClient.swift */; };
+		B10000000000000000000107 /* VectorCodeMobileWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000207 /* VectorCodeMobileWorkspaceModel.swift */; };
+		B10000000000000000000108 /* VectorCodeMobileRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000208 /* VectorCodeMobileRootView.swift */; };
+		B10000000000000000000109 /* VectorCodePairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000209 /* VectorCodePairingView.swift */; };
+		B10000000000000000000110 /* VectorCodeQrScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000210 /* VectorCodeQrScannerView.swift */; };
+		B10000000000000000000111 /* VectorCodeProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000211 /* VectorCodeProjectsView.swift */; };
+		B10000000000000000000112 /* VectorCodeFilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000212 /* VectorCodeFilesView.swift */; };
+		B10000000000000000000113 /* VectorCodeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000213 /* VectorCodeEditorView.swift */; };
+		B10000000000000000000114 /* VectorCodeTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000214 /* VectorCodeTerminalView.swift */; };
+		B10000000000000000000115 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000216 /* Assets.xcassets */; };
+		B10000000000000000000116 /* VectorCodeControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000218 /* VectorCodeControls.swift */; };
+		B10000000000000000000117 /* VectorCodeRemoteWorkspaceClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000219 /* VectorCodeRemoteWorkspaceClient.swift */; };
+		B10000000000000000000118 /* VectorCodeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000220 /* VectorCodeIcon.swift */; };
+		B10000000000000000000119 /* codicon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000221 /* codicon.ttf */; };
+		B10000000000000000000120 /* VectorCodePairingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000222 /* VectorCodePairingStore.swift */; };
+		B10000000000000000000121 /* VectorCodeNativeTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000223 /* VectorCodeNativeTerminalView.swift */; };
+		B10000000000000000000122 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = B10000000000000000000901 /* SwiftTerm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B10000000000000000000201 /* VectorCodeMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobileApp/VectorCodeMobileApp.swift; sourceTree = "<group>"; };
+		B10000000000000000000202 /* VectorCodeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Design/VectorCodeTheme.swift; sourceTree = "<group>"; };
+		B10000000000000000000203 /* VectorCodePairingPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Models/VectorCodePairingPayload.swift; sourceTree = "<group>"; };
+		B10000000000000000000204 /* VectorCodeWorkspaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Models/VectorCodeWorkspaceModels.swift; sourceTree = "<group>"; };
+		B10000000000000000000205 /* VectorCodeMobileProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Remote/VectorCodeMobileProtocol.swift; sourceTree = "<group>"; };
+		B10000000000000000000206 /* VectorCodeRelayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Remote/VectorCodeRelayClient.swift; sourceTree = "<group>"; };
+		B10000000000000000000207 /* VectorCodeMobileWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/ViewModels/VectorCodeMobileWorkspaceModel.swift; sourceTree = "<group>"; };
+		B10000000000000000000208 /* VectorCodeMobileRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeMobileRootView.swift; sourceTree = "<group>"; };
+		B10000000000000000000209 /* VectorCodePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodePairingView.swift; sourceTree = "<group>"; };
+		B10000000000000000000210 /* VectorCodeQrScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeQrScannerView.swift; sourceTree = "<group>"; };
+		B10000000000000000000211 /* VectorCodeProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeProjectsView.swift; sourceTree = "<group>"; };
+		B10000000000000000000212 /* VectorCodeFilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeFilesView.swift; sourceTree = "<group>"; };
+		B10000000000000000000213 /* VectorCodeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeEditorView.swift; sourceTree = "<group>"; };
+		B10000000000000000000214 /* VectorCodeTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeTerminalView.swift; sourceTree = "<group>"; };
+		B10000000000000000000215 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App/Info.plist; sourceTree = "<group>"; };
+		B10000000000000000000216 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App/Assets.xcassets; sourceTree = "<group>"; };
+		B10000000000000000000217 /* VectorCodeMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VectorCodeMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000218 /* VectorCodeControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeControls.swift; sourceTree = "<group>"; };
+		B10000000000000000000219 /* VectorCodeRemoteWorkspaceClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Remote/VectorCodeRemoteWorkspaceClient.swift; sourceTree = "<group>"; };
+		B10000000000000000000220 /* VectorCodeIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Design/VectorCodeIcon.swift; sourceTree = "<group>"; };
+		B10000000000000000000221 /* codicon.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Sources/VectorCodeMobile/Resources/Fonts/codicon.ttf; sourceTree = "<group>"; };
+		B10000000000000000000222 /* VectorCodePairingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Storage/VectorCodePairingStore.swift; sourceTree = "<group>"; };
+		B10000000000000000000223 /* VectorCodeNativeTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeNativeTerminalView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B10000000000000000000301 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000122 /* SwiftTerm in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B10000000000000000000401 = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000402 /* App */,
+				B10000000000000000000403 /* Sources */,
+				B10000000000000000000404 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B10000000000000000000402 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000215 /* Info.plist */,
+				B10000000000000000000216 /* Assets.xcassets */,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000403 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000201 /* VectorCodeMobileApp.swift */,
+				B10000000000000000000202 /* VectorCodeTheme.swift */,
+				B10000000000000000000220 /* VectorCodeIcon.swift */,
+				B10000000000000000000203 /* VectorCodePairingPayload.swift */,
+				B10000000000000000000204 /* VectorCodeWorkspaceModels.swift */,
+				B10000000000000000000205 /* VectorCodeMobileProtocol.swift */,
+				B10000000000000000000206 /* VectorCodeRelayClient.swift */,
+				B10000000000000000000219 /* VectorCodeRemoteWorkspaceClient.swift */,
+				B10000000000000000000222 /* VectorCodePairingStore.swift */,
+				B10000000000000000000207 /* VectorCodeMobileWorkspaceModel.swift */,
+				B10000000000000000000208 /* VectorCodeMobileRootView.swift */,
+				B10000000000000000000218 /* VectorCodeControls.swift */,
+				B10000000000000000000209 /* VectorCodePairingView.swift */,
+				B10000000000000000000210 /* VectorCodeQrScannerView.swift */,
+				B10000000000000000000211 /* VectorCodeProjectsView.swift */,
+				B10000000000000000000212 /* VectorCodeFilesView.swift */,
+				B10000000000000000000213 /* VectorCodeEditorView.swift */,
+				B10000000000000000000214 /* VectorCodeTerminalView.swift */,
+				B10000000000000000000223 /* VectorCodeNativeTerminalView.swift */,
+				B10000000000000000000221 /* codicon.ttf */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000404 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000217 /* VectorCodeMobile.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B10000000000000000000501 /* VectorCodeMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000000000000000000802 /* Build configuration list for PBXNativeTarget "VectorCodeMobile" */;
+			buildPhases = (
+				B10000000000000000000302 /* Sources */,
+				B10000000000000000000301 /* Frameworks */,
+				B10000000000000000000303 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VectorCodeMobile;
+			packageProductDependencies = (
+				B10000000000000000000901 /* SwiftTerm */,
+			);
+			productName = VectorCodeMobile;
+			productReference = B10000000000000000000217 /* VectorCodeMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B10000000000000000000601 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					B10000000000000000000501 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = B10000000000000000000801 /* Build configuration list for PBXProject "VectorCodeMobile" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B10000000000000000000401;
+			packageReferences = (
+				B10000000000000000000902 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
+			productRefGroup = B10000000000000000000404 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B10000000000000000000501 /* VectorCodeMobile */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B10000000000000000000303 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000115 /* Assets.xcassets in Resources */,
+				B10000000000000000000119 /* codicon.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B10000000000000000000302 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000101 /* VectorCodeMobileApp.swift in Sources */,
+				B10000000000000000000102 /* VectorCodeTheme.swift in Sources */,
+				B10000000000000000000118 /* VectorCodeIcon.swift in Sources */,
+				B10000000000000000000103 /* VectorCodePairingPayload.swift in Sources */,
+				B10000000000000000000104 /* VectorCodeWorkspaceModels.swift in Sources */,
+				B10000000000000000000105 /* VectorCodeMobileProtocol.swift in Sources */,
+				B10000000000000000000106 /* VectorCodeRelayClient.swift in Sources */,
+				B10000000000000000000117 /* VectorCodeRemoteWorkspaceClient.swift in Sources */,
+				B10000000000000000000120 /* VectorCodePairingStore.swift in Sources */,
+				B10000000000000000000107 /* VectorCodeMobileWorkspaceModel.swift in Sources */,
+				B10000000000000000000108 /* VectorCodeMobileRootView.swift in Sources */,
+				B10000000000000000000116 /* VectorCodeControls.swift in Sources */,
+				B10000000000000000000109 /* VectorCodePairingView.swift in Sources */,
+				B10000000000000000000110 /* VectorCodeQrScannerView.swift in Sources */,
+				B10000000000000000000111 /* VectorCodeProjectsView.swift in Sources */,
+				B10000000000000000000112 /* VectorCodeFilesView.swift in Sources */,
+				B10000000000000000000113 /* VectorCodeEditorView.swift in Sources */,
+				B10000000000000000000114 /* VectorCodeTerminalView.swift in Sources */,
+				B10000000000000000000121 /* VectorCodeNativeTerminalView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B10000000000000000000902 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.13.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B10000000000000000000901 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000000000000000000902 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B10000000000000000000701 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B10000000000000000000702 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B10000000000000000000703 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.orintech.vectorcode.mobile;
+				PRODUCT_NAME = VectorCodeMobile;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B10000000000000000000704 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.orintech.vectorcode.mobile;
+				PRODUCT_NAME = VectorCodeMobile;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B10000000000000000000801 /* Build configuration list for PBXProject "VectorCodeMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000701 /* Debug */,
+				B10000000000000000000702 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000000000000000000802 /* Build configuration list for PBXNativeTarget "VectorCodeMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000703 /* Debug */,
+				B10000000000000000000704 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B10000000000000000000601 /* Project object */;
+}

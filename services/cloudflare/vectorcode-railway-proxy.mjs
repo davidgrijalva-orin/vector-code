@@ -1,12 +1,12 @@
-const UPDATE_FEED_HOST = 'update-feed-production.up.railway.app';
-const RELAY_HOST = 'relay-production-e21f.up.railway.app';
+const UPDATE_FEED_HOST = 'w2v9ki0q.up.railway.app';
+const RELAY_HOST = 'sskpzvaw.up.railway.app';
 
 function resolveUpstreamHost(hostname) {
 	if (hostname === 'relay.vectorcode.app') {
 		return RELAY_HOST;
 	}
 
-	if (hostname === 'vectorcode.app' || hostname === 'www.vectorcode.app') {
+	if (hostname === 'vectorcode.app') {
 		return UPDATE_FEED_HOST;
 	}
 
@@ -16,6 +16,11 @@ function resolveUpstreamHost(hostname) {
 export default {
 	async fetch(request) {
 		const incomingUrl = new URL(request.url);
+		if (incomingUrl.hostname === 'www.vectorcode.app') {
+			incomingUrl.hostname = 'vectorcode.app';
+			return Response.redirect(incomingUrl, 301);
+		}
+
 		const upstreamHost = resolveUpstreamHost(incomingUrl.hostname);
 
 		if (!upstreamHost) {

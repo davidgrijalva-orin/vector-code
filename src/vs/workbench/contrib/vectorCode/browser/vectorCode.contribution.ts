@@ -23,7 +23,7 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { ViewPane } from '../../../browser/parts/views/viewPane.js';
+import { IViewPaneOptions, ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContainer.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
@@ -52,13 +52,15 @@ interface IVectorCodeStatusCard {
 	readonly status: HTMLElement;
 }
 
-class VectorCodeProjectsView extends ViewPane {
+abstract class VectorCodeViewPane extends ViewPane {
 
 	constructor(
 		options: IViewletViewOptions,
-		@ICommandService private readonly commandService: ICommandService,
-		@IVectorCodeWorkbenchService private readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
-		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@ICommandService protected readonly commandService: ICommandService,
+		@IVectorCodeWorkbenchService protected readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
+		@IWorkspaceContextService protected readonly workspaceContextService: IWorkspaceContextService,
+		@IVectorCodeMobileRelayService protected readonly mobileRelayService: IVectorCodeMobileRelayService,
+		@INotificationService protected readonly notificationService: INotificationService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService configurationService: IConfigurationService,
@@ -69,9 +71,21 @@ class VectorCodeProjectsView extends ViewPane {
 		@IThemeService themeService: IThemeService,
 		@IHoverService hoverService: IHoverService,
 	) {
-		super({ ...options, titleMenuId: MenuId.ViewTitle, minimumBodySize: 76, maximumBodySize: 124 }, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, hoverService);
-		this.collapsible = false;
+		const vectorCodePane = new.target as typeof VectorCodeViewPane;
+		super({ ...options, titleMenuId: MenuId.ViewTitle, ...vectorCodePane.viewOptions }, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, hoverService);
+		if (typeof vectorCodePane.collapsible === 'boolean') {
+			this.collapsible = vectorCodePane.collapsible;
+		}
 	}
+
+	protected static readonly viewOptions: Partial<IViewPaneOptions> = {};
+	protected static readonly collapsible: boolean | undefined;
+}
+
+class VectorCodeProjectsView extends VectorCodeViewPane {
+
+	protected static override readonly viewOptions = { minimumBodySize: 76, maximumBodySize: 124 };
+	protected static override readonly collapsible = false;
 
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
@@ -170,24 +184,7 @@ class VectorCodeLayoutContribution extends Disposable implements IWorkbenchContr
 	}
 }
 
-class VectorCodeControlView extends ViewPane {
-
-	constructor(
-		options: IViewletViewOptions,
-		@IVectorCodeMobileRelayService private readonly mobileRelayService: IVectorCodeMobileRelayService,
-		@INotificationService private readonly notificationService: INotificationService,
-		@IKeybindingService keybindingService: IKeybindingService,
-		@IContextMenuService contextMenuService: IContextMenuService,
-		@IConfigurationService configurationService: IConfigurationService,
-		@IContextKeyService contextKeyService: IContextKeyService,
-		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
-		@IInstantiationService instantiationService: IInstantiationService,
-		@IOpenerService openerService: IOpenerService,
-		@IThemeService themeService: IThemeService,
-		@IHoverService hoverService: IHoverService,
-	) {
-		super({ ...options, titleMenuId: MenuId.ViewTitle }, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, hoverService);
-	}
+class VectorCodeControlView extends VectorCodeViewPane {
 
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);

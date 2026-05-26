@@ -8,6 +8,7 @@ import { VSBuffer } from '../../../../base/common/buffer.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { isEqualOrParent } from '../../../../base/common/resources.js';
+import { hasKey } from '../../../../base/common/types.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { FileType, IFileService } from '../../../../platform/files/common/files.js';
@@ -27,7 +28,30 @@ import { VIEW_ID as EXPLORER_FILE_VIEW_ID, VIEWLET_ID as EXPLORER_VIEWLET_ID } f
 import { ITerminalGroupService, ITerminalInstance, ITerminalService } from '../../terminal/browser/terminal.js';
 import { TERMINAL_VIEW_ID } from '../../terminal/common/terminal.js';
 import { IVectorCodeMobileRelayService, IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
-import { IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRemoteEditorTab, IVectorCodeMobileRemoteFileCopyResponse, IVectorCodeMobileRemoteFileMoveResponse, IVectorCodeMobileRemoteFileNode, IVectorCodeMobileRemoteFileReadResponse, IVectorCodeMobileRemoteFileTreeResponse, IVectorCodeMobileRemoteFileWriteResponse, IVectorCodeMobileRemoteTerminalControlResponse, IVectorCodeMobileRemoteTerminalInputResponse, IVectorCodeMobileRemoteTerminalOutputResponse, IVectorCodeMobileRemoteTerminalTab, IVectorCodeMobileRemoteWorkspaceSnapshot, VectorCodeMobileRemoteAction, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
+import { inferVectorCodeLanguage } from '../common/vectorCodeLanguageInference.js';
+import {
+	createVectorCodeMobileRemoteErrorResponse,
+	createVectorCodeMobileRemoteResponse,
+	isVectorCodeMobileTerminalControlCommand,
+	isVectorCodeMobileTerminalInputMode,
+	IVectorCodeMobileRemoteEditorTab,
+	IVectorCodeMobileRemoteEnvelope,
+	IVectorCodeMobileRemoteFileCopyResponse,
+	IVectorCodeMobileRemoteFileMoveResponse,
+	IVectorCodeMobileRemoteFileNode,
+	IVectorCodeMobileRemoteFileReadResponse,
+	IVectorCodeMobileRemoteFileTreeResponse,
+	IVectorCodeMobileRemoteFileWriteResponse,
+	IVectorCodeMobileRemoteTerminalControlResponse,
+	IVectorCodeMobileRemoteTerminalInputResponse,
+	IVectorCodeMobileRemoteTerminalOutputResponse,
+	IVectorCodeMobileRemoteTerminalTab,
+	IVectorCodeMobileRemoteWorkspaceSnapshot,
+	VectorCodeMobileRemoteAction,
+	VectorCodeMobileTerminalControlCommand,
+	VectorCodeMobileTerminalInputMode
+} from '../common/vectorCodeMobileProtocol.js';
+import { VectorCodeMobileTerminalStateStore } from './vectorCodeMobileTerminalState.js';
 
 const SET_ACTIVE_PROJECT_ROOT_COMMAND_ID = 'workbench.files.action.setActiveProjectRoot';
 const VECTOR_CODE_MOBILE_FILE_TREE_MAX_DEPTH = 8;
@@ -65,6 +89,35 @@ interface IVectorCodeTerminalLayoutState {
 	readonly terminalVisible: boolean;
 }
 
+interface IVectorCodeMobileProjectResource {
+	readonly resource: URI;
+	readonly relativePath: string;
+}
+
+interface IVectorCodeMobileFileTarget {
+	readonly project: IVectorCodeProjectSummary;
+	readonly payload: Record<string, unknown>;
+	readonly target: IVectorCodeMobileProjectResource;
+}
+
+interface IVectorCodeMobileFileTransfer {
+	readonly source: IVectorCodeMobileProjectResource;
+	readonly target: IVectorCodeMobileProjectResource;
+	readonly targetProjectId: string;
+	readonly overwrite: boolean;
+}
+
+interface IVectorCodeMobileRequestProject {
+	readonly project: IVectorCodeProjectSummary;
+}
+
+interface IVectorCodeMobileTerminalTarget {
+	readonly projectKey: string;
+	readonly payload: Record<string, unknown>;
+	readonly terminalId: string;
+	readonly instance: ITerminalInstance;
+}
+
 class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbenchService {
 	readonly _serviceBrand: undefined;
 	private readonly _onDidChangeActiveProject = this._register(new Emitter<URI | undefined>());
@@ -72,11 +125,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 	private activeProjectUri: URI | undefined;
 	private readonly projectEditorStates = new Map<string, IVectorCodeEditorState>();
-	private readonly projectTerminalInstances = new Map<string, ITerminalInstance[]>();
-	private readonly projectActiveTerminalInstances = new Map<string, ITerminalInstance>();
-	private readonly terminalProjectKeys = new Map<number, string>();
-	private readonly terminalOutputLines = new Map<number, string[]>();
-	private readonly terminalOutputDisposables = new Map<number, readonly { dispose(): void }[]>();
+	private readonly terminalState = this._register(new VectorCodeMobileTerminalStateStore(VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES));
 	private projectSwitching = false;
 	private projectSwitchQueue = Promise.resolve();
 
@@ -94,12 +143,12 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
 	) {
 		super();
-		this._register(this.terminalService.onDidCreateInstance(instance => this.adoptTerminalInstance(instance)));
-		this._register(this.terminalService.onDidDisposeInstance(instance => this.forgetTerminalInstance(instance)));
+		this._register(this.terminalService.onDidCreateInstance(instance => this.terminalState.adopt(instance, this.activeProjectUri?.toString())));
+		this._register(this.terminalService.onDidDisposeInstance(instance => this.terminalState.forget(instance)));
 		this._register(this.terminalService.onDidChangeActiveInstance(instance => {
-			const projectKey = instance ? this.terminalProjectKeys.get(instance.instanceId) : undefined;
+			const projectKey = instance ? this.terminalState.getProjectKey(instance) : undefined;
 			if (projectKey && instance && !instance.isDisposed) {
-				this.projectActiveTerminalInstances.set(projectKey, instance);
+				this.terminalState.setActive(projectKey, instance);
 			}
 		}));
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(() => this.pruneProjectState()));
@@ -245,12 +294,9 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 
 		const projectKey = this.activeProjectUri?.toString();
-		let instance = projectKey ? this.projectActiveTerminalInstances.get(projectKey) : undefined;
-		if (instance?.isDisposed || (instance && this.terminalProjectKeys.get(instance.instanceId) !== projectKey)) {
-			instance = undefined;
-		}
+		let instance = projectKey ? this.terminalState.getActive(projectKey) : undefined;
 		if (!instance && projectKey) {
-			instance = (this.projectTerminalInstances.get(projectKey) ?? []).find(candidate => !candidate.isDisposed && this.terminalProjectKeys.get(candidate.instanceId) === projectKey);
+			instance = this.terminalState.getInstances(projectKey)[0];
 		}
 		if (!instance && this.terminalService.isProcessSupportRegistered) {
 			instance = await this.terminalService.createTerminal({
@@ -258,12 +304,12 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				cwd: this.activeProjectUri
 			});
 			if (projectKey) {
-				this.adoptTerminalInstance(instance, projectKey, true);
+				this.terminalState.adopt(instance, projectKey, true);
 			}
 		}
 
 		if (instance && projectKey) {
-			this.projectActiveTerminalInstances.set(projectKey, instance);
+			this.terminalState.setActive(projectKey, instance);
 			await this.terminalService.showBackgroundTerminal(instance);
 			this.terminalService.setActiveInstance(instance);
 		}
@@ -277,7 +323,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	private async handleVectorCodeMobileRemoteRequest(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
 		switch (request.action) {
 			case VectorCodeMobileRemoteAction.StateRead:
-				return this.createMobileRemoteResponse(request, await this.getMobileWorkspaceSnapshotWithFiles(request.projectId));
+				return createVectorCodeMobileRemoteResponse(request, await this.getMobileWorkspaceSnapshotWithFiles(request.projectId));
 			case VectorCodeMobileRemoteAction.FileTreeRead:
 				return this.handleMobileFileTreeRead(request);
 			case VectorCodeMobileRemoteAction.FileRead:
@@ -299,74 +345,64 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			case VectorCodeMobileRemoteAction.TerminalOutput:
 				return this.handleMobileTerminalOutput(request);
 			default:
-				return this.createMobileRemoteErrorResponse(request, 'unsupported_action', `The desktop bridge does not support ${request.action} yet.`);
+				return createVectorCodeMobileRemoteErrorResponse(request, 'unsupported_action', `The desktop bridge does not support ${request.action} yet.`);
 		}
 	}
 
 	private async handleMobileFileTreeRead(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		if (!project) {
-			return this.createMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.');
+		const result = this.resolveMobileFileTarget(request, {
+			allowRoot: true,
+			defaultPath: '',
+			invalidPathMessage: 'The requested file tree path is outside the project.'
+		});
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const payload = getMobilePayloadObject(request.payload);
-		const path = getOptionalMobilePayloadString(payload, 'path') ?? '';
-		const target = this.resolveMobileProjectResource(project, path, true);
-		if (!target) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_path', 'The requested file tree path is outside the project.');
-		}
-
-		return this.createMobileRemoteResponse(request, await this.getMobileFileTree(project.uri, target.relativePath));
+		const { project, target } = result.target;
+		return createVectorCodeMobileRemoteResponse(request, await this.getMobileFileTree(project.uri, target.relativePath));
 	}
 
 	private async handleMobileFileRead(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		if (!project) {
-			return this.createMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.');
+		const result = this.resolveMobileFileTarget(request, {
+			allowRoot: false,
+			missingPathMessage: 'File read requires a path.',
+			invalidPathMessage: 'The requested file is outside the project.'
+		});
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const payload = getMobilePayloadObject(request.payload);
-		const path = getRequiredMobilePayloadString(payload, 'path');
-		if (!path) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'File read requires a path.');
-		}
-
-		const target = this.resolveMobileProjectResource(project, path, false);
-		if (!target) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_path', 'The requested file is outside the project.');
-		}
-
+		const { target } = result.target;
 		const stat = await this.fileService.stat(target.resource);
 		if (!stat.isFile) {
-			return this.createMobileRemoteErrorResponse(request, 'not_a_file', 'The requested path is not a file.');
+			return createVectorCodeMobileRemoteErrorResponse(request, 'not_a_file', 'The requested path is not a file.');
 		}
 
 		const content = await this.fileService.readFile(target.resource);
 		const response: IVectorCodeMobileRemoteFileReadResponse = {
 			path: target.relativePath,
 			content: content.value.toString(),
-			language: inferLanguage(target.relativePath),
+			language: inferVectorCodeLanguage(target.relativePath),
 			version: content.etag
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
 	private async handleMobileFileWrite(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		if (!project) {
-			return this.createMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.');
+		const result = this.resolveMobileFileTarget(request, {
+			allowRoot: false,
+			missingPathMessage: 'File write requires a path and content.',
+			invalidPathMessage: 'The requested file is outside the project.'
+		});
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const payload = getMobilePayloadObject(request.payload);
-		const path = getRequiredMobilePayloadString(payload, 'path');
+		const { payload, target } = result.target;
 		const content = getRequiredMobilePayloadString(payload, 'content');
-		if (!path || content === undefined) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'File write requires a path and content.');
-		}
-
-		const target = this.resolveMobileProjectResource(project, path, false);
-		if (!target) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_path', 'The requested file is outside the project.');
+		if (content === undefined) {
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', 'File write requires a path and content.');
 		}
 
 		const expectedVersion = getOptionalMobilePayloadString(payload, 'expectedVersion');
@@ -375,92 +411,150 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			path: target.relativePath,
 			version: stat.etag
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
-	private async handleMobileFileMove(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const sourceProject = this.getMobileRequestProject(request);
-		const payload = getMobilePayloadObject(request.payload);
-		const path = getRequiredMobilePayloadString(payload, 'path');
-		const targetPath = getRequiredMobilePayloadString(payload, 'targetPath');
-		if (!sourceProject || !path || !targetPath) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'File move requires a source project, path, and targetPath.');
+	private resolveMobileFileTarget(
+		request: IVectorCodeMobileRemoteEnvelope,
+		options: {
+			readonly allowRoot: boolean;
+			readonly defaultPath?: string;
+			readonly missingPathMessage?: string;
+			readonly invalidPathMessage: string;
+		}
+	): { readonly target: IVectorCodeMobileFileTarget } | { readonly error: IVectorCodeMobileRemoteEnvelope } {
+		const projectResult = this.resolveMobileRequestProject(request);
+		if (hasKey(projectResult, { error: true })) {
+			return projectResult;
 		}
 
-		const targetProjectId = getOptionalMobilePayloadString(payload, 'targetProjectId') ?? sourceProject.uri.toString();
+		const { project } = projectResult.target;
+		const payload = getMobilePayloadObject(request.payload);
+		const path = options.defaultPath ?? getRequiredMobilePayloadString(payload, 'path');
+		if (path === undefined || (!options.allowRoot && !path)) {
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', options.missingPathMessage ?? 'The request requires a path.')
+			};
+		}
+
+		const target = this.resolveMobileProjectResource(project, path, options.allowRoot);
+		if (!target) {
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'invalid_path', options.invalidPathMessage)
+			};
+		}
+
+		return { target: { project, payload, target } };
+	}
+
+	private resolveMobileFileTransfer(
+		request: IVectorCodeMobileRemoteEnvelope,
+		payload: Record<string, unknown>,
+		options: { readonly actionLabel: 'move' | 'copy'; readonly requireTargetProject: boolean }
+	): { readonly transfer: IVectorCodeMobileFileTransfer } | { readonly error: IVectorCodeMobileRemoteEnvelope } {
+		const sourceProjectResult = this.resolveMobileRequestProject(request);
+		if (hasKey(sourceProjectResult, { error: true })) {
+			return sourceProjectResult;
+		}
+
+		const { project: sourceProject } = sourceProjectResult.target;
+		const path = getRequiredMobilePayloadString(payload, 'path');
+		const targetPath = getRequiredMobilePayloadString(payload, 'targetPath');
+		const explicitTargetProjectId = getRequiredMobilePayloadString(payload, 'targetProjectId');
+		if (!path || !targetPath || (options.requireTargetProject && !explicitTargetProjectId)) {
+			const targetProjectMessage = options.requireTargetProject ? ', targetProjectId,' : '';
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(
+					request,
+					'invalid_payload',
+					`File ${options.actionLabel} requires a source project, path${targetProjectMessage} and targetPath.`
+				)
+			};
+		}
+
+		const targetProjectId = explicitTargetProjectId ?? sourceProject.uri.toString();
 		const targetProject = this.getProjectById(targetProjectId);
 		if (!targetProject) {
-			return this.createMobileRemoteErrorResponse(request, 'target_project_not_found', 'The destination project is not open on the desktop.');
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'target_project_not_found', 'The destination project is not open on the desktop.')
+			};
 		}
 
 		const source = this.resolveMobileProjectResource(sourceProject, path, false);
 		const target = this.resolveMobileProjectResource(targetProject, targetPath, false);
 		if (!source || !target) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_path', 'The requested move path is outside an open project.');
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'invalid_path', `The requested ${options.actionLabel} path is outside an open project.`)
+			};
 		}
 
-		const overwrite = getMobilePayloadBoolean(payload, 'overwrite') ?? false;
+		return {
+			transfer: {
+				source,
+				target,
+				targetProjectId: targetProject.uri.toString(),
+				overwrite: getMobilePayloadBoolean(payload, 'overwrite') ?? false
+			}
+		};
+	}
+
+	private async handleMobileFileMove(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
+		const payload = getMobilePayloadObject(request.payload);
+		const result = this.resolveMobileFileTransfer(request, payload, { actionLabel: 'move', requireTargetProject: false });
+		if (hasKey(result, { error: true })) {
+			return result.error;
+		}
+
+		const { source, target, targetProjectId, overwrite } = result.transfer;
 		await this.fileService.move(source.resource, target.resource, overwrite);
 		const response: IVectorCodeMobileRemoteFileMoveResponse = {
 			path: source.relativePath,
 			targetPath: target.relativePath,
-			targetProjectId: targetProject.uri.toString()
+			targetProjectId
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
 	private async handleMobileFileCopy(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const sourceProject = this.getMobileRequestProject(request);
 		const payload = getMobilePayloadObject(request.payload);
-		const path = getRequiredMobilePayloadString(payload, 'path');
-		const targetProjectId = getRequiredMobilePayloadString(payload, 'targetProjectId');
-		const targetPath = getRequiredMobilePayloadString(payload, 'targetPath');
-		if (!sourceProject || !path || !targetProjectId || !targetPath) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'File copy requires a source project, path, targetProjectId, and targetPath.');
+		const result = this.resolveMobileFileTransfer(request, payload, { actionLabel: 'copy', requireTargetProject: true });
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const targetProject = this.getProjectById(targetProjectId);
-		if (!targetProject) {
-			return this.createMobileRemoteErrorResponse(request, 'target_project_not_found', 'The destination project is not open on the desktop.');
-		}
-
-		const source = this.resolveMobileProjectResource(sourceProject, path, false);
-		const target = this.resolveMobileProjectResource(targetProject, targetPath, false);
-		if (!source || !target) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_path', 'The requested copy path is outside an open project.');
-		}
-
-		const overwrite = getMobilePayloadBoolean(payload, 'overwrite') ?? false;
+		const { source, target, targetProjectId, overwrite } = result.transfer;
 		await this.fileService.copy(source.resource, target.resource, overwrite);
 		const response: IVectorCodeMobileRemoteFileCopyResponse = {
 			path: source.relativePath,
 			targetPath: target.relativePath,
-			targetProjectId: targetProject.uri.toString()
+			targetProjectId
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
 	private async handleMobileTerminalList(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		if (!project) {
-			return this.createMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.');
+		const result = this.resolveMobileRequestProject(request);
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		return this.createMobileRemoteResponse(request, await this.getMobileTerminalTabsWithRawOutput(project.uri.toString()));
+		const { project } = result.target;
+		return createVectorCodeMobileRemoteResponse(request, await this.getMobileTerminalTabsWithRawOutput(project.uri.toString()));
 	}
 
 	private async handleMobileTerminalCreate(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		if (!project) {
-			return this.createMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.');
+		const result = this.resolveMobileRequestProject(request);
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
+		const { project } = result.target;
 		const payload = getMobilePayloadObject(request.payload);
 		const requestedTitle = getOptionalMobilePayloadString(payload, 'title');
 		const requestedCwd = getOptionalMobilePayloadString(payload, 'cwd');
 		const cwd = requestedCwd ? this.resolveMobileProjectResource(project, requestedCwd, true)?.resource : project.uri;
 		if (!cwd) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_cwd', 'The requested terminal working directory is outside the project.');
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_cwd', 'The requested terminal working directory is outside the project.');
 		}
 
 		const instance = await this.terminalService.createTerminal({
@@ -473,148 +567,158 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 
 		const projectKey = project.uri.toString();
-		this.adoptTerminalInstance(instance, projectKey, true);
-		this.projectActiveTerminalInstances.set(projectKey, instance);
+		this.terminalState.adopt(instance, projectKey, true);
+		this.terminalState.setActive(projectKey, instance);
 		if (projectKey === this.activeProjectUri?.toString()) {
 			this.terminalService.setActiveInstance(instance);
 		} else {
 			this.terminalService.moveToBackground(instance);
 		}
 
-		return this.createMobileRemoteResponse(request, await this.getMobileTerminalTabWithRawOutput(projectKey, instance, true));
+		return createVectorCodeMobileRemoteResponse(request, await this.getMobileTerminalTabWithRawOutput(projectKey, instance, true));
 	}
 
 	private async handleMobileTerminalInput(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		const payload = getMobilePayloadObject(request.payload);
-		const terminalId = getRequiredMobilePayloadString(payload, 'terminalId');
+		const result = this.resolveMobileTerminalTarget(request, 'Terminal input requires a project, terminalId, and input.');
+		if (hasKey(result, { error: true })) {
+			return result.error;
+		}
+
+		const { payload, terminalId, projectKey, instance } = result.target;
 		const input = getRequiredMobilePayloadString(payload, 'input');
 		const submit = getMobilePayloadBoolean(payload, 'submit') ?? false;
-		const mode = getOptionalMobilePayloadString(payload, 'mode') ?? (submit ? 'command' : 'paste');
-		if (!project || !terminalId || input === undefined) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal input requires a project, terminalId, and input.');
+		const mode = getOptionalMobilePayloadString(payload, 'mode') ?? (submit ? VectorCodeMobileTerminalInputMode.Command : VectorCodeMobileTerminalInputMode.Paste);
+		if (input === undefined) {
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal input requires a project, terminalId, and input.');
 		}
-		if (mode !== 'raw' && mode !== 'paste' && mode !== 'command') {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal input mode must be raw, paste, or command.');
-		}
-
-		const projectKey = project.uri.toString();
-		const instance = this.getProjectTerminalInstance(projectKey, terminalId);
-		if (!instance) {
-			return this.createMobileRemoteErrorResponse(request, 'terminal_not_found', 'The requested terminal is not open for this project.');
+		if (!isVectorCodeMobileTerminalInputMode(mode)) {
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal input mode must be raw, paste, or command.');
 		}
 
-		this.projectActiveTerminalInstances.set(projectKey, instance);
+		this.terminalState.setActive(projectKey, instance);
 		if (projectKey === this.activeProjectUri?.toString()) {
 			this.terminalService.setActiveInstance(instance);
 		}
-		await instance.sendText(input, mode === 'command' ? submit : false, mode === 'paste');
+		await instance.sendText(input, mode === VectorCodeMobileTerminalInputMode.Command ? submit : false, mode === VectorCodeMobileTerminalInputMode.Paste);
 		const response: IVectorCodeMobileRemoteTerminalInputResponse = {
 			terminalId,
 			accepted: true
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
 	private async handleMobileTerminalControl(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		const payload = getMobilePayloadObject(request.payload);
-		const terminalId = getRequiredMobilePayloadString(payload, 'terminalId');
-		const command = getRequiredMobilePayloadString(payload, 'command');
-		if (!project || !terminalId || !command) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal control requires a project, terminalId, and command.');
+		const result = this.resolveMobileTerminalTarget(request, 'Terminal control requires a project, terminalId, and command.');
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const projectKey = project.uri.toString();
-		const instance = this.getProjectTerminalInstance(projectKey, terminalId);
-		if (!instance) {
-			return this.createMobileRemoteErrorResponse(request, 'terminal_not_found', 'The requested terminal is not open for this project.');
+		const { payload, terminalId, instance } = result.target;
+		const command = getRequiredMobilePayloadString(payload, 'command');
+		if (!command) {
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal control requires a project, terminalId, and command.');
 		}
 
 		let accepted = true;
-		switch (command) {
-			case 'clear':
-				instance.clearBuffer();
-				this.terminalOutputLines.set(instance.instanceId, []);
-				break;
-			case 'interrupt':
-				await instance.sendSignal('SIGINT');
-				break;
-			case 'rename': {
-				const title = getOptionalMobilePayloadString(payload, 'title');
-				if (title) {
-					await instance.rename(title);
-				} else {
-					accepted = false;
+		if (!isVectorCodeMobileTerminalControlCommand(command)) {
+			accepted = false;
+		} else {
+			switch (command) {
+				case VectorCodeMobileTerminalControlCommand.Clear:
+					instance.clearBuffer();
+					this.terminalState.clearOutput(instance);
+					break;
+				case VectorCodeMobileTerminalControlCommand.Interrupt:
+					await instance.sendSignal('SIGINT');
+					break;
+				case VectorCodeMobileTerminalControlCommand.Rename: {
+					const title = getOptionalMobilePayloadString(payload, 'title');
+					if (title) {
+						await instance.rename(title);
+					} else {
+						accepted = false;
+					}
+					break;
 				}
-				break;
-			}
-			case 'close':
-				instance.dispose();
-				break;
-			case 'resize': {
-				const cols = getPositiveIntegerMobilePayloadValue(payload, 'cols');
-				const rows = getPositiveIntegerMobilePayloadValue(payload, 'rows');
-				if (cols && rows) {
-					instance.setOverrideDimensions({ cols, rows });
-				} else {
-					accepted = false;
+				case VectorCodeMobileTerminalControlCommand.Close:
+					instance.dispose();
+					break;
+				case VectorCodeMobileTerminalControlCommand.Resize: {
+					const cols = getPositiveIntegerMobilePayloadValue(payload, 'cols');
+					const rows = getPositiveIntegerMobilePayloadValue(payload, 'rows');
+					if (cols && rows) {
+						instance.setOverrideDimensions({ cols, rows });
+					} else {
+						accepted = false;
+					}
+					break;
 				}
-				break;
+				default:
+					accepted = false;
+					break;
 			}
-			default:
-				accepted = false;
-				break;
 		}
 
 		const response: IVectorCodeMobileRemoteTerminalControlResponse = {
 			terminalId,
 			accepted
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
 	private async handleMobileTerminalOutput(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
-		const project = this.getMobileRequestProject(request);
-		const payload = getMobilePayloadObject(request.payload);
-		const terminalId = getRequiredMobilePayloadString(payload, 'terminalId');
-		if (!project || !terminalId) {
-			return this.createMobileRemoteErrorResponse(request, 'invalid_payload', 'Terminal output requires a project and terminalId.');
+		const result = this.resolveMobileTerminalTarget(request, 'Terminal output requires a project and terminalId.');
+		if (hasKey(result, { error: true })) {
+			return result.error;
 		}
 
-		const instance = this.getProjectTerminalInstance(project.uri.toString(), terminalId);
-		if (!instance) {
-			return this.createMobileRemoteErrorResponse(request, 'terminal_not_found', 'The requested terminal is not open for this project.');
-		}
-
+		const { terminalId, instance } = result.target;
 		const response: IVectorCodeMobileRemoteTerminalOutputResponse = {
 			terminalId,
-			output: this.terminalOutputLines.get(instance.instanceId) ?? [],
+			output: this.terminalState.getOutput(instance),
 			rawOutput: await this.getTerminalRawOutput(instance)
 		};
-		return this.createMobileRemoteResponse(request, response);
+		return createVectorCodeMobileRemoteResponse(request, response);
 	}
 
-	private createMobileRemoteResponse<TPayload>(request: IVectorCodeMobileRemoteEnvelope, payload: TPayload): IVectorCodeMobileRemoteEnvelope<TPayload> {
-		return {
-			kind: 'response',
-			protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
-			requestId: request.requestId,
-			action: request.action,
-			projectId: request.projectId,
-			payload
-		};
+	private resolveMobileRequestProject(request: IVectorCodeMobileRemoteEnvelope): { readonly target: IVectorCodeMobileRequestProject } | { readonly error: IVectorCodeMobileRemoteEnvelope } {
+		const project = this.getMobileRequestProject(request);
+		if (!project) {
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'project_not_found', 'The requested project is not open on the desktop.')
+			};
+		}
+
+		return { target: { project } };
 	}
 
-	private createMobileRemoteErrorResponse(request: IVectorCodeMobileRemoteEnvelope, code: string, message: string): IVectorCodeMobileRemoteEnvelope {
-		return {
-			kind: 'response',
-			protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
-			requestId: request.requestId,
-			action: request.action,
-			projectId: request.projectId,
-			error: { code, message }
-		};
+	private resolveMobileTerminalTarget(
+		request: IVectorCodeMobileRemoteEnvelope,
+		missingPayloadMessage: string
+	): { readonly target: IVectorCodeMobileTerminalTarget } | { readonly error: IVectorCodeMobileRemoteEnvelope } {
+		const projectResult = this.resolveMobileRequestProject(request);
+		if (hasKey(projectResult, { error: true })) {
+			return projectResult;
+		}
+
+		const { project } = projectResult.target;
+		const payload = getMobilePayloadObject(request.payload);
+		const terminalId = getRequiredMobilePayloadString(payload, 'terminalId');
+		if (!terminalId) {
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'invalid_payload', missingPayloadMessage)
+			};
+		}
+
+		const projectKey = project.uri.toString();
+		const instance = this.getProjectTerminalInstance(projectKey, terminalId);
+		if (!instance) {
+			return {
+				error: createVectorCodeMobileRemoteErrorResponse(request, 'terminal_not_found', 'The requested terminal is not open for this project.')
+			};
+		}
+
+		return { target: { projectKey, payload, terminalId, instance } };
 	}
 
 	private async doSwitchProject(projectUri: URI | undefined): Promise<void> {
@@ -737,20 +841,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	private captureProjectTerminalState(projectKey: string): readonly ITerminalInstance[] {
 		const visibleInstances = this.terminalGroupService.instances.filter(instance => !instance.isDisposed);
 		const activeInstance = this.terminalGroupService.activeGroup?.activeInstance;
-		const existingInstances = (this.projectTerminalInstances.get(projectKey) ?? []).filter(instance => !instance.isDisposed && this.terminalProjectKeys.get(instance.instanceId) === projectKey);
-
-		for (const instance of visibleInstances) {
-			this.adoptTerminalInstance(instance, projectKey);
-		}
-
-		this.projectTerminalInstances.set(projectKey, this.uniqueTerminalInstances([...existingInstances, ...visibleInstances]));
-		if (activeInstance && visibleInstances.includes(activeInstance)) {
-			this.projectActiveTerminalInstances.set(projectKey, activeInstance);
-		} else {
-			this.projectActiveTerminalInstances.delete(projectKey);
-		}
-
-		return visibleInstances;
+		return this.terminalState.captureProject(projectKey, visibleInstances, activeInstance);
 	}
 
 	private captureTerminalLayoutState(): IVectorCodeTerminalLayoutState {
@@ -779,16 +870,14 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			return;
 		}
 
-		const instances = (this.projectTerminalInstances.get(projectKey) ?? []).filter(instance => !instance.isDisposed && this.terminalProjectKeys.get(instance.instanceId) === projectKey);
-		this.projectTerminalInstances.set(projectKey, instances);
+		const instances = this.terminalState.getInstances(projectKey);
 
 		for (const instance of instances) {
-			this.terminalProjectKeys.set(instance.instanceId, projectKey);
 			await this.terminalService.showBackgroundTerminal(instance, true);
 		}
 
-		const activeInstance = this.projectActiveTerminalInstances.get(projectKey);
-		if (activeInstance && !activeInstance.isDisposed && instances.includes(activeInstance)) {
+		const activeInstance = this.terminalState.getActive(projectKey);
+		if (activeInstance && instances.includes(activeInstance)) {
 			this.terminalService.setActiveInstance(activeInstance);
 		} else if (instances.length) {
 			this.terminalService.setActiveInstance(instances[0]);
@@ -801,61 +890,6 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				this.terminalService.moveToBackground(instance);
 			}
 		}
-	}
-
-	private adoptTerminalInstance(instance: ITerminalInstance, projectKey = this.activeProjectUri?.toString(), forceProject = false): void {
-		if (!projectKey || instance.isDisposed) {
-			return;
-		}
-		this.ensureTerminalOutputTracking(instance);
-		const existingProjectKey = this.terminalProjectKeys.get(instance.instanceId);
-		if (existingProjectKey && (!forceProject || existingProjectKey === projectKey)) {
-			return;
-		}
-		if (existingProjectKey && forceProject) {
-			const previousInstances = this.projectTerminalInstances.get(existingProjectKey) ?? [];
-			this.projectTerminalInstances.set(existingProjectKey, previousInstances.filter(candidate => candidate !== instance));
-			if (this.projectActiveTerminalInstances.get(existingProjectKey) === instance) {
-				this.projectActiveTerminalInstances.delete(existingProjectKey);
-			}
-		}
-
-		this.terminalProjectKeys.set(instance.instanceId, projectKey);
-		const instances = this.projectTerminalInstances.get(projectKey) ?? [];
-		this.projectTerminalInstances.set(projectKey, this.uniqueTerminalInstances([...instances, instance]));
-	}
-
-	private uniqueTerminalInstances(instances: readonly ITerminalInstance[]): ITerminalInstance[] {
-		const seen = new Set<number>();
-		const uniqueInstances: ITerminalInstance[] = [];
-		for (const instance of instances) {
-			if (seen.has(instance.instanceId) || instance.isDisposed) {
-				continue;
-			}
-			seen.add(instance.instanceId);
-			uniqueInstances.push(instance);
-		}
-		return uniqueInstances;
-	}
-
-	private ensureTerminalOutputTracking(instance: ITerminalInstance): void {
-		if (this.terminalOutputDisposables.has(instance.instanceId)) {
-			return;
-		}
-
-		this.terminalOutputLines.set(instance.instanceId, this.terminalOutputLines.get(instance.instanceId) ?? []);
-		this.terminalOutputDisposables.set(instance.instanceId, [
-			instance.onLineData(line => this.captureTerminalOutputLine(instance, line))
-		]);
-	}
-
-	private captureTerminalOutputLine(instance: ITerminalInstance, line: string): void {
-		const lines = this.terminalOutputLines.get(instance.instanceId) ?? [];
-		lines.push(line);
-		if (lines.length > VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES) {
-			lines.splice(0, lines.length - VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES);
-		}
-		this.terminalOutputLines.set(instance.instanceId, lines);
 	}
 
 	private getMobileEditorTabs(projectKey: string): IVectorCodeMobileRemoteEditorTab[] {
@@ -872,21 +906,21 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				projectId: projectKey,
 				path,
 				title: entry.editor.getName(),
-				language: inferLanguage(path),
+				language: inferVectorCodeLanguage(path),
 				isDirty: entry.editor.isDirty()
 			};
 		});
 	}
 
 	private getMobileTerminalTabs(projectKey: string): IVectorCodeMobileRemoteTerminalTab[] {
-		const activeInstance = this.projectActiveTerminalInstances.get(projectKey);
-		const instances = (this.projectTerminalInstances.get(projectKey) ?? []).filter(instance => !instance.isDisposed && this.terminalProjectKeys.get(instance.instanceId) === projectKey);
+		const activeInstance = this.terminalState.getActive(projectKey);
+		const instances = this.terminalState.getInstances(projectKey);
 		return instances.map(instance => this.getMobileTerminalTab(projectKey, instance, activeInstance === instance));
 	}
 
 	private async getMobileTerminalTabsWithRawOutput(projectKey: string): Promise<IVectorCodeMobileRemoteTerminalTab[]> {
-		const activeInstance = this.projectActiveTerminalInstances.get(projectKey);
-		const instances = (this.projectTerminalInstances.get(projectKey) ?? []).filter(instance => !instance.isDisposed && this.terminalProjectKeys.get(instance.instanceId) === projectKey);
+		const activeInstance = this.terminalState.getActive(projectKey);
+		const instances = this.terminalState.getInstances(projectKey);
 		return Promise.all(instances.map(instance => this.getMobileTerminalTabWithRawOutput(projectKey, instance, activeInstance === instance)));
 	}
 
@@ -897,7 +931,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			title: instance.title || instance.processName || localize('vectorCodeMobileTerminalTitle', 'Terminal'),
 			cwd: instance.cwd ?? instance.initialCwd ?? '',
 			isActive,
-			output: this.terminalOutputLines.get(instance.instanceId) ?? []
+			output: this.terminalState.getOutput(instance)
 		};
 	}
 
@@ -935,7 +969,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		return this.getProjectSummaries().find(project => project.uri.toString() === projectId);
 	}
 
-	private resolveMobileProjectResource(project: IVectorCodeProjectSummary, relativePath: string, allowRoot: boolean): { readonly resource: URI; readonly relativePath: string } | undefined {
+	private resolveMobileProjectResource(project: IVectorCodeProjectSummary, relativePath: string, allowRoot: boolean): IVectorCodeMobileProjectResource | undefined {
 		const segments = relativePath.split(/[\\/]+/).filter(Boolean);
 		if (!segments.length && !allowRoot) {
 			return undefined;
@@ -956,11 +990,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	}
 
 	private getProjectTerminalInstance(projectKey: string, terminalId: string): ITerminalInstance | undefined {
-		return (this.projectTerminalInstances.get(projectKey) ?? []).find(instance => (
-			!instance.isDisposed
-			&& String(instance.instanceId) === terminalId
-			&& this.terminalProjectKeys.get(instance.instanceId) === projectKey
-		));
+		return this.terminalState.getInstances(projectKey).find(instance => String(instance.instanceId) === terminalId);
 	}
 
 	private async getMobileFileTree(projectUri: URI, relativePath = ''): Promise<IVectorCodeMobileRemoteFileTreeResponse> {
@@ -1044,24 +1074,6 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		await this.commandService.executeCommand(REVEAL_IN_EXPLORER_COMMAND_ID, projectUri);
 	}
 
-	private forgetTerminalInstance(instance: ITerminalInstance): void {
-		this.terminalProjectKeys.delete(instance.instanceId);
-		this.terminalOutputLines.delete(instance.instanceId);
-		for (const disposable of this.terminalOutputDisposables.get(instance.instanceId) ?? []) {
-			disposable.dispose();
-		}
-		this.terminalOutputDisposables.delete(instance.instanceId);
-		for (const [projectKey, instances] of this.projectTerminalInstances) {
-			this.projectTerminalInstances.set(projectKey, instances.filter(candidate => candidate !== instance));
-		}
-
-		for (const [projectKey, activeInstance] of this.projectActiveTerminalInstances) {
-			if (activeInstance === instance) {
-				this.projectActiveTerminalInstances.delete(projectKey);
-			}
-		}
-	}
-
 	private pruneProjectState(): void {
 		const projectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
 		for (const projectKey of this.projectEditorStates.keys()) {
@@ -1069,19 +1081,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				this.projectEditorStates.delete(projectKey);
 			}
 		}
-		for (const projectKey of this.projectTerminalInstances.keys()) {
-			if (!projectKeys.has(projectKey)) {
-				for (const instance of this.projectTerminalInstances.get(projectKey) ?? []) {
-					this.terminalProjectKeys.delete(instance.instanceId);
-				}
-				this.projectTerminalInstances.delete(projectKey);
-			}
-		}
-		for (const projectKey of this.projectActiveTerminalInstances.keys()) {
-			if (!projectKeys.has(projectKey)) {
-				this.projectActiveTerminalInstances.delete(projectKey);
-			}
-		}
+		this.terminalState.prune(projectKeys);
 
 		const activeProjectKey = this.activeProjectUri?.toString();
 		if (activeProjectKey && !projectKeys.has(activeProjectKey)) {
@@ -1115,29 +1115,5 @@ function getPositiveIntegerMobilePayloadValue(payload: Record<string, unknown>, 
 	return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
-function inferLanguage(path: string): string {
-	const extension = path.match(/\.([^.\\/]+)$/)?.[1]?.toLowerCase();
-	switch (extension) {
-		case 'md':
-		case 'mdx':
-			return 'markdown';
-		case 'ts':
-		case 'tsx':
-			return 'typescript';
-		case 'js':
-		case 'jsx':
-			return 'javascript';
-		case 'json':
-			return 'json';
-		case 'swift':
-			return 'swift';
-		case 'sh':
-		case 'zsh':
-		case 'bash':
-			return 'shell';
-		default:
-			return 'text';
-	}
-}
 
 registerSingleton(IVectorCodeWorkbenchService, VectorCodeWorkbenchService, InstantiationType.Delayed);

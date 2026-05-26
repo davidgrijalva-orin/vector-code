@@ -3,8 +3,7 @@ import SwiftUI
 public struct VectorCodeTerminalView: View {
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
     @State private var input = ""
-    @State private var showingRenameTerminal = false
-    @State private var terminalRenameDraft = ""
+    @State private var renamePrompt: VectorCodeRenamePrompt<VectorCodeTerminalTab>?
 
     public init(model: VectorCodeMobileWorkspaceModel) {
         self.model = model
@@ -53,8 +52,7 @@ public struct VectorCodeTerminalView: View {
                         }
                         Spacer()
                         VectorCodeIconButton(icon: .edit, size: 31) {
-                            terminalRenameDraft = terminal.title
-                            showingRenameTerminal = true
+                            renamePrompt = VectorCodeRenamePrompt(item: terminal, draft: terminal.title)
                         }
                         VectorCodeIconButton(icon: .refresh, size: 31) {
                             Task {
@@ -81,16 +79,8 @@ public struct VectorCodeTerminalView: View {
 
                     HStack(spacing: 8) {
                         TextField("Paste command", text: $input)
-                            .textFieldStyle(.plain)
                             .submitLabel(.send)
-                            .font(.system(size: 14, design: .monospaced))
-                            .padding(10)
-                            .background(VectorCodeTheme.raised)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                                    .stroke(VectorCodeTheme.line, lineWidth: 1)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+                            .textFieldStyle(VectorCodeOutlinedTextFieldStyle())
                             .onSubmit {
                                 submitInput()
                             }
@@ -138,14 +128,8 @@ public struct VectorCodeTerminalView: View {
             }
         }
         .background(VectorCodeTheme.background)
-        .alert("Rename terminal", isPresented: $showingRenameTerminal) {
-            TextField("Name", text: $terminalRenameDraft)
-            Button("Rename") {
-                if let terminal = model.selectedTerminal {
-                    model.renameTerminal(terminal, title: terminalRenameDraft)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
+        .vectorCodeRenameAlert("Rename terminal", prompt: $renamePrompt) { terminal, title in
+            model.renameTerminal(terminal, title: title)
         }
     }
 

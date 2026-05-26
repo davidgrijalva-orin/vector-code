@@ -26,8 +26,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     private let remoteWorkspaceClient: VectorCodeRemoteWorkspaceClient
     private let pairingStore: VectorCodePairingStore
     private var remoteSyncTask: Task<Void, Never>?
-    private var selectedEditorByProject: [String: String] = [:]
-    private var selectedTerminalByProject: [String: String] = [:]
+    private var editorSelections = VectorCodeProjectScopedSelectionStore()
+    private var terminalSelections = VectorCodeProjectScopedSelectionStore()
 
     public init(
         snapshot: VectorCodeRemoteWorkspaceSnapshot = .empty,
@@ -52,12 +52,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             self.pairingPayload = storedPairing.payload
             self.relayConfiguration = storedConfiguration
         }
-        if let initialProjectId, let selectedEditorId {
-            selectedEditorByProject[initialProjectId] = selectedEditorId
-        }
-        if let initialProjectId, let selectedTerminalId {
-            selectedTerminalByProject[initialProjectId] = selectedTerminalId
-        }
+        editorSelections.remember(projectId: initialProjectId, selectedId: selectedEditorId)
+        terminalSelections.remember(projectId: initialProjectId, selectedId: selectedTerminalId)
     }
 
     public var selectedProject: VectorCodeProjectSummary? {
@@ -159,8 +155,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         selectedEditorId = nil
         selectedTerminalId = nil
         editorDraft = ""
-        selectedEditorByProject.removeAll()
-        selectedTerminalByProject.removeAll()
+        editorSelections.clear()
+        terminalSelections.clear()
         viewport = .projects
         statusText = "Not paired"
     }
@@ -170,12 +166,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         selectedProjectId = project.id
         selectedEditorId = restoredEditorId(for: project.id)
         selectedTerminalId = restoredTerminalId(for: project.id)
-        if let selectedEditorId {
-            selectedEditorByProject[project.id] = selectedEditorId
-        }
-        if let selectedTerminalId {
-            selectedTerminalByProject[project.id] = selectedTerminalId
-        }
+        editorSelections.remember(projectId: project.id, selectedId: selectedEditorId)
+        terminalSelections.remember(projectId: project.id, selectedId: selectedTerminalId)
         editorDraft = snapshot.editorsByProject[project.id]?.first { $0.id == selectedEditorId }?.content ?? ""
         viewport = .files
         if isRemoteConnected, snapshot.filesByProject[project.id]?.isEmpty != false {
@@ -245,8 +237,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -266,8 +257,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -287,15 +277,14 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        if isRemoteConnected {
-            statusText = "Creating terminal"
-            Task { [weak self] in
-                await self?.createRemoteTerminal(project: project)
-            }
+        guard requireRemoteConnection() else {
             return
         }
 
-        statusText = "Desktop not connected"
+        statusText = "Creating terminal"
+        Task { [weak self] in
+            await self?.createRemoteTerminal(project: project)
+        }
     }
 
     public func sendTerminalInput(_ input: String, submit: Bool) {
@@ -303,8 +292,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -316,7 +304,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     public func selectEditor(_ editor: VectorCodeEditorTab) {
         selectedProjectId = editor.projectId
         selectedEditorId = editor.id
-        selectedEditorByProject[editor.projectId] = editor.id
+        editorSelections.remember(projectId: editor.projectId, selectedId: editor.id)
         editorDraft = editor.content ?? ""
         viewport = .editor
     }
@@ -326,25 +314,20 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        let closesSelectedProjectEditor = selectedProjectId == editor.projectId && selectedEditorId == editor.id
-        let closesRememberedProjectEditor = selectedEditorByProject[editor.projectId] == editor.id
         snapshot.editorsByProject[editor.projectId]?.remove(at: index)
         let remainingEditors = snapshot.editorsByProject[editor.projectId] ?? []
-        let nextEditor = remainingEditors.indices.contains(index) ? remainingEditors[index] : remainingEditors.last
-        if closesSelectedProjectEditor {
+        let closeSelection = editorSelections.close(
+            projectId: editor.projectId,
+            removedId: editor.id,
+            removedIndex: index,
+            remainingIds: remainingEditors.map(\.id),
+            currentProjectId: selectedProjectId,
+            currentSelectedId: selectedEditorId
+        )
+        let nextEditor = closeSelection.nextId.flatMap { nextId in remainingEditors.first { $0.id == nextId } }
+        if closeSelection.closedCurrentSelection {
             selectedEditorId = nextEditor?.id
             editorDraft = nextEditor?.content ?? ""
-        }
-
-        if closesRememberedProjectEditor {
-            if let nextEditor {
-                selectedEditorByProject[editor.projectId] = nextEditor.id
-            } else {
-                selectedEditorByProject.removeValue(forKey: editor.projectId)
-            }
-        } else if let rememberedEditorId = selectedEditorByProject[editor.projectId],
-                  !remainingEditors.contains(where: { $0.id == rememberedEditorId }) {
-            selectedEditorByProject.removeValue(forKey: editor.projectId)
         }
 
         if selectedProjectId == editor.projectId && selectedEditorId == nil {
@@ -356,7 +339,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         let existingEditor = snapshot.editorsByProject[project.id]?.first { $0.path == node.path }
         if let existingEditor {
             selectedEditorId = existingEditor.id
-            selectedEditorByProject[project.id] = existingEditor.id
+            editorSelections.remember(projectId: project.id, selectedId: existingEditor.id)
             if let content {
                 updateEditor(
                     projectId: project.id,
@@ -377,13 +360,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
                 projectId: project.id,
                 path: node.path,
                 title: node.name,
-                language: language ?? Self.language(for: node.path),
+                language: language ?? VectorCodeLanguageInference.language(for: node.path),
                 content: content,
                 version: version
             )
             snapshot.editorsByProject[project.id, default: []].append(editor)
             selectedEditorId = editor.id
-            selectedEditorByProject[project.id] = editor.id
+            editorSelections.remember(projectId: project.id, selectedId: editor.id)
             editorDraft = content
         }
         viewport = .editor
@@ -403,7 +386,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     public func selectTerminal(_ terminal: VectorCodeTerminalTab) {
         selectedProjectId = terminal.projectId
         selectedTerminalId = terminal.id
-        selectedTerminalByProject[terminal.projectId] = terminal.id
+        terminalSelections.remember(projectId: terminal.projectId, selectedId: terminal.id)
         if let indices = snapshot.terminalsByProject[terminal.projectId]?.indices {
             for index in indices {
                 snapshot.terminalsByProject[terminal.projectId]?[index].isActive = snapshot.terminalsByProject[terminal.projectId]?[index].id == terminal.id
@@ -421,8 +404,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -446,8 +428,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -464,8 +445,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -481,8 +461,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -503,8 +482,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        guard isRemoteConnected else {
-            statusText = "Desktop not connected"
+        guard requireRemoteConnection() else {
             return
         }
 
@@ -521,7 +499,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func resizeTerminal(_ terminal: VectorCodeTerminalTab, cols: Int, rows: Int) {
-        guard isRemoteConnected, cols > 0, rows > 0, hasTerminal(terminal) else {
+        guard requireRemoteConnection(), cols > 0, rows > 0, hasTerminal(terminal) else {
             return
         }
 
@@ -555,27 +533,22 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        let closesSelectedProjectTerminal = selectedProjectId == terminal.projectId && selectedTerminalId == terminal.id
-        let closesRememberedProjectTerminal = selectedTerminalByProject[terminal.projectId] == terminal.id
         snapshot.terminalsByProject[terminal.projectId]?.remove(at: index)
         let remainingTerminals = snapshot.terminalsByProject[terminal.projectId] ?? []
-        let nextTerminal = remainingTerminals.indices.contains(index) ? remainingTerminals[index] : remainingTerminals.last
-        if closesSelectedProjectTerminal {
+        let closeSelection = terminalSelections.close(
+            projectId: terminal.projectId,
+            removedId: terminal.id,
+            removedIndex: index,
+            remainingIds: remainingTerminals.map(\.id),
+            currentProjectId: selectedProjectId,
+            currentSelectedId: selectedTerminalId
+        )
+        let nextTerminal = closeSelection.nextId.flatMap { nextId in remainingTerminals.first { $0.id == nextId } }
+        if closeSelection.closedCurrentSelection {
             selectedTerminalId = nextTerminal?.id
         }
 
-        if closesRememberedProjectTerminal {
-            if let nextTerminal {
-                selectedTerminalByProject[terminal.projectId] = nextTerminal.id
-            } else {
-                selectedTerminalByProject.removeValue(forKey: terminal.projectId)
-            }
-        } else if let rememberedTerminalId = selectedTerminalByProject[terminal.projectId],
-                  !remainingTerminals.contains(where: { $0.id == rememberedTerminalId }) {
-            selectedTerminalByProject.removeValue(forKey: terminal.projectId)
-        }
-
-        if closesSelectedProjectTerminal, let nextTerminal {
+        if closeSelection.closedCurrentSelection, let nextTerminal {
             selectTerminal(nextTerminal)
         }
     }
@@ -647,26 +620,6 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         return false
     }
 
-    private static func language(for path: String) -> String {
-        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
-        switch ext {
-        case "md", "mdx":
-            return "markdown"
-        case "swift":
-            return "swift"
-        case "ts", "tsx":
-            return "typescript"
-        case "js", "jsx":
-            return "javascript"
-        case "json":
-            return "json"
-        case "sh", "zsh", "bash":
-            return "shell"
-        default:
-            return "text"
-        }
-    }
-
     private static func renamedPath(for path: String, newName: String) -> String {
         guard let slashIndex = path.lastIndex(of: "/") else {
             return newName
@@ -699,20 +652,16 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         do {
             try await remoteWorkspaceClient.connect(configuration: configuration)
             statusText = "Syncing workspace"
-            let nextSnapshot = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
+            let nextSnapshot = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
                 try await remoteWorkspaceClient.readState()
             }
             applySnapshot(nextSnapshot)
             isRemoteConnected = true
             statusText = "Connected"
         } catch is CancellationError {
-            await remoteWorkspaceClient.disconnect()
-            isRemoteConnected = false
-            statusText = "Ready to connect"
+            await disconnectRemoteWorkspace(statusText: "Ready to connect")
         } catch {
-            await remoteWorkspaceClient.disconnect()
-            isRemoteConnected = false
-            statusText = "Paired. Desktop not ready."
+            await disconnectRemoteWorkspace(statusText: "Paired. Desktop not ready.")
         }
     }
 
@@ -735,12 +684,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         selectedProjectId = nextProjectId
         selectedEditorId = nextProjectId.flatMap { restoredEditorId(for: $0) }
         selectedTerminalId = nextProjectId.flatMap { restoredTerminalId(for: $0) }
-        if let nextProjectId, let selectedEditorId {
-            selectedEditorByProject[nextProjectId] = selectedEditorId
-        }
-        if let nextProjectId, let selectedTerminalId {
-            selectedTerminalByProject[nextProjectId] = selectedTerminalId
-        }
+        editorSelections.remember(projectId: nextProjectId, selectedId: selectedEditorId)
+        terminalSelections.remember(projectId: nextProjectId, selectedId: selectedTerminalId)
         editorDraft = snapshot.editorsByProject[nextProjectId ?? ""]?.first { $0.id == selectedEditorId }?.content ?? ""
         if nextProjectId == nil {
             viewport = .projects
@@ -756,26 +701,26 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         var merged = next
         let projectIds = Set(next.projects.map(\.id))
 
-        merged.filesByProject = current.filesByProject.filter { projectIds.contains($0.key) }
-        for (projectId, files) in next.filesByProject where projectIds.contains(projectId) {
-            merged.filesByProject[projectId] = files
+        merged.filesByProject = mergeProjectMap(current: current.filesByProject, next: next.filesByProject, projectIds: projectIds)
+        merged.fileTreeTruncatedByProject = mergeProjectMap(current: current.fileTreeTruncatedByProject, next: next.fileTreeTruncatedByProject, projectIds: projectIds)
+        merged.editorsByProject = mergeProjectMap(current: current.editorsByProject, next: next.editorsByProject, projectIds: projectIds)
+        merged.terminalsByProject = mergeProjectMap(current: current.terminalsByProject, next: next.terminalsByProject, projectIds: projectIds) { _, currentTerminals, nextTerminals in
+            mergeTerminalTabs(current: currentTerminals ?? [], next: nextTerminals)
         }
 
-        merged.fileTreeTruncatedByProject = current.fileTreeTruncatedByProject.filter { projectIds.contains($0.key) }
-        for (projectId, truncated) in next.fileTreeTruncatedByProject where projectIds.contains(projectId) {
-            merged.fileTreeTruncatedByProject[projectId] = truncated
-        }
+        return merged
+    }
 
-        merged.editorsByProject = current.editorsByProject.filter { projectIds.contains($0.key) }
-        for (projectId, editors) in next.editorsByProject where projectIds.contains(projectId) {
-            merged.editorsByProject[projectId] = editors
+    private static func mergeProjectMap<Value>(
+        current: [String: Value],
+        next: [String: Value],
+        projectIds: Set<String>,
+        mergeValue: (_ projectId: String, _ currentValue: Value?, _ nextValue: Value) -> Value = { _, _, nextValue in nextValue }
+    ) -> [String: Value] {
+        var merged = current.filter { projectIds.contains($0.key) }
+        for (projectId, nextValue) in next where projectIds.contains(projectId) {
+            merged[projectId] = mergeValue(projectId, current[projectId], nextValue)
         }
-
-        merged.terminalsByProject = current.terminalsByProject.filter { projectIds.contains($0.key) }
-        for (projectId, terminals) in next.terminalsByProject where projectIds.contains(projectId) {
-            merged.terminalsByProject[projectId] = mergeTerminalTabs(current: current.terminalsByProject[projectId] ?? [], next: terminals)
-        }
-
         return merged
     }
 
@@ -811,54 +756,61 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         snapshot.editorsByProject[dirtyEditor.projectId]?[index].version = dirtyEditor.version
     }
 
-    private func openRemoteFile(_ node: VectorCodeFileNode, project: VectorCodeProjectSummary) async {
+    private func runRemoteOperation<Value: Sendable>(
+        failureStatus: String,
+        operation: @escaping @Sendable () async throws -> Value,
+        onSuccess: (Value) async throws -> Void
+    ) async {
         do {
-            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readFile(projectId: project.id, path: node.path)
-            }
+            let value = try await runTimedRemoteOperation(operation)
+            try await onSuccess(value)
+        } catch {
+            await handleRemoteFailure(error, statusText: failureStatus)
+        }
+    }
+
+    private func runTimedRemoteOperation<Value: Sendable>(
+        _ operation: @escaping @Sendable () async throws -> Value
+    ) async throws -> Value {
+        try await Self.withTimeout(seconds: 8, operation: operation)
+    }
+
+    private func openRemoteFile(_ node: VectorCodeFileNode, project: VectorCodeProjectSummary) async {
+        await runRemoteOperation(failureStatus: "File unavailable") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.readFile(projectId: project.id, path: node.path)
+        } onSuccess: { response in
             openLocalFile(node, project: project, content: response.content, language: response.language, version: response.version)
             statusText = "Connected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "File unavailable")
         }
     }
 
     private func saveRemoteEditor(_ editor: VectorCodeEditorTab, projectId: String, content: String) async {
-        do {
-            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.writeFile(projectId: projectId, path: editor.path, content: content, expectedVersion: editor.version)
-            }
+        await runRemoteOperation(failureStatus: "Save failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.writeFile(projectId: projectId, path: editor.path, content: content, expectedVersion: editor.version)
+        } onSuccess: { response in
             updateEditor(projectId: projectId, editorId: editor.id, content: content, isDirty: false, version: response.version)
             statusText = "Saved"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Save failed")
         }
     }
 
     private func moveRemoteFile(projectId: String, path: String, targetPath: String) async {
-        do {
-            _ = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.moveFile(projectId: projectId, path: path, targetPath: targetPath)
-            }
+        await runRemoteOperation(failureStatus: "Rename failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.moveFile(projectId: projectId, path: path, targetPath: targetPath)
+        } onSuccess: { _ in
             await refreshRemoteFileTreeAfterMutation(projectId: projectId, changedPath: targetPath)
             if Self.parentFolderPath(for: path) != Self.parentFolderPath(for: targetPath) {
                 await refreshRemoteFileTreeAfterMutation(projectId: projectId, changedPath: path)
             }
             statusText = "Renamed"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Rename failed")
         }
     }
 
     private func copyRemoteFile(sourceProjectId: String, path: String, targetProjectId: String, targetPath: String) async {
-        do {
-            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.copyFile(projectId: sourceProjectId, path: path, targetProjectId: targetProjectId, targetPath: targetPath)
-            }
+        await runRemoteOperation(failureStatus: "Copy failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.copyFile(projectId: sourceProjectId, path: path, targetProjectId: targetProjectId, targetPath: targetPath)
+        } onSuccess: { response in
             await refreshRemoteFileTreeAfterMutation(projectId: response.targetProjectId, changedPath: response.targetPath)
             statusText = "Copied"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Copy failed")
         }
     }
 
@@ -875,30 +827,24 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     private func loadRemoteFolderChildren(projectId: String, path: String) async {
-        do {
-            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readFileTree(projectId: projectId, path: path)
-            }
+        await runRemoteOperation(failureStatus: "Folder unavailable") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.readFileTree(projectId: projectId, path: path)
+        } onSuccess: { response in
             replaceFolderChildren(projectId: projectId, path: path, children: response.nodes, truncated: response.truncated)
             statusText = "Connected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Folder unavailable")
         }
     }
 
     private func createRemoteTerminal(project: VectorCodeProjectSummary) async {
-        do {
-            let terminal = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.createTerminal(projectId: project.id)
-            }
+        await runRemoteOperation(failureStatus: "Terminal unavailable") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.createTerminal(projectId: project.id)
+        } onSuccess: { terminal in
             snapshot.terminalsByProject[project.id, default: []].removeAll { $0.id == terminal.id }
             snapshot.terminalsByProject[project.id, default: []].append(terminal)
             selectedTerminalId = terminal.id
-            selectedTerminalByProject[project.id] = terminal.id
+            terminalSelections.remember(projectId: project.id, selectedId: terminal.id)
             viewport = .terminal
             statusText = "Connected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Terminal unavailable")
         }
     }
 
@@ -910,22 +856,16 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         mode: VectorCodeTerminalInputRequest.Mode,
         refreshAfterSend: Bool = true
     ) async {
-        do {
-            _ = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.sendTerminalInput(projectId: projectId, terminalId: terminalId, input: input, submit: submit, mode: mode)
-            }
+        await runRemoteOperation(failureStatus: "Terminal input failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.sendTerminalInput(projectId: projectId, terminalId: terminalId, input: input, submit: submit, mode: mode)
+        } onSuccess: { _ in
             guard refreshAfterSend else {
                 statusText = "Connected"
                 return
             }
             try await Task.sleep(nanoseconds: 450_000_000)
-            let terminalOutput = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readTerminalOutput(projectId: projectId, terminalId: terminalId)
-            }
-            replaceTerminalOutput(projectId: projectId, terminalId: terminalId, output: terminalOutput.output, rawOutput: terminalOutput.rawOutput)
+            try await readAndReplaceRemoteTerminalOutput(projectId: projectId, terminalId: terminalId)
             statusText = "Connected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Terminal input failed")
         }
     }
 
@@ -956,42 +896,33 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         cols: Int? = nil,
         rows: Int? = nil
     ) async {
-        do {
-            let response = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.controlTerminal(
-                    projectId: terminal.projectId,
-                    terminalId: terminal.id,
-                    command: command,
-                    cols: cols,
-                    rows: rows,
-                    title: title
-                )
-            }
+        await runRemoteOperation(failureStatus: "Terminal action failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.controlTerminal(
+                projectId: terminal.projectId,
+                terminalId: terminal.id,
+                command: command,
+                cols: cols,
+                rows: rows,
+                title: title
+            )
+        } onSuccess: { response in
             statusText = response.accepted ? "Connected" : "Terminal action rejected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Terminal action failed")
         }
     }
 
     private func refreshRemoteWorkspace(projectId requestedProjectId: String? = nil) async {
         let projectId = requestedProjectId ?? selectedProjectId
-        do {
-            let nextSnapshot = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readState(projectId: projectId)
-            }
-            applySnapshot(nextSnapshot)
+        await runRemoteOperation(failureStatus: "Refresh failed") { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.readState(projectId: projectId)
+        } onSuccess: { snapshot in
+            applySnapshot(snapshot)
             statusText = "Connected"
-        } catch {
-            await handleRemoteFailure(error, statusText: "Refresh failed")
         }
     }
 
     private func refreshRemoteTerminalOutput(projectId: String, terminalId: String, updateStatus: Bool) async {
         do {
-            let terminalOutput = try await Self.withTimeout(seconds: 8) { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readTerminalOutput(projectId: projectId, terminalId: terminalId)
-            }
-            replaceTerminalOutput(projectId: projectId, terminalId: terminalId, output: terminalOutput.output, rawOutput: terminalOutput.rawOutput)
+            try await readAndReplaceRemoteTerminalOutput(projectId: projectId, terminalId: terminalId)
             if updateStatus {
                 statusText = "Connected"
             }
@@ -1002,32 +933,43 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
+    private func readAndReplaceRemoteTerminalOutput(projectId: String, terminalId: String) async throws {
+        let terminalOutput = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+            try await remoteWorkspaceClient.readTerminalOutput(projectId: projectId, terminalId: terminalId)
+        }
+        replaceTerminalOutput(projectId: projectId, terminalId: terminalId, output: terminalOutput.output, rawOutput: terminalOutput.rawOutput)
+    }
+
+    private func disconnectRemoteWorkspace(statusText: String) async {
+        await remoteWorkspaceClient.disconnect()
+        isRemoteConnected = false
+        self.statusText = statusText
+    }
+
     private func rememberCurrentProjectSelection() {
         guard let selectedProjectId else {
             return
         }
-        if let selectedEditorId {
-            selectedEditorByProject[selectedProjectId] = selectedEditorId
-        }
-        if let selectedTerminalId {
-            selectedTerminalByProject[selectedProjectId] = selectedTerminalId
-        }
+        editorSelections.remember(projectId: selectedProjectId, selectedId: selectedEditorId)
+        terminalSelections.remember(projectId: selectedProjectId, selectedId: selectedTerminalId)
     }
 
     private func restoredEditorId(for projectId: String) -> String? {
         let editors = snapshot.editorsByProject[projectId] ?? []
-        if let remembered = selectedEditorByProject[projectId], editors.contains(where: { $0.id == remembered }) {
-            return remembered
-        }
-        return editors.first?.id
+        return editorSelections.restoreId(for: projectId, availableIds: editors.map(\.id))
     }
 
     private func restoredTerminalId(for projectId: String) -> String? {
         let terminals = snapshot.terminalsByProject[projectId] ?? []
-        if let remembered = selectedTerminalByProject[projectId], terminals.contains(where: { $0.id == remembered }) {
-            return remembered
+        return terminalSelections.restoreId(for: projectId, availableIds: terminals.map(\.id))
+    }
+
+    private func requireRemoteConnection() -> Bool {
+        guard isRemoteConnected else {
+            statusText = "Desktop not connected"
+            return false
         }
-        return terminals.first?.id
+        return true
     }
 
     private func handleRemoteFailure(_ error: Error, statusText: String) async {
@@ -1083,84 +1025,4 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
 private enum VectorCodeRemoteSyncError: Error {
     case timeout
-}
-
-public extension VectorCodeRemoteWorkspaceSnapshot {
-    static let empty = VectorCodeRemoteWorkspaceSnapshot()
-
-    static let sample = VectorCodeRemoteWorkspaceSnapshot(
-        activeProjectId: "job-board",
-        projects: [
-            VectorCodeProjectSummary(id: "job-board", name: "job_board", path: "~/OrinTech/job_board"),
-            VectorCodeProjectSummary(id: "neuron", name: "NEURON", path: "~/OrinTech/NEURON"),
-        ],
-        filesByProject: [
-            "job-board": [
-                VectorCodeFileNode(name: "apps", path: "apps", kind: .folder, children: [
-                    VectorCodeFileNode(name: "web", path: "apps/web", kind: .folder, children: [
-                        VectorCodeFileNode(name: "page.tsx", path: "apps/web/app/page.tsx", kind: .file),
-                    ]),
-                ]),
-                VectorCodeFileNode(name: "README.md", path: "README.md", kind: .file),
-                VectorCodeFileNode(name: "package.json", path: "package.json", kind: .file),
-            ],
-            "neuron": [
-                VectorCodeFileNode(name: "products", path: "products", kind: .folder, children: [
-                    VectorCodeFileNode(name: "audio-lab", path: "products/audio-lab", kind: .folder),
-                ]),
-                VectorCodeFileNode(name: "README.md", path: "README.md", kind: .file),
-            ],
-        ],
-        editorsByProject: [
-            "job-board": [
-                VectorCodeEditorTab(
-                    id: "job-board:README.md",
-                    projectId: "job-board",
-                    path: "README.md",
-                    title: "README.md",
-                    language: "markdown",
-                    content: "# job_board\n\nOpen from desktop, continue on phone.\n"
-                ),
-            ],
-            "neuron": [
-                VectorCodeEditorTab(
-                    id: "neuron:README.md",
-                    projectId: "neuron",
-                    path: "README.md",
-                    title: "README.md",
-                    language: "markdown",
-                    content: "# NEURON\n\nProject state restores when you switch back.\n"
-                ),
-            ],
-        ],
-        terminalsByProject: [
-            "job-board": [
-                VectorCodeTerminalTab(
-                    id: "job-board:terminal-1",
-                    projectId: "job-board",
-                    title: "zsh",
-                    cwd: "~/OrinTech/job_board",
-                    isActive: true,
-                    output: ["david@Mac job_board % pnpm test", "Tests ready."]
-                ),
-                VectorCodeTerminalTab(
-                    id: "job-board:terminal-2",
-                    projectId: "job-board",
-                    title: "server",
-                    cwd: "~/OrinTech/job_board",
-                    output: ["ready - started server on 3000"]
-                ),
-            ],
-            "neuron": [
-                VectorCodeTerminalTab(
-                    id: "neuron:terminal-1",
-                    projectId: "neuron",
-                    title: "zsh",
-                    cwd: "~/OrinTech/NEURON",
-                    isActive: true,
-                    output: ["david@Mac NEURON % swift test"]
-                ),
-            ],
-        ]
-    )
 }

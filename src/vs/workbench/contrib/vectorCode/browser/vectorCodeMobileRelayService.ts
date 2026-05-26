@@ -10,8 +10,10 @@ import { IVectorCodeMobileRelayBridgeService } from '../../../../platform/vector
 import { ISecretStorageService } from '../../../../platform/secrets/common/secrets.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IVectorCodeMobileConnectionStatus, IVectorCodeMobilePairingPayload, IVectorCodeMobilePairingSession, IVectorCodeMobileRelayService, IVectorCodeMobileRemoteRequestHandler, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
+import { normalizeVectorCodeRelayHost, VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST, VECTOR_CODE_MOBILE_DEFAULT_USER_ID } from '../common/vectorCodeHosts.js';
+import { cryptoRandomVectorCodeBase64Url, encodeVectorCodeBase64Url } from '../common/vectorCodeMobileEncoding.js';
 import { decryptVectorCodeMobileFramePayload, encryptVectorCodeMobileFramePayload } from '../common/vectorCodeMobileFrameCrypto.js';
-import { IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRelayEncryptedFrame, VectorCodeMobileRelayFrameDirection, VectorCodeMobileRelayInboundMessage, VectorCodeMobileRelayOutboundMessage, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
+import { createVectorCodeMobileRemoteErrorResponse, IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRelayEncryptedFrame, VectorCodeMobileRelayFrameDirection, VectorCodeMobileRelayInboundMessage, VectorCodeMobileRelayOutboundMessage, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
 import { toString as qrToString } from './vectorCodeQrBundle.js';
 
 const VECTOR_CODE_MOBILE_DESKTOP_ID_STORAGE_KEY = 'vectorCode.mobile.desktopId';
@@ -19,15 +21,9 @@ const VECTOR_CODE_MOBILE_PRIVATE_KEY_STORAGE_KEY = 'vectorCode.mobile.privateKey
 const VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY = 'vectorCode.mobile.relayHost';
 const VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY = 'vectorCode.mobile.relayIssuerToken';
 const VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.activeRelaySession';
-const VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST = 'relay.vectorcode.app';
-const VECTOR_CODE_MOBILE_LEGACY_RELAY_HOSTS = new Set([
-	'relay-production-e21f.up.railway.app',
-	'sskpzvaw.up.railway.app'
-]);
 const VECTOR_CODE_MOBILE_PAIRING_TTL_MS = 5 * 60_000;
 const VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS = 60_000;
-const VECTOR_CODE_MOBILE_DEFAULT_USER_ID = 'default';
 
 interface IVectorCodeMobileDesktopRelayConnection {
 	readonly connectionId: string;
@@ -39,6 +35,16 @@ interface IVectorCodeMobileStoredRelaySession {
 	readonly payload: IVectorCodeMobilePairingPayload;
 	readonly desktopRelayToken: string;
 	readonly desktopRelayTokenExpiresAt: string;
+}
+
+interface IVectorCodeMobileRelayToken {
+	readonly relayToken: string;
+	readonly relayTokenExpiresAt: string;
+}
+
+interface IVectorCodeMobilePairingRelayTokens {
+	readonly phoneRelayToken: IVectorCodeMobileRelayToken;
+	readonly desktopRelayToken: IVectorCodeMobileRelayToken;
 }
 
 class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobileRelayService {
@@ -89,7 +95,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 	}
 
 	async startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus> {
-		const normalizedRelayHost = normalizeRelayHost(relayHost ?? this.getStoredRelayHost());
+		const normalizedRelayHost = normalizeVectorCodeRelayHost(relayHost ?? this.getStoredRelayHost());
 		if (!normalizedRelayHost) {
 			this._lastStatus = {
 				state: VectorCodeMobileConnectionState.Unconfigured,
@@ -104,20 +110,21 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		const expiresAt = new Date(Date.now() + VECTOR_CODE_MOBILE_PAIRING_TTL_MS).toISOString();
 		const desktopId = this.getOrCreateDesktopId();
 		const pairingId = cryptoRandomId('pairing');
-		const pairingToken = cryptoRandomBase64Url(32);
+		const pairingToken = cryptoRandomVectorCodeBase64Url(32);
+		const basePairingPayload: IVectorCodeMobilePairingPayload = {
+			protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
+			desktopId,
+			pairingId,
+			desktopPublicKey: identity.publicKey,
+			desktopPublicKeyFingerprint: identity.publicKeyFingerprint,
+			pairingToken,
+			relayHost: normalizedRelayHost,
+			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
+			expiresAt
+		};
 		const issuerToken = await this.resolveRelayIssuerToken(relayIssuerToken);
 		if (!issuerToken) {
-			const pairing = await createPairingSession({
-				protocolVersion: 1,
-				desktopId,
-				pairingId,
-				desktopPublicKey: identity.publicKey,
-				desktopPublicKeyFingerprint: identity.publicKeyFingerprint,
-				pairingToken,
-				relayHost: normalizedRelayHost,
-				userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-				expiresAt
-			});
+			const pairing = await createPairingSession(basePairingPayload);
 			this._lastStatus = {
 				state: VectorCodeMobileConnectionState.Unconfigured,
 				label: localize('vectorCodeMobileRelayIssuerTokenRequired', 'Connection setup required'),
@@ -128,36 +135,16 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 			return this._lastStatus;
 		}
 
-		const phoneRelayToken = await this.createRelayToken({
+		const relayTokens = await this.createPairingRelayTokens({
 			relayHost: normalizedRelayHost,
 			issuerToken,
-			role: 'phone',
 			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
 			desktopId,
 			pairingId,
 			ttlSeconds: VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS
 		});
-		const desktopRelayToken = await this.createRelayToken({
-			relayHost: normalizedRelayHost,
-			issuerToken,
-			role: 'desktop',
-			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-			desktopId,
-			pairingId,
-			ttlSeconds: VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS
-		});
-		if (!phoneRelayToken || !desktopRelayToken) {
-			const pairing = await createPairingSession({
-				protocolVersion: 1,
-				desktopId,
-				pairingId,
-				desktopPublicKey: identity.publicKey,
-				desktopPublicKeyFingerprint: identity.publicKeyFingerprint,
-				pairingToken,
-				relayHost: normalizedRelayHost,
-				userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-				expiresAt
-			});
+		if (!relayTokens) {
+			const pairing = await createPairingSession(basePairingPayload);
 			this._lastStatus = {
 				state: VectorCodeMobileConnectionState.Disconnected,
 				label: localize('vectorCodeMobileRelayTokenRejected', 'Secure pairing failed'),
@@ -169,23 +156,15 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		}
 
 		const payload: IVectorCodeMobilePairingPayload = {
-			protocolVersion: 1,
-			desktopId,
-			pairingId,
-			desktopPublicKey: identity.publicKey,
-			desktopPublicKeyFingerprint: identity.publicKeyFingerprint,
-			pairingToken,
-			relayHost: normalizedRelayHost,
-			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-			relayToken: phoneRelayToken.relayToken,
-			relayTokenExpiresAt: phoneRelayToken.relayTokenExpiresAt,
-			expiresAt
+			...basePairingPayload,
+			relayToken: relayTokens.phoneRelayToken.relayToken,
+			relayTokenExpiresAt: relayTokens.phoneRelayToken.relayTokenExpiresAt
 		};
 
 		const pairing = await createPairingSession(payload);
 		try {
-			await this.connectDesktopRelay(payload, desktopRelayToken.relayToken);
-			await this.storeActiveRelaySession(payload, desktopRelayToken);
+			await this.connectDesktopRelay(payload, relayTokens.desktopRelayToken.relayToken);
+			await this.storeActiveRelaySession(payload, relayTokens.desktopRelayToken);
 		} catch {
 			this._lastStatus = {
 				state: VectorCodeMobileConnectionState.Disconnected,
@@ -362,16 +341,16 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 
 	private async createRemoteResponse(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
 		if (request.kind !== 'request') {
-			return createRemoteErrorResponse(request, 'invalid_kind', 'Expected a request envelope.');
+			return createVectorCodeMobileRemoteErrorResponse(request, 'invalid_kind', 'Expected a request envelope.');
 		}
 		if (!this.requestHandler) {
-			return createRemoteErrorResponse(request, 'desktop_handler_missing', 'The desktop bridge is not ready.');
+			return createVectorCodeMobileRemoteErrorResponse(request, 'desktop_handler_missing', 'The desktop bridge is not ready.');
 		}
 		try {
 			return await this.requestHandler.handleVectorCodeMobileRemoteRequest(request);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'The desktop bridge failed to handle the request.';
-			return createRemoteErrorResponse(request, 'desktop_request_failed', message);
+			return createVectorCodeMobileRemoteErrorResponse(request, 'desktop_request_failed', message);
 		}
 	}
 
@@ -397,7 +376,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 	}
 
 	private getStoredRelayHost(): string | undefined {
-		return normalizeRelayHost(this.storageService.get(VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY, StorageScope.APPLICATION)) ?? VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
+		return normalizeVectorCodeRelayHost(this.storageService.get(VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY, StorageScope.APPLICATION)) ?? VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
 	}
 
 	private getOrCreateDesktopId(): string {
@@ -448,7 +427,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		const publicCryptoKey = await crypto.subtle.importKey('jwk', publicKeyJwk, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify']);
 		const publicKey = await crypto.subtle.exportKey('spki', publicCryptoKey);
 		return {
-			publicKey: base64Url(new Uint8Array(publicKey)),
+			publicKey: encodeVectorCodeBase64Url(new Uint8Array(publicKey)),
 			publicKeyFingerprint: await sha256Base64Url(new Uint8Array(publicKey))
 		};
 	}
@@ -464,6 +443,24 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		return storedToken || undefined;
 	}
 
+	private async createPairingRelayTokens(input: {
+		relayHost: string;
+		issuerToken: string;
+		userId: string;
+		desktopId: string;
+		pairingId: string;
+		ttlSeconds: number;
+	}): Promise<IVectorCodeMobilePairingRelayTokens | undefined> {
+		const [phoneRelayToken, desktopRelayToken] = await Promise.all([
+			this.createRelayToken({ ...input, role: 'phone' }),
+			this.createRelayToken({ ...input, role: 'desktop' })
+		]);
+		if (!phoneRelayToken || !desktopRelayToken) {
+			return undefined;
+		}
+		return { phoneRelayToken, desktopRelayToken };
+	}
+
 	private async createRelayToken(input: {
 		relayHost: string;
 		issuerToken: string;
@@ -472,7 +469,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		desktopId: string;
 		pairingId?: string;
 		ttlSeconds: number;
-	}): Promise<{ relayToken: string; relayTokenExpiresAt: string } | undefined> {
+	}): Promise<IVectorCodeMobileRelayToken | undefined> {
 		try {
 			return await this.relayBridgeService.createRelayToken({
 				url: relayHttpUrl(input.relayHost, '/relay/token'),
@@ -490,7 +487,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		}
 	}
 
-	private async storeActiveRelaySession(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: { relayToken: string; relayTokenExpiresAt: string }): Promise<void> {
+	private async storeActiveRelaySession(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: IVectorCodeMobileRelayToken): Promise<void> {
 		const session: IVectorCodeMobileStoredRelaySession = {
 			payload,
 			desktopRelayToken: desktopRelayToken.relayToken,
@@ -508,7 +505,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		try {
 			const candidate = JSON.parse(rawSession) as unknown;
 			if (isStoredRelaySession(candidate)) {
-				const relayHost = normalizeRelayHost(candidate.payload.relayHost);
+				const relayHost = normalizeVectorCodeRelayHost(candidate.payload.relayHost);
 				if (!relayHost) {
 					await this.clearActiveRelaySession();
 					return undefined;
@@ -562,25 +559,6 @@ async function createPairingSession(payload: IVectorCodeMobilePairingPayload): P
 	};
 }
 
-function normalizeRelayHost(value?: string | null): string | undefined {
-	const rawValue = value?.trim();
-	if (!rawValue) {
-		return undefined;
-	}
-
-	try {
-		const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(rawValue) ? rawValue : `wss://${rawValue}`);
-		const hostname = url.hostname.toLowerCase();
-		const relayHost = url.port ? `${hostname}:${url.port}` : hostname;
-		if (VECTOR_CODE_MOBILE_LEGACY_RELAY_HOSTS.has(hostname)) {
-			return VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
-		}
-		return /^[A-Za-z0-9.-]+(?::\d{2,5})?$/.test(relayHost) ? relayHost : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
 function relayHttpUrl(relayHost: string, pathname: string): string {
 	const scheme = /^(localhost|127\.0\.0\.1)(?::|$)/.test(relayHost) ? 'http' : 'https';
 	return `${scheme}://${relayHost}${pathname}`;
@@ -607,7 +585,7 @@ function isPairingPayload(value: unknown): value is IVectorCodeMobilePairingPayl
 	if (!isRecord(value)) {
 		return false;
 	}
-	return value.protocolVersion === 1
+	return value.protocolVersion === VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION
 		&& typeof value.desktopId === 'string'
 		&& typeof value.pairingId === 'string'
 		&& typeof value.desktopPublicKey === 'string'
@@ -637,27 +615,13 @@ function svgDataUrl(svg: string): string {
 }
 
 function cryptoRandomId(prefix: string): string {
-	const uuid = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : cryptoRandomBase64Url(16);
+	const uuid = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : cryptoRandomVectorCodeBase64Url(16);
 	return `${prefix}_${uuid}`;
-}
-
-function cryptoRandomBase64Url(byteLength: number): string {
-	const bytes = new Uint8Array(byteLength);
-	globalThis.crypto.getRandomValues(bytes);
-	return base64Url(bytes);
-}
-
-function base64Url(bytes: Uint8Array): string {
-	let value = '';
-	for (const byte of bytes) {
-		value += String.fromCharCode(byte);
-	}
-	return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 async function sha256Base64Url(bytes: Uint8Array): Promise<string> {
 	const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-	return base64Url(new Uint8Array(digest));
+	return encodeVectorCodeBase64Url(new Uint8Array(digest));
 }
 
 function formatPairingCode(value: string): string {
@@ -672,16 +636,5 @@ function publicJwkFromPrivate(privateKeyJwk: JsonWebKey): JsonWebKey {
 		y: privateKeyJwk.y,
 		ext: true,
 		key_ops: ['verify']
-	};
-}
-
-function createRemoteErrorResponse(request: IVectorCodeMobileRemoteEnvelope, code: string, message: string): IVectorCodeMobileRemoteEnvelope {
-	return {
-		kind: 'response',
-		protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
-		requestId: request.requestId,
-		action: request.action,
-		projectId: request.projectId,
-		error: { code, message }
 	};
 }

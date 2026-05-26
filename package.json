@@ -45,6 +45,8 @@
     "update-grammars": "node build/npm/update-all-grammars.ts",
     "update-localization-extension": "node build/npm/update-localization-extension.ts",
     "vector-update-feed": "node build/lib/vectorUpdateFeed.ts",
+    "generate-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs",
+    "check-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs --check",
     "mixin-telemetry-docs": "node build/npm/mixin-telemetry-docs.ts",
     "smoketest": "node build/lib/preLaunch.ts && cd test/smoke && npm run compile && node test/index.js",
     "smoketest-no-compile": "cd test/smoke && node test/index.js",

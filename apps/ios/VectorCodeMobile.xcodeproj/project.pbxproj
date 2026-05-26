@@ -29,6 +29,11 @@
 		B10000000000000000000120 /* VectorCodePairingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000222 /* VectorCodePairingStore.swift */; };
 		B10000000000000000000121 /* VectorCodeNativeTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000223 /* VectorCodeNativeTerminalView.swift */; };
 		B10000000000000000000122 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = B10000000000000000000901 /* SwiftTerm */; };
+		B10000000000000000000123 /* VectorCodeWorkspaceFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000224 /* VectorCodeWorkspaceFixtures.swift */; };
+		B10000000000000000000124 /* VectorCodeProjectScopedSelectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000225 /* VectorCodeProjectScopedSelectionStore.swift */; };
+		B10000000000000000000125 /* VectorCodeHosts.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000226 /* VectorCodeHosts.swift */; };
+		B10000000000000000000126 /* VectorCodeLanguageInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000227 /* VectorCodeLanguageInference.swift */; };
+		B10000000000000000000127 /* VectorCodeGeneratedConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000228 /* VectorCodeGeneratedConfig.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +60,11 @@
 		B10000000000000000000221 /* codicon.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Sources/VectorCodeMobile/Resources/Fonts/codicon.ttf; sourceTree = "<group>"; };
 		B10000000000000000000222 /* VectorCodePairingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Storage/VectorCodePairingStore.swift; sourceTree = "<group>"; };
 		B10000000000000000000223 /* VectorCodeNativeTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Views/VectorCodeNativeTerminalView.swift; sourceTree = "<group>"; };
+		B10000000000000000000224 /* VectorCodeWorkspaceFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Models/VectorCodeWorkspaceFixtures.swift; sourceTree = "<group>"; };
+		B10000000000000000000225 /* VectorCodeProjectScopedSelectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/ViewModels/VectorCodeProjectScopedSelectionStore.swift; sourceTree = "<group>"; };
+		B10000000000000000000226 /* VectorCodeHosts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Models/VectorCodeHosts.swift; sourceTree = "<group>"; };
+		B10000000000000000000227 /* VectorCodeLanguageInference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Models/VectorCodeLanguageInference.swift; sourceTree = "<group>"; };
+		B10000000000000000000228 /* VectorCodeGeneratedConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/VectorCodeMobile/Generated/VectorCodeGeneratedConfig.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,13 +103,18 @@
 				B10000000000000000000201 /* VectorCodeMobileApp.swift */,
 				B10000000000000000000202 /* VectorCodeTheme.swift */,
 				B10000000000000000000220 /* VectorCodeIcon.swift */,
+				B10000000000000000000228 /* VectorCodeGeneratedConfig.swift */,
+				B10000000000000000000226 /* VectorCodeHosts.swift */,
 				B10000000000000000000203 /* VectorCodePairingPayload.swift */,
+				B10000000000000000000227 /* VectorCodeLanguageInference.swift */,
 				B10000000000000000000204 /* VectorCodeWorkspaceModels.swift */,
+				B10000000000000000000224 /* VectorCodeWorkspaceFixtures.swift */,
 				B10000000000000000000205 /* VectorCodeMobileProtocol.swift */,
 				B10000000000000000000206 /* VectorCodeRelayClient.swift */,
 				B10000000000000000000219 /* VectorCodeRemoteWorkspaceClient.swift */,
 				B10000000000000000000222 /* VectorCodePairingStore.swift */,
 				B10000000000000000000207 /* VectorCodeMobileWorkspaceModel.swift */,
+				B10000000000000000000225 /* VectorCodeProjectScopedSelectionStore.swift */,
 				B10000000000000000000208 /* VectorCodeMobileRootView.swift */,
 				B10000000000000000000218 /* VectorCodeControls.swift */,
 				B10000000000000000000209 /* VectorCodePairingView.swift */,
@@ -201,13 +216,18 @@
 				B10000000000000000000101 /* VectorCodeMobileApp.swift in Sources */,
 				B10000000000000000000102 /* VectorCodeTheme.swift in Sources */,
 				B10000000000000000000118 /* VectorCodeIcon.swift in Sources */,
+				B10000000000000000000127 /* VectorCodeGeneratedConfig.swift in Sources */,
+				B10000000000000000000125 /* VectorCodeHosts.swift in Sources */,
 				B10000000000000000000103 /* VectorCodePairingPayload.swift in Sources */,
+				B10000000000000000000126 /* VectorCodeLanguageInference.swift in Sources */,
 				B10000000000000000000104 /* VectorCodeWorkspaceModels.swift in Sources */,
+				B10000000000000000000123 /* VectorCodeWorkspaceFixtures.swift in Sources */,
 				B10000000000000000000105 /* VectorCodeMobileProtocol.swift in Sources */,
 				B10000000000000000000106 /* VectorCodeRelayClient.swift in Sources */,
 				B10000000000000000000117 /* VectorCodeRemoteWorkspaceClient.swift in Sources */,
 				B10000000000000000000120 /* VectorCodePairingStore.swift in Sources */,
 				B10000000000000000000107 /* VectorCodeMobileWorkspaceModel.swift in Sources */,
+				B10000000000000000000124 /* VectorCodeProjectScopedSelectionStore.swift in Sources */,
 				B10000000000000000000108 /* VectorCodeMobileRootView.swift in Sources */,
 				B10000000000000000000116 /* VectorCodeControls.swift in Sources */,
 				B10000000000000000000109 /* VectorCodePairingView.swift in Sources */,

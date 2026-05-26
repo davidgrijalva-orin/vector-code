@@ -7,14 +7,15 @@ func verifyVectorCodeMobile() async throws {
 
     let expiresAt = VectorCodeISO8601.string(from: Date().addingTimeInterval(300))
     let relayTokenExpiresAt = VectorCodeISO8601.string(from: Date().addingTimeInterval(86_400))
+    let relayHost = VectorCodeHosts.canonicalRelayHost
     let payload = VectorCodePairingPayload(
         desktopId: "desktop-1",
         pairingId: "pairing-1",
         desktopPublicKey: "public-key",
         desktopPublicKeyFingerprint: "fingerprint",
         pairingToken: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        relayHost: "relay.vectorcode.app",
-        userId: "default",
+        relayHost: relayHost,
+        userId: VectorCodeHosts.defaultUserId,
         relayToken: "relay-token",
         relayTokenExpiresAt: relayTokenExpiresAt,
         expiresAt: expiresAt
@@ -25,29 +26,31 @@ func verifyVectorCodeMobile() async throws {
     let payloadJSON = String(data: payloadData, encoding: .utf8)!
     let decodedPayload = try VectorCodePairingPayload.decode(from: payloadJSON)
     precondition(decodedPayload == payload)
+    try verifySharedProtocolFixtures()
 
     let relayConfiguration = try VectorCodeRelayConfiguration(pairingPayload: payload, phoneId: "phone-1")
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("/relay"))
-    precondition(relayConfiguration.webSocketURL.host == "relay.vectorcode.app")
+    precondition(relayConfiguration.webSocketURL.host == relayHost)
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("role=phone"))
     precondition(relayConfiguration.webSocketURL.absoluteString.contains("deviceId=phone-1"))
     precondition(relayConfiguration.authorizationHeader == "Bearer relay-token")
 
+    let legacyRelayHost = VectorCodeHosts.legacyRelayHosts.sorted().first!
     let legacyRelayPayload = VectorCodePairingPayload(
         desktopId: "desktop-1",
         pairingId: "pairing-legacy",
         desktopPublicKey: "public-key",
         desktopPublicKeyFingerprint: "fingerprint",
         pairingToken: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-        relayHost: "relay-production-e21f.up.railway.app",
-        userId: "default",
+        relayHost: legacyRelayHost,
+        userId: VectorCodeHosts.defaultUserId,
         relayToken: "relay-token",
         relayTokenExpiresAt: relayTokenExpiresAt,
         expiresAt: expiresAt
     )
-    precondition(legacyRelayPayload.relayHost == "relay.vectorcode.app")
+    precondition(legacyRelayPayload.relayHost == relayHost)
     let legacyRelayConfiguration = try VectorCodeRelayConfiguration(pairingPayload: legacyRelayPayload, phoneId: "phone-1")
-    precondition(legacyRelayConfiguration.webSocketURL.host == "relay.vectorcode.app")
+    precondition(legacyRelayConfiguration.webSocketURL.host == relayHost)
 
     let emptyModel = VectorCodeMobileWorkspaceModel()
     precondition(emptyModel.snapshot.projects.isEmpty)
@@ -519,6 +522,113 @@ private func containsFile(_ nodes: [VectorCodeFileNode], path: String) -> Bool {
     return false
 }
 
+private func verifySharedProtocolFixtures() throws {
+    let fixtureURL = try findProtocolFixtureURL()
+    let data = try Data(contentsOf: fixtureURL)
+    let fixture = try JSONDecoder().decode(VectorCodeMobileProtocolFixture.self, from: data)
+
+    precondition(fixture.protocolVersion == vectorCodeMobileProtocolVersion)
+    precondition(fixture.actions == VectorCodeRemoteAction.allCases.map(\.rawValue))
+    precondition(fixture.terminalInputModes == VectorCodeTerminalInputRequest.Mode.allCases.map(\.rawValue))
+    precondition(fixture.terminalControlCommands == VectorCodeTerminalControlRequest.Command.allCases.map(\.rawValue))
+    precondition(fixture.hosts.canonicalHost == VectorCodeHosts.canonicalHost)
+    precondition(fixture.hosts.releaseDownloadUrl == VectorCodeHosts.releaseDownloadURL)
+    precondition(fixture.hosts.updateFeedUrl == VectorCodeHosts.updateFeedURL)
+    precondition(fixture.hosts.canonicalRelayHost == VectorCodeHosts.canonicalRelayHost)
+    precondition(fixture.hosts.defaultUserId == VectorCodeHosts.defaultUserId)
+    precondition(Set(fixture.hosts.legacyRelayHosts) == VectorCodeHosts.legacyRelayHosts)
+    precondition(fixture.hosts.relayHostPattern == VectorCodeGeneratedConfig.relayHostPattern)
+    precondition(fixture.hosts.relayHostNormalizationCases.count == VectorCodeGeneratedConfig.relayHostNormalizationCases.count)
+    for testCase in fixture.hosts.relayHostNormalizationCases {
+        precondition(VectorCodeHosts.normalizeRelayHost(testCase.input) == testCase.normalized)
+    }
+    for testCase in VectorCodeGeneratedConfig.relayHostNormalizationCases {
+        precondition(VectorCodeHosts.normalizeRelayHost(testCase.input) == testCase.normalized)
+    }
+    precondition(fixture.frameCrypto.nonceBytes == VectorCodeGeneratedConfig.frameNonceBytes)
+    precondition(fixture.frameCrypto.tagBytes == VectorCodeGeneratedConfig.frameTagBytes)
+    precondition(fixture.frameCrypto.keyBytes == VectorCodeGeneratedConfig.frameKeyBytes)
+    precondition(fixture.frameCrypto.base64UrlCases.count == VectorCodeGeneratedConfig.base64URLCases.count)
+    for (fixtureCase, generatedCase) in zip(fixture.frameCrypto.base64UrlCases, VectorCodeGeneratedConfig.base64URLCases) {
+        precondition(fixtureCase.bytes == generatedCase.bytes)
+        precondition(fixtureCase.encoded == generatedCase.encoded)
+    }
+    for (fileExtension, language) in fixture.languageByExtension {
+        precondition(VectorCodeLanguageInference.language(for: "example.\(fileExtension)") == language)
+    }
+
+    let terminalInputData = try JSONEncoder().encode(VectorCodeJSONValue.object(fixture.terminalInputRequest))
+    let terminalInput = try JSONDecoder().decode(VectorCodeTerminalInputRequest.self, from: terminalInputData)
+    precondition(terminalInput.mode == .paste)
+    precondition(terminalInput.submit == false)
+
+    let fileCopyData = try JSONEncoder().encode(VectorCodeJSONValue.object(fixture.fileCopyRequest))
+    let fileCopy = try JSONDecoder().decode(VectorCodeFileCopyRequest.self, from: fileCopyData)
+    precondition(fileCopy.targetProjectId == "neuron")
+    precondition(fileCopy.overwrite == false)
+
+    let snapshotData = try JSONEncoder().encode(VectorCodeJSONValue.object(fixture.workspaceSnapshot))
+    let snapshot = try JSONDecoder().decode(VectorCodeRemoteWorkspaceSnapshot.self, from: snapshotData)
+    precondition(snapshot.activeProjectId == "job-board")
+    precondition(snapshot.projects.first?.name == "job_board")
+    precondition(snapshot.filesByProject["job-board"]?.first?.path == "README.md")
+    precondition(snapshot.terminalsByProject["job-board"]?.first?.rawOutput?.contains("\u{001B}[32m") == true)
+}
+
+private func findProtocolFixtureURL() throws -> URL {
+    let relativePath = "src/vs/workbench/contrib/vectorCode/common/vectorCodeMobileProtocolFixtures.json"
+    var directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+    for _ in 0..<8 {
+        let candidate = directory.appendingPathComponent(relativePath)
+        if FileManager.default.fileExists(atPath: candidate.path) {
+            return candidate
+        }
+        directory.deleteLastPathComponent()
+    }
+    throw VectorCodeVerifierError.missingFixture(relativePath)
+}
+
+private struct VectorCodeMobileProtocolFixture: Decodable {
+    let protocolVersion: Int
+    let actions: [String]
+    let terminalInputModes: [String]
+    let terminalControlCommands: [String]
+    let hosts: VectorCodeMobileHostsFixture
+    let frameCrypto: VectorCodeMobileFrameCryptoFixture
+    let languageByExtension: [String: String]
+    let terminalInputRequest: [String: VectorCodeJSONValue]
+    let fileCopyRequest: [String: VectorCodeJSONValue]
+    let workspaceSnapshot: [String: VectorCodeJSONValue]
+}
+
+private struct VectorCodeMobileHostsFixture: Decodable {
+    let canonicalHost: String
+    let releaseDownloadUrl: String
+    let updateFeedUrl: String
+    let canonicalRelayHost: String
+    let defaultUserId: String
+    let legacyRelayHosts: [String]
+    let relayHostPattern: String
+    let relayHostNormalizationCases: [VectorCodeMobileRelayHostNormalizationFixture]
+}
+
+private struct VectorCodeMobileRelayHostNormalizationFixture: Decodable {
+    let input: String
+    let normalized: String?
+}
+
+private struct VectorCodeMobileFrameCryptoFixture: Decodable {
+    let nonceBytes: Int
+    let tagBytes: Int
+    let keyBytes: Int
+    let base64UrlCases: [VectorCodeMobileBase64URLFixture]
+}
+
+private struct VectorCodeMobileBase64URLFixture: Decodable {
+    let bytes: [UInt8]
+    let encoded: String
+}
+
 private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
     private let snapshot: VectorCodeRemoteWorkspaceSnapshot
     private(set) var lastSentEnvelope: VectorCodeSentEnvelope?
@@ -605,13 +715,11 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
         _ payload: Payload,
         action: VectorCodeRemoteAction
     ) throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
-        let data = try JSONEncoder().encode(payload)
-        let decodedPayload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: data)
-        return VectorCodeRemoteEnvelope(
-            kind: .response,
-            requestId: lastSentEnvelope?.requestId ?? "loopback-response",
+        try vectorCodeVerifierResponseEnvelope(
+            requestId: lastSentEnvelope?.requestId,
+            fallbackRequestId: "loopback-response",
             action: action,
-            payload: decodedPayload
+            payload: payload
         )
     }
 }
@@ -646,6 +754,37 @@ private struct VectorCodeSentEnvelope: Sendable {
     }
 }
 
+private func vectorCodeVerifierJSONPayload<Payload: Encodable>(_ payload: Payload) throws -> VectorCodeJSONValue {
+    try JSONDecoder().decode(VectorCodeJSONValue.self, from: JSONEncoder().encode(payload))
+}
+
+private func vectorCodeVerifierResponseEnvelope<Payload: Encodable>(
+    requestId: String?,
+    fallbackRequestId: String,
+    action: VectorCodeRemoteAction,
+    payload: Payload
+) throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
+    try VectorCodeRemoteEnvelope(
+        kind: .response,
+        requestId: requestId ?? fallbackRequestId,
+        action: action,
+        payload: vectorCodeVerifierJSONPayload(payload)
+    )
+}
+
+private struct VectorCodeVerifierRelayState {
+    private(set) var requestId: String?
+    private(set) var disconnectCount = 0
+
+    mutating func recordDisconnect() {
+        disconnectCount += 1
+    }
+
+    mutating func recordSend<Payload>(_ envelope: VectorCodeRemoteEnvelope<Payload>) {
+        requestId = envelope.requestId
+    }
+}
+
 private actor VectorCodeStaleRelayClient: VectorCodeRelayClientProtocol {
     private let snapshot: VectorCodeRemoteWorkspaceSnapshot
     private var requestId: String?
@@ -670,33 +809,27 @@ private actor VectorCodeStaleRelayClient: VectorCodeRelayClientProtocol {
     func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
         receiveCount += 1
         if receiveCount == 1 {
-            let stalePayload = try JSONDecoder().decode(
-                VectorCodeJSONValue.self,
-                from: JSONEncoder().encode(VectorCodeTerminalOutputResponse(terminalId: "old-terminal", output: ["stale"]))
-            )
-            return VectorCodeRemoteEnvelope(
-                kind: .response,
+            return try vectorCodeVerifierResponseEnvelope(
                 requestId: "stale-response",
+                fallbackRequestId: "stale-response",
                 action: .terminalOutput,
-                payload: stalePayload
+                payload: VectorCodeTerminalOutputResponse(terminalId: "old-terminal", output: ["stale"])
             )
         }
 
-        let payload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: JSONEncoder().encode(snapshot))
-        return VectorCodeRemoteEnvelope(
-            kind: .response,
-            requestId: requestId ?? "state-response",
+        return try vectorCodeVerifierResponseEnvelope(
+            requestId: requestId,
+            fallbackRequestId: "state-response",
             action: .stateRead,
-            payload: payload
+            payload: snapshot
         )
     }
 }
 
 private actor VectorCodeConnectThenFailingStateRelayClient: VectorCodeRelayClientProtocol {
     private let snapshot: VectorCodeRemoteWorkspaceSnapshot
-    private var requestId: String?
+    private var relayState = VectorCodeVerifierRelayState()
     private var stateReadCount = 0
-    private(set) var disconnectCount = 0
 
     init(snapshot: VectorCodeRemoteWorkspaceSnapshot) {
         self.snapshot = snapshot
@@ -705,15 +838,15 @@ private actor VectorCodeConnectThenFailingStateRelayClient: VectorCodeRelayClien
     func connect(configuration: VectorCodeRelayConfiguration) async throws {}
 
     func disconnect() async {
-        disconnectCount += 1
+        relayState.recordDisconnect()
     }
 
     func currentDisconnectCount() -> Int {
-        disconnectCount
+        relayState.disconnectCount
     }
 
     func send<Payload>(_ envelope: VectorCodeRemoteEnvelope<Payload>) async throws where Payload: Decodable, Payload: Encodable, Payload: Sendable {
-        requestId = envelope.requestId
+        relayState.recordSend(envelope)
     }
 
     func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
@@ -722,37 +855,37 @@ private actor VectorCodeConnectThenFailingStateRelayClient: VectorCodeRelayClien
             throw VectorCodeVerifierRelayError.connectFailed
         }
 
-        let payload = try JSONDecoder().decode(VectorCodeJSONValue.self, from: JSONEncoder().encode(snapshot))
-        return VectorCodeRemoteEnvelope(
-            kind: .response,
-            requestId: requestId ?? "state-response",
+        return try vectorCodeVerifierResponseEnvelope(
+            requestId: relayState.requestId,
+            fallbackRequestId: "state-response",
             action: .stateRead,
-            payload: payload
+            payload: snapshot
         )
     }
 }
 
 private actor VectorCodeFailingRelayClient: VectorCodeRelayClientProtocol {
-    private(set) var disconnectCount = 0
+    private var relayState = VectorCodeVerifierRelayState()
 
     func connect(configuration: VectorCodeRelayConfiguration) async throws {
         throw VectorCodeVerifierRelayError.connectFailed
     }
 
-    func disconnect() async {
-        disconnectCount += 1
-    }
-
-    func currentDisconnectCount() -> Int {
-        disconnectCount
-    }
-
     func send<Payload>(_ envelope: VectorCodeRemoteEnvelope<Payload>) async throws where Payload: Decodable, Payload: Encodable, Payload: Sendable {
+        relayState.recordSend(envelope)
         throw VectorCodeVerifierRelayError.connectFailed
     }
 
     func receiveEnvelope() async throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
         throw VectorCodeVerifierRelayError.connectFailed
+    }
+
+    func disconnect() async {
+        relayState.recordDisconnect()
+    }
+
+    func currentDisconnectCount() -> Int {
+        relayState.disconnectCount
     }
 }
 
@@ -761,10 +894,13 @@ private enum VectorCodeVerifierRelayError: Error {
 }
 
 private enum VectorCodeVerifierError: Error, LocalizedError {
+    case missingFixture(String)
     case timeout(String)
 
     var errorDescription: String? {
         switch self {
+        case .missingFixture(let path):
+            "Missing protocol fixture at \(path)."
         case .timeout(let description):
             "Timed out waiting for \(description)."
         }

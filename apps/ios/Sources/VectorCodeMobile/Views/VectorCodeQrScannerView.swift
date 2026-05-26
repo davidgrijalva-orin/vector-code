@@ -1,21 +1,33 @@
 import SwiftUI
 
-#if os(iOS) && canImport(AVFoundation)
-@preconcurrency import AVFoundation
-import UIKit
-
 public struct VectorCodeQrScannerView: View {
     public let onScan: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var cameraState = VectorCodeCameraState.checking
-    @State private var errorText: String?
-    @State private var didScan = false
 
     public init(onScan: @escaping (String) -> Void) {
         self.onScan = onScan
     }
 
     public var body: some View {
+        VectorCodeQrScannerContent(onScan: onScan)
+    }
+}
+
+#if os(iOS) && canImport(AVFoundation)
+@preconcurrency import AVFoundation
+import UIKit
+
+private struct VectorCodeQrScannerContent: View {
+    let onScan: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var cameraState = VectorCodeCameraState.checking
+    @State private var errorText: String?
+    @State private var didScan = false
+
+    init(onScan: @escaping (String) -> Void) {
+        self.onScan = onScan
+    }
+
+    var body: some View {
         ZStack {
             switch cameraState {
             case .checking:
@@ -161,16 +173,13 @@ private struct VectorCodeScannerChrome: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VectorCodeBrandWordmark()
-                Spacer()
-                VectorCodeIconButton(icon: .close, foreground: VectorCodeTheme.text, background: Color.black.opacity(0.38)) {
-                    close()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 8)
+            VectorCodeSheetHeader(
+                closeForeground: VectorCodeTheme.text,
+                closeBackground: Color.black.opacity(0.38),
+                topPadding: 14,
+                bottomPadding: 8,
+                closeAction: close
+            )
             Spacer()
             VectorCodeScanFrame()
                 .frame(width: 256, height: 256)
@@ -221,26 +230,13 @@ private struct VectorCodeScannerMessage: View {
     let message: String
     var primaryTitle: String?
     var primaryAction: (() -> Void)?
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VectorCodeBrandWordmark()
-                Spacer()
-                VectorCodeIconButton(icon: .close, size: 32) {
-                    dismiss()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            VectorCodeSheetHeader()
             Spacer()
             VStack(spacing: 14) {
-                VectorCodeIconView(icon: icon, size: 28)
-                    .foregroundStyle(VectorCodeTheme.accent)
-                    .frame(width: 56, height: 56)
-                    .background(VectorCodeTheme.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
+                VectorCodeIconTile(icon: icon, iconSize: 28, tileSize: 56)
                 Text(title)
                     .font(.title3.weight(.semibold))
                 Text(message)
@@ -309,14 +305,14 @@ public final class ScannerController: UIViewController {
     }
 }
 #else
-public struct VectorCodeQrScannerView: View {
-    public let onScan: (String) -> Void
+private struct VectorCodeQrScannerContent: View {
+    let onScan: (String) -> Void
 
-    public init(onScan: @escaping (String) -> Void) {
+    init(onScan: @escaping (String) -> Void) {
         self.onScan = onScan
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 12) {
             VectorCodeMark()
                 .fill(VectorCodeTheme.accent, style: FillStyle(eoFill: true))

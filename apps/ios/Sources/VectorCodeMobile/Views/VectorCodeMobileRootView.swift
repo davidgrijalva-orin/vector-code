@@ -89,34 +89,20 @@ private struct VectorCodeProjectStrip: View {
     var body: some View {
         Group {
             if !model.snapshot.projects.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(model.snapshot.projects) { project in
-                            Button {
-                                model.switchProject(project)
-                            } label: {
-                                VectorCodeProjectIdentity(
-                                    project: project,
-                                    dotSize: 6,
-                                    titleFont: .caption.weight(.semibold),
-                                    pathFont: .caption2,
-                                    showsPath: false
-                                )
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .frame(minWidth: 104, alignment: .leading)
-                                .background(project.id == model.selectedProject?.id ? VectorCodeTheme.accentSoft : Color.clear)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                                        .stroke(project.id == model.selectedProject?.id ? VectorCodeTheme.accent.opacity(0.42) : VectorCodeTheme.line, lineWidth: 1)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                VectorCodePillStrip(
+                    items: model.snapshot.projects,
+                    selectedId: model.selectedProject?.id
+                ) { project in
+                    model.switchProject(project)
+                } label: { project in
+                    VectorCodeProjectIdentity(
+                        project: project,
+                        dotSize: 6,
+                        titleFont: .caption.weight(.semibold),
+                        pathFont: .caption2,
+                        showsPath: false
+                    )
+                    .frame(minWidth: 104, alignment: .leading)
                 }
             } else {
                 EmptyView()

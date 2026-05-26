@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IVectorCodeMobileRelayEncryptedFrame, IVectorCodeMobileRelayFrameHeader } from './vectorCodeMobileProtocol.js';
-
-const VECTOR_CODE_MOBILE_FRAME_NONCE_BYTES = 12;
-const VECTOR_CODE_MOBILE_FRAME_TAG_BYTES = 16;
+import { decodeVectorCodeBase64Url, encodeVectorCodeBase64Url } from './vectorCodeMobileEncoding.js';
+import { VECTOR_CODE_MOBILE_FRAME_KEY_BYTES, VECTOR_CODE_MOBILE_FRAME_NONCE_BYTES, VECTOR_CODE_MOBILE_FRAME_TAG_BYTES } from './vectorCodeGeneratedConfig.js';
 
 export async function encryptVectorCodeMobileFramePayload(input: {
 	readonly pairingToken: string;
@@ -24,9 +23,9 @@ export async function encryptVectorCodeMobileFramePayload(input: {
 
 	return {
 		header: input.header,
-		nonce: base64Url(nonce),
-		ciphertext: base64Url(encrypted.slice(0, -VECTOR_CODE_MOBILE_FRAME_TAG_BYTES)),
-		tag: base64Url(encrypted.slice(-VECTOR_CODE_MOBILE_FRAME_TAG_BYTES))
+		nonce: encodeVectorCodeBase64Url(nonce),
+		ciphertext: encodeVectorCodeBase64Url(encrypted.slice(0, -VECTOR_CODE_MOBILE_FRAME_TAG_BYTES)),
+		tag: encodeVectorCodeBase64Url(encrypted.slice(-VECTOR_CODE_MOBILE_FRAME_TAG_BYTES))
 	};
 }
 
@@ -35,14 +34,14 @@ export async function decryptVectorCodeMobileFramePayload<TPayload>(input: {
 	readonly frame: IVectorCodeMobileRelayEncryptedFrame;
 }): Promise<TPayload> {
 	const key = await importVectorCodeMobileFrameKey(input.pairingToken, ['decrypt']);
-	const ciphertext = base64UrlDecode(input.frame.ciphertext);
-	const tag = base64UrlDecode(input.frame.tag);
+	const ciphertext = decodeVectorCodeBase64Url(input.frame.ciphertext);
+	const tag = decodeVectorCodeBase64Url(input.frame.tag);
 	const encrypted = new Uint8Array(ciphertext.byteLength + tag.byteLength);
 	encrypted.set(ciphertext);
 	encrypted.set(tag, ciphertext.byteLength);
 	const plaintext = await globalThis.crypto.subtle.decrypt({
 		name: 'AES-GCM',
-		iv: base64UrlDecode(input.frame.nonce),
+		iv: decodeVectorCodeBase64Url(input.frame.nonce),
 		tagLength: VECTOR_CODE_MOBILE_FRAME_TAG_BYTES * 8
 	}, key, encrypted);
 	return JSON.parse(new TextDecoder().decode(plaintext)) as TPayload;
@@ -55,30 +54,11 @@ function cryptoRandomBytes(byteLength: number): Uint8Array<ArrayBuffer> {
 }
 
 async function importVectorCodeMobileFrameKey(pairingToken: string, keyUsages: KeyUsage[]): Promise<CryptoKey> {
-	const keyBytes = base64UrlDecode(pairingToken);
-	if (keyBytes.byteLength !== 32) {
-		throw new Error('VectorCode mobile pairing token must decode to a 32-byte frame key.');
+	const keyBytes = decodeVectorCodeBase64Url(pairingToken);
+	if (keyBytes.byteLength !== VECTOR_CODE_MOBILE_FRAME_KEY_BYTES) {
+		throw new Error(`VectorCode mobile pairing token must decode to a ${VECTOR_CODE_MOBILE_FRAME_KEY_BYTES}-byte frame key.`);
 	}
 	return globalThis.crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, keyUsages);
-}
-
-function base64Url(bytes: Uint8Array): string {
-	let value = '';
-	for (const byte of bytes) {
-		value += String.fromCharCode(byte);
-	}
-	return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
-	const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-	const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
-	const decoded = atob(padded);
-	const bytes = new Uint8Array(new ArrayBuffer(decoded.length));
-	for (let index = 0; index < decoded.length; index++) {
-		bytes[index] = decoded.charCodeAt(index);
-	}
-	return bytes;
 }
 
 function arrayBufferBackedBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {

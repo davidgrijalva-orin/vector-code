@@ -16,18 +16,19 @@
 :root,
 body,
 .monaco-workbench {
-	--vectorcode-shell-bg: #0b0f12;
-	--vectorcode-shell-panel: #111719;
-	--vectorcode-shell-raised: #171d21;
-	--vectorcode-shell-line: rgba(244, 239, 230, 0.12);
-	--vectorcode-shell-text: #f4efe6;
-	--vectorcode-shell-muted: #aeb8b4;
-	--vectorcode-shell-accent: #37d6c2;
-	--vectorcode-shell-warn: #0f8f8c;
-	--vectorcode-focus-ring: rgba(55, 214, 194, 0.86);
+	--vectorcode-shell-bg: #0c1111;
+	--vectorcode-shell-panel: #101615;
+	--vectorcode-shell-raised: #151b1a;
+	--vectorcode-shell-line: rgba(238, 244, 242, 0.09);
+	--vectorcode-shell-text: #eef4f2;
+	--vectorcode-shell-muted: #9aa8a5;
+	--vectorcode-shell-accent: #72aaa5;
+	--vectorcode-shell-accent-strong: #8fc8c3;
+	--vectorcode-shell-warn: #81908d;
+	--vectorcode-focus-ring: rgba(114, 170, 165, 0.32);
 	--vectorcode-contrast-border: rgba(244, 239, 230, 0.24);
 	--vectorcode-hover-bg: rgba(244, 239, 230, 0.07);
-	--vectorcode-selection-active: rgba(55, 214, 194, 0.22);
+	--vectorcode-selection-active: rgba(238, 244, 242, 0.065);
 	--vectorcode-selection-inactive: rgba(244, 239, 230, 0.11);
 	--vectorcode-overlayBackground: rgba(11, 15, 18, 0.78);
 	--vectorcode-input-bg: #0d1214;
@@ -50,9 +51,9 @@ body,
 	--vectorcode-error-bg: rgba(255, 107, 107, 0.14);
 	--vectorcode-error-border: rgba(255, 107, 107, 0.5);
 	--vectorcode-error-text: #ffc8c8;
-	--vectorcode-button-primary-bg: #2bc7b7;
-	--vectorcode-button-primary-hover-bg: #38ddcc;
-	--vectorcode-button-primary-text: #061112;
+	--vectorcode-button-primary-bg: rgba(238, 244, 242, 0.065);
+	--vectorcode-button-primary-hover-bg: rgba(114, 170, 165, 0.12);
+	--vectorcode-button-primary-text: #dce7e4;
 	--vectorcode-button-secondary-bg: rgba(244, 239, 230, 0.08);
 	--vectorcode-button-secondary-hover-bg: rgba(244, 239, 230, 0.13);
 	--vectorcode-button-secondary-text: #f4efe6;
@@ -103,8 +104,8 @@ body,
 	--vectorcode-bodyFontSize-small: 12px;
 	--vectorcode-browser-border: var(--vectorcode-focus-ring);
 	--vectorcode-button-background: var(--vectorcode-button-primary-bg);
-	--vectorcode-button-border: var(--vectorcode-focus-ring);
-	--vectorcode-button-foreground: var(--vectorcode-shell-text);
+	--vectorcode-button-border: rgba(238, 244, 242, 0.12);
+	--vectorcode-button-foreground: var(--vectorcode-button-primary-text);
 	--vectorcode-button-hoverBackground: var(--vectorcode-button-primary-hover-bg);
 	--vectorcode-button-secondaryBackground: var(--vectorcode-button-secondary-bg);
 	--vectorcode-button-secondaryBorder: var(--vectorcode-focus-ring);
@@ -277,11 +278,11 @@ body,
 	--vectorcode-extensionBadge-remoteBackground: var(--vectorcode-badge-bg);
 	--vectorcode-extensionBadge-remoteForeground: var(--vectorcode-shell-text);
 	--vectorcode-extensionButton-background: var(--vectorcode-button-primary-bg);
-	--vectorcode-extensionButton-border: var(--vectorcode-focus-ring);
-	--vectorcode-extensionButton-foreground: var(--vectorcode-shell-text);
+	--vectorcode-extensionButton-border: rgba(238, 244, 242, 0.12);
+	--vectorcode-extensionButton-foreground: var(--vectorcode-button-primary-text);
 	--vectorcode-extensionButton-hoverBackground: var(--vectorcode-button-primary-hover-bg);
 	--vectorcode-extensionButton-prominentBackground: var(--vectorcode-button-primary-bg);
-	--vectorcode-extensionButton-prominentForeground: var(--vectorcode-shell-text);
+	--vectorcode-extensionButton-prominentForeground: var(--vectorcode-button-primary-text);
 	--vectorcode-extensionButton-prominentHoverBackground: var(--vectorcode-button-primary-hover-bg);
 	--vectorcode-extensionButton-separator: var(--vectorcode-shell-text);
 	--vectorcode-extensionIcon-preReleaseForeground: var(--vectorcode-shell-text);
@@ -1343,19 +1344,6 @@ body,
 	text-align: center;
 }
 
-/* Vector shell refresh. */
-.monaco-workbench {
-	--vectorcode-shell-bg: #0c1211;
-	--vectorcode-shell-panel: #111817;
-	--vectorcode-shell-raised: #192321;
-	--vectorcode-shell-line: rgba(238, 244, 242, 0.12);
-	--vectorcode-shell-text: #eef4f2;
-	--vectorcode-shell-muted: #9fb2ae;
-	--vectorcode-shell-accent: #1fd0ca;
-	--vectorcode-shell-accent-strong: #3ce0da;
-	--vectorcode-shell-warn: #0f8f8c;
-}
-
 .monaco-workbench .part.titlebar {
 	background:
 		linear-gradient(90deg, rgba(31, 208, 202, 0.12), transparent 38%),
@@ -1656,14 +1644,6 @@ body,
 
 /* Cleaner VectorCode shell pass. Keep brand presence in the editor canvas only. */
 .monaco-workbench {
-	--vectorcode-shell-bg: #0c1111;
-	--vectorcode-shell-panel: #101615;
-	--vectorcode-shell-raised: #151b1a;
-	--vectorcode-shell-line: rgba(238, 244, 242, 0.09);
-	--vectorcode-shell-text: #eef4f2;
-	--vectorcode-shell-muted: #9aa8a5;
-	--vectorcode-shell-accent: #1fd0ca;
-	--vectorcode-shell-warn: #0f8f8c;
 	font-weight: 450;
 }
 
@@ -2043,13 +2023,6 @@ body,
 .vector-terminal-tab__close:hover {
 	background: rgba(238, 244, 242, 0.1);
 	color: #eef4f2;
-}
-
-/* Muted brand pass. Keep the interface quiet and reserve teal for small state cues. */
-.monaco-workbench {
-	--vectorcode-shell-accent: #72aaa5;
-	--vectorcode-shell-accent-strong: #8fc8c3;
-	--vectorcode-shell-warn: #81908d;
 }
 
 .monaco-workbench .part.auxiliarybar {
@@ -2564,30 +2537,6 @@ body,
 	width: 0 !important;
 }
 
-.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
-	align-items: center !important;
-	background: rgba(238, 244, 242, 0.035) !important;
-	border: 1px solid rgba(238, 244, 242, 0.09) !important;
-	border-radius: 8px !important;
-	box-shadow: none !important;
-	box-sizing: border-box !important;
-	display: flex !important;
-	height: 30px !important;
-	justify-content: center !important;
-	left: auto !important;
-	margin: 0 !important;
-	max-width: 30px !important;
-	min-width: 30px !important;
-	overflow: hidden !important;
-	padding: 0 !important;
-	pointer-events: auto !important;
-	position: relative !important;
-	top: auto !important;
-	width: 30px !important;
-	z-index: auto !important;
-	-webkit-app-region: no-drag;
-}
-
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick {
 	right: 124px !important;
 }
@@ -2600,13 +2549,8 @@ body,
 	right: 52px !important;
 }
 
-.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal) {
-	right: auto !important;
-}
-
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick:hover,
-.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal):hover {
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover {
 	background: rgba(238, 244, 242, 0.07) !important;
 	border-color: rgba(114, 170, 165, 0.26) !important;
 }
@@ -2616,8 +2560,7 @@ body,
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-icon,
-.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label,
-.monaco-workbench .part.titlebar a.action-label.codicon-terminal {
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-label {
 	align-items: center !important;
 	background: transparent !important;
 	border: 0 !important;
@@ -2634,8 +2577,7 @@ body,
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick:hover .search-icon,
-.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover .action-label,
-.monaco-workbench .part.titlebar .action-item:has(.codicon-terminal):hover a.action-label.codicon-terminal {
+.monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item:hover .action-label {
 	color: #e4ece9 !important;
 }
 
@@ -3636,28 +3578,6 @@ body,
 .monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.incoming-changes > .graph > circle:last-child,
 .monaco-workbench .scm-view .monaco-list-row .history-item > .graph-container.outgoing-changes > .graph > circle:last-child {
 	fill: rgba(9, 14, 14, 0.96) !important;
-}
-
-/* Unified quiet chrome and CTA pass. Keep search/account/settings/terminal as one titlebar group. */
-.monaco-workbench {
-	--vectorcode-shell-accent: #72aaa5;
-	--vectorcode-shell-accent-strong: #8fc8c3;
-	--vectorcode-focus-ring: rgba(114, 170, 165, 0.32);
-	--vectorcode-selection-active: rgba(238, 244, 242, 0.065);
-	--vectorcode-button-primary-bg: rgba(238, 244, 242, 0.065);
-	--vectorcode-button-primary-hover-bg: rgba(114, 170, 165, 0.12);
-	--vectorcode-button-primary-text: #dce7e4;
-	--vectorcode-button-background: var(--vectorcode-button-primary-bg);
-	--vectorcode-button-border: rgba(238, 244, 242, 0.12);
-	--vectorcode-button-foreground: #dce7e4;
-	--vectorcode-button-hoverBackground: var(--vectorcode-button-primary-hover-bg);
-	--vectorcode-extensionButton-background: var(--vectorcode-button-primary-bg);
-	--vectorcode-extensionButton-border: rgba(238, 244, 242, 0.12);
-	--vectorcode-extensionButton-foreground: #dce7e4;
-	--vectorcode-extensionButton-hoverBackground: var(--vectorcode-button-primary-hover-bg);
-	--vectorcode-extensionButton-prominentBackground: var(--vectorcode-button-primary-bg);
-	--vectorcode-extensionButton-prominentForeground: #dce7e4;
-	--vectorcode-extensionButton-prominentHoverBackground: var(--vectorcode-button-primary-hover-bg);
 }
 
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center,

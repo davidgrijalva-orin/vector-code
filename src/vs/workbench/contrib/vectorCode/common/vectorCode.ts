@@ -7,7 +7,7 @@ import { URI } from '../../../../base/common/uri.js';
 import { Event } from '../../../../base/common/event.js';
 import { IDisposable } from '../../../../base/common/lifecycle.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import type { IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRemoteWorkspaceSnapshot } from './vectorCodeMobileProtocol.js';
+import { type IVectorCodeMobileRemoteEnvelope, type IVectorCodeMobileRemoteWorkspaceSnapshot, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from './vectorCodeMobileProtocol.js';
 
 export const VECTOR_CODE_VIEW_CONTAINER_ID = 'workbench.view.vectorCode';
 export const VECTOR_CODE_CONTROL_VIEW_ID = 'workbench.views.vectorCode.control';
@@ -31,7 +31,7 @@ export const enum VectorCodeMobileConnectionState {
 }
 
 export interface IVectorCodeMobilePairingPayload {
-	readonly protocolVersion: 1;
+	readonly protocolVersion: typeof VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION;
 	readonly desktopId: string;
 	readonly pairingId: string;
 	readonly desktopPublicKey: string;

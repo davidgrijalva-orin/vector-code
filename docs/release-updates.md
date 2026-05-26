@@ -3,7 +3,7 @@
 Vector Code uses the native workbench update service. A packaged build checks:
 
 ```text
-GET https://update-feed-production.up.railway.app/api/update/:platform/:quality/:commit
+GET https://vectorcode.app/api/update/:platform/:quality/:commit
 ```
 
 The `product.json` release fields are:
@@ -11,8 +11,8 @@ The `product.json` release fields are:
 ```json
 {
 	"quality": "stable",
-	"downloadUrl": "https://vectorcode.com/download",
-	"updateUrl": "https://update-feed-production.up.railway.app"
+	"downloadUrl": "https://vectorcode.app/download",
+	"updateUrl": "https://vectorcode.app"
 }
 ```
 
@@ -88,10 +88,10 @@ For the first Railway deployment, set `VECTOR_UPDATE_FEED_JSON` to:
 
 That makes the endpoint live while safely returning `204` until the first signed release asset is published.
 
-Production is currently deployed on Railway at:
+Production is served from the branded VectorCode domain:
 
 ```text
-https://update-feed-production.up.railway.app
+https://vectorcode.app
 ```
 
-The intended branded domain is `updates.vectorcode.com`; Railway is returning `Unauthorized` for the custom-domain mutation from the current CLI/MCP session, so the packaged app uses the verified Railway URL until that domain can be added.
+Cloudflare routes the branded hostname to the Railway update-feed service, so product metadata, docs, and packaged builds all use the same public URL.

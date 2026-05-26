@@ -15,27 +15,22 @@ public final class VectorCodePairingStore {
 
     public func load() -> (payload: VectorCodePairingPayload, phoneId: String)? {
         if let stored = loadFromKeychain() {
-            do {
-                try stored.payload.validateStoredSession()
-                return (stored.payload, stored.phoneId)
-            } catch {
+            return validatedStoredPairing(stored) {
                 clear()
-                return nil
             }
         }
 
         guard let legacy = loadLegacyDefaultsPairing() else {
             return nil
         }
-        do {
-            try legacy.payload.validateStoredSession()
-            save(payload: legacy.payload, phoneId: legacy.phoneId)
+        guard let stored = validatedStoredPairing(legacy, onInvalid: {
             clearLegacyDefaultsPairing()
-            return (legacy.payload, legacy.phoneId)
-        } catch {
-            clearLegacyDefaultsPairing()
+        }) else {
             return nil
         }
+        save(payload: stored.payload, phoneId: stored.phoneId)
+        clearLegacyDefaultsPairing()
+        return stored
     }
 
     public func save(payload: VectorCodePairingPayload, phoneId: String) {
@@ -82,6 +77,19 @@ public final class VectorCodePairingStore {
             return nil
         }
         return try? JSONDecoder().decode(StoredPairing.self, from: data)
+    }
+
+    private func validatedStoredPairing(
+        _ stored: StoredPairing,
+        onInvalid: () -> Void
+    ) -> (payload: VectorCodePairingPayload, phoneId: String)? {
+        do {
+            try stored.payload.validateStoredSession()
+            return (stored.payload, stored.phoneId)
+        } catch {
+            onInvalid()
+            return nil
+        }
     }
 
     private func clearLegacyDefaultsPairing() {

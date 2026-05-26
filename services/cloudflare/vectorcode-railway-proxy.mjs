@@ -1,16 +1,13 @@
 const UPDATE_FEED_HOST = 'w2v9ki0q.up.railway.app';
 const RELAY_HOST = 'sskpzvaw.up.railway.app';
 
+const UPSTREAM_HOSTS_BY_PUBLIC_HOST = new Map([
+	['relay.vectorcode.app', RELAY_HOST],
+	['vectorcode.app', UPDATE_FEED_HOST],
+]);
+
 function resolveUpstreamHost(hostname) {
-	if (hostname === 'relay.vectorcode.app') {
-		return RELAY_HOST;
-	}
-
-	if (hostname === 'vectorcode.app') {
-		return UPDATE_FEED_HOST;
-	}
-
-	return undefined;
+	return UPSTREAM_HOSTS_BY_PUBLIC_HOST.get(hostname);
 }
 
 export default {

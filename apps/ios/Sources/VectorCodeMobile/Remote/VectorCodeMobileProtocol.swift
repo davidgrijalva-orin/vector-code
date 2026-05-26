@@ -1,22 +1,6 @@
 import CryptoKit
 import Foundation
 
-public let vectorCodeMobileProtocolVersion = 1
-
-public enum VectorCodeRemoteAction: String, Codable, Sendable {
-    case stateRead = "state.read"
-    case fileTreeRead = "file.tree.read"
-    case fileRead = "file.read"
-    case fileWrite = "file.write"
-    case fileMove = "file.move"
-    case fileCopy = "file.copy"
-    case terminalList = "terminal.list"
-    case terminalCreate = "terminal.create"
-    case terminalInput = "terminal.input"
-    case terminalControl = "terminal.control"
-    case terminalOutput = "terminal.output"
-}
-
 public struct VectorCodeRemoteEnvelope<Payload: Codable & Sendable>: Codable, Sendable {
     public let kind: VectorCodeRemoteEnvelopeKind
     public let protocolVersion: Int
@@ -135,7 +119,7 @@ public struct VectorCodeRelayConfiguration: Equatable, Sendable {
 
         components.queryItems = [
             URLQueryItem(name: "role", value: "phone"),
-            URLQueryItem(name: "userId", value: pairingPayload.userId ?? "default"),
+            URLQueryItem(name: "userId", value: pairingPayload.userId ?? VectorCodeHosts.defaultUserId),
             URLQueryItem(name: "desktopId", value: pairingPayload.desktopId),
             URLQueryItem(name: "deviceId", value: phoneId),
             URLQueryItem(name: "pairingId", value: pairingPayload.pairingId),
@@ -159,12 +143,12 @@ public enum VectorCodeRelayConfigurationError: Error, LocalizedError {
     }
 }
 
-public enum VectorCodeRelayFrameDirection: String, Codable, Sendable {
+public enum VectorCodeRelayFrameDirection: String, CaseIterable, Codable, Sendable {
     case phoneToDesktop = "phone_to_desktop"
     case desktopToPhone = "desktop_to_phone"
 }
 
-public enum VectorCodeRelayFrameChannel: String, Codable, Sendable {
+public enum VectorCodeRelayFrameChannel: String, CaseIterable, Codable, Sendable {
     case control
     case terminal
     case file
@@ -340,8 +324,8 @@ public enum VectorCodeRelayInboundMessage: Codable, Equatable, Sendable {
 }
 
 public enum VectorCodeRelayFrameCrypto {
-    private static let nonceBytes = 12
-    private static let tagBytes = 16
+    private static let nonceBytes = VectorCodeGeneratedConfig.frameNonceBytes
+    private static let tagBytes = VectorCodeGeneratedConfig.frameTagBytes
 
     public static func encrypt<Payload: Encodable>(_ payload: Payload, header: VectorCodeRelayFrameHeader, pairingToken: String) throws -> VectorCodeRelayEncryptedFrame {
         let key = try frameKey(pairingToken)
@@ -373,7 +357,7 @@ public enum VectorCodeRelayFrameCrypto {
 
     private static func frameKey(_ pairingToken: String) throws -> SymmetricKey {
         let keyData = try Data(base64URLString: pairingToken)
-        guard keyData.count == 32 else {
+        guard keyData.count == VectorCodeGeneratedConfig.frameKeyBytes else {
             throw VectorCodeRelayFrameCryptoError.invalidPairingToken
         }
         return SymmetricKey(data: keyData)
@@ -402,11 +386,7 @@ public enum VectorCodeRelayFrameCryptoError: Error, LocalizedError {
 }
 
 public struct VectorCodeTerminalInputRequest: Codable, Equatable, Sendable {
-    public enum Mode: String, Codable, Sendable {
-        case raw
-        case paste
-        case command
-    }
+    public typealias Mode = VectorCodeTerminalInputMode
 
     public let terminalId: String
     public let input: String
@@ -436,7 +416,7 @@ public struct VectorCodeTerminalInputRequest: Codable, Equatable, Sendable {
     }
 }
 
-public struct VectorCodeTerminalInputResponse: Codable, Equatable, Sendable {
+public struct VectorCodeTerminalAcceptedResponse: Codable, Equatable, Sendable {
     public let terminalId: String
     public let accepted: Bool
 
@@ -445,6 +425,8 @@ public struct VectorCodeTerminalInputResponse: Codable, Equatable, Sendable {
         self.accepted = accepted
     }
 }
+
+public typealias VectorCodeTerminalInputResponse = VectorCodeTerminalAcceptedResponse
 
 public struct VectorCodeTerminalCreateRequest: Codable, Equatable, Sendable {
     public let title: String?
@@ -457,13 +439,7 @@ public struct VectorCodeTerminalCreateRequest: Codable, Equatable, Sendable {
 }
 
 public struct VectorCodeTerminalControlRequest: Codable, Equatable, Sendable {
-    public enum Command: String, Codable, Sendable {
-        case resize
-        case interrupt
-        case clear
-        case rename
-        case close
-    }
+    public typealias Command = VectorCodeTerminalControlCommand
 
     public let terminalId: String
     public let command: Command
@@ -480,15 +456,7 @@ public struct VectorCodeTerminalControlRequest: Codable, Equatable, Sendable {
     }
 }
 
-public struct VectorCodeTerminalControlResponse: Codable, Equatable, Sendable {
-    public let terminalId: String
-    public let accepted: Bool
-
-    public init(terminalId: String, accepted: Bool) {
-        self.terminalId = terminalId
-        self.accepted = accepted
-    }
-}
+public typealias VectorCodeTerminalControlResponse = VectorCodeTerminalAcceptedResponse
 
 public struct VectorCodeTerminalOutputRequest: Codable, Equatable, Sendable {
     public let terminalId: String
@@ -615,7 +583,7 @@ public struct VectorCodeFileMoveRequest: Codable, Equatable, Sendable {
     }
 }
 
-public struct VectorCodeFileMoveResponse: Codable, Equatable, Sendable {
+public struct VectorCodeFileTransferResponse: Codable, Equatable, Sendable {
     public let path: String
     public let targetPath: String
     public let targetProjectId: String
@@ -626,6 +594,8 @@ public struct VectorCodeFileMoveResponse: Codable, Equatable, Sendable {
         self.targetProjectId = targetProjectId
     }
 }
+
+public typealias VectorCodeFileMoveResponse = VectorCodeFileTransferResponse
 
 public struct VectorCodeFileCopyRequest: Codable, Equatable, Sendable {
     public let path: String
@@ -641,14 +611,4 @@ public struct VectorCodeFileCopyRequest: Codable, Equatable, Sendable {
     }
 }
 
-public struct VectorCodeFileCopyResponse: Codable, Equatable, Sendable {
-    public let path: String
-    public let targetPath: String
-    public let targetProjectId: String
-
-    public init(path: String, targetPath: String, targetProjectId: String) {
-        self.path = path
-        self.targetPath = targetPath
-        self.targetProjectId = targetProjectId
-    }
-}
+public typealias VectorCodeFileCopyResponse = VectorCodeFileTransferResponse

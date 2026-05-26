@@ -1,0 +1,168 @@
+{
+	"protocolVersion": 1,
+	"actions": [
+		"state.read",
+		"file.tree.read",
+		"file.read",
+		"file.write",
+		"file.move",
+		"file.copy",
+		"terminal.list",
+		"terminal.create",
+		"terminal.input",
+		"terminal.control",
+		"terminal.output"
+	],
+	"terminalInputModes": [
+		"raw",
+		"paste",
+		"command"
+	],
+	"terminalControlCommands": [
+		"resize",
+		"interrupt",
+		"clear",
+		"rename",
+		"close"
+	],
+	"hosts": {
+		"canonicalHost": "vectorcode.app",
+		"releaseDownloadUrl": "https://vectorcode.app/download",
+		"updateFeedUrl": "https://vectorcode.app",
+		"canonicalRelayHost": "relay.vectorcode.app",
+		"defaultUserId": "default",
+		"legacyRelayHosts": [
+			"relay-production-e21f.up.railway.app",
+			"sskpzvaw.up.railway.app"
+		],
+		"relayHostPattern": "^[A-Za-z0-9.-]+(?::\\d{2,5})?$",
+		"relayHostNormalizationCases": [
+			{
+				"input": " relay.vectorcode.app ",
+				"normalized": "relay.vectorcode.app"
+			},
+			{
+				"input": "https://relay.vectorcode.app/pair",
+				"normalized": "relay.vectorcode.app"
+			},
+			{
+				"input": "relay-production-e21f.up.railway.app",
+				"normalized": "relay.vectorcode.app"
+			},
+			{
+				"input": "LOCALHOST:8787",
+				"normalized": "localhost:8787"
+			},
+			{
+				"input": "",
+				"normalized": null
+			},
+			{
+				"input": "relay_vectorcode_app",
+				"normalized": null
+			}
+		]
+	},
+	"frameCrypto": {
+		"nonceBytes": 12,
+		"tagBytes": 16,
+		"keyBytes": 32,
+		"base64UrlCases": [
+			{
+				"bytes": [
+					0,
+					251,
+					255
+				],
+				"encoded": "APv_"
+			},
+			{
+				"bytes": [
+					72,
+					101,
+					108,
+					108,
+					111
+				],
+				"encoded": "SGVsbG8"
+			}
+		]
+	},
+	"languageByExtension": {
+		"md": "markdown",
+		"mdx": "markdown",
+		"ts": "typescript",
+		"tsx": "typescript",
+		"js": "javascript",
+		"jsx": "javascript",
+		"json": "json",
+		"swift": "swift",
+		"sh": "shell",
+		"zsh": "shell",
+		"bash": "shell"
+	},
+	"terminalInputRequest": {
+		"terminalId": "terminal-1",
+		"input": "pnpm test",
+		"submit": false,
+		"mode": "paste"
+	},
+	"fileCopyRequest": {
+		"path": "README.md",
+		"targetPath": "COPIED.md",
+		"targetProjectId": "neuron",
+		"overwrite": false
+	},
+	"workspaceSnapshot": {
+		"activeProjectId": "job-board",
+		"projects": [
+			{
+				"id": "job-board",
+				"name": "job_board",
+				"path": "~/OrinTech/job_board",
+				"isOnline": true
+			}
+		],
+		"filesByProject": {
+			"job-board": [
+				{
+					"name": "README.md",
+					"path": "README.md",
+					"kind": "file"
+				}
+			]
+		},
+		"fileTreeTruncatedByProject": {
+			"job-board": false
+		},
+		"editorsByProject": {
+			"job-board": [
+				{
+					"id": "job-board:README.md",
+					"projectId": "job-board",
+					"path": "README.md",
+					"title": "README.md",
+					"language": "markdown",
+					"isDirty": false,
+					"content": "# job_board\n",
+					"version": "v1"
+				}
+			]
+		},
+		"terminalsByProject": {
+			"job-board": [
+				{
+					"id": "terminal-1",
+					"projectId": "job-board",
+					"title": "zsh",
+					"cwd": "~/OrinTech/job_board",
+					"isActive": true,
+					"output": [
+						"pnpm test"
+					],
+					"rawOutput": "\u001b[32mpnpm test\u001b[0m"
+				}
+			]
+		}
+	}
+}

@@ -37,6 +37,143 @@ struct VectorCodeIconButton: View {
     }
 }
 
+struct VectorCodeIconTile: View {
+    let icon: VectorCodeIcon
+    var iconSize: CGFloat = 26
+    var tileSize: CGFloat = 54
+    var foreground: Color = VectorCodeTheme.accent
+    var background: Color = VectorCodeTheme.accentSoft
+    var cornerRadius: CGFloat = VectorCodeTheme.cornerRadius
+
+    var body: some View {
+        VectorCodeIconView(icon: icon, size: iconSize)
+            .foregroundStyle(foreground)
+            .frame(width: tileSize, height: tileSize)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
+struct VectorCodeSheetHeader: View {
+    var title: String?
+    var titleColor: Color = VectorCodeTheme.muted
+    var closeForeground: Color = VectorCodeTheme.muted
+    var closeBackground: Color = .clear
+    var closeSize: CGFloat = 32
+    var showsDivider: Bool = false
+    var topPadding: CGFloat = 12
+    var bottomPadding: CGFloat = 12
+    var closeAction: (() -> Void)?
+    @Environment(\.dismiss) private var dismiss
+
+    init(
+        title: String? = nil,
+        titleColor: Color = VectorCodeTheme.muted,
+        closeForeground: Color = VectorCodeTheme.muted,
+        closeBackground: Color = .clear,
+        closeSize: CGFloat = 32,
+        showsDivider: Bool = false,
+        topPadding: CGFloat = 12,
+        bottomPadding: CGFloat = 12,
+        closeAction: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.titleColor = titleColor
+        self.closeForeground = closeForeground
+        self.closeBackground = closeBackground
+        self.closeSize = closeSize
+        self.showsDivider = showsDivider
+        self.topPadding = topPadding
+        self.bottomPadding = bottomPadding
+        self.closeAction = closeAction
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VectorCodeBrandWordmark()
+            if let title {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(titleColor)
+            }
+            Spacer()
+            VectorCodeIconButton(icon: .close, foreground: closeForeground, background: closeBackground, size: closeSize) {
+                if let closeAction {
+                    closeAction()
+                } else {
+                    dismiss()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, topPadding)
+        .padding(.bottom, bottomPadding)
+        .overlay(alignment: .bottom) {
+            if showsDivider {
+                Rectangle()
+                    .fill(VectorCodeTheme.line)
+                    .frame(height: 1)
+            }
+        }
+    }
+}
+
+public struct VectorCodePrimaryButtonStyle: ButtonStyle {
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        VectorCodeButtonChrome(
+            configuration: configuration,
+            foreground: VectorCodeTheme.accent,
+            pressedForeground: VectorCodeTheme.text,
+            background: VectorCodeTheme.raised,
+            pressedBackground: VectorCodeTheme.accentSoft,
+            stroke: VectorCodeTheme.accent.opacity(0.36),
+            pressedStroke: VectorCodeTheme.accent.opacity(0.62)
+        )
+    }
+}
+
+public struct VectorCodeSecondaryButtonStyle: ButtonStyle {
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        VectorCodeButtonChrome(
+            configuration: configuration,
+            foreground: VectorCodeTheme.text,
+            pressedForeground: VectorCodeTheme.text,
+            background: .clear,
+            pressedBackground: VectorCodeTheme.hover,
+            stroke: VectorCodeTheme.line,
+            pressedStroke: VectorCodeTheme.line
+        )
+    }
+}
+
+private struct VectorCodeButtonChrome: View {
+    let configuration: ButtonStyle.Configuration
+    let foreground: Color
+    let pressedForeground: Color
+    let background: Color
+    let pressedBackground: Color
+    let stroke: Color
+    let pressedStroke: Color
+
+    var body: some View {
+        configuration.label
+            .font(.callout.weight(.semibold))
+            .padding(.vertical, 11)
+            .padding(.horizontal, 14)
+            .foregroundStyle(configuration.isPressed ? pressedForeground : foreground)
+            .background(configuration.isPressed ? pressedBackground : background)
+            .overlay {
+                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
+                    .stroke(configuration.isPressed ? pressedStroke : stroke, lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
+    }
+}
+
 struct VectorCodePillStrip<Item: Identifiable, Label: View>: View where Item.ID: Equatable {
     let items: [Item]
     let selectedId: Item.ID?
@@ -169,6 +306,21 @@ struct VectorCodeSectionSurface<Content: View>: View {
     }
 }
 
+struct VectorCodeListRowSurface<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VectorCodeSectionSurface {
+            content
+                .padding(12)
+        }
+    }
+}
+
 struct VectorCodeEmptyState: View {
     let title: String
     let icon: VectorCodeIcon
@@ -182,11 +334,11 @@ struct VectorCodeEmptyState: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            VectorCodeIconView(icon: icon, size: 26)
-                .foregroundStyle(VectorCodeTheme.subtle)
-                .frame(width: 54, height: 54)
-                .background(VectorCodeTheme.raised.opacity(0.72))
-                .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
+            VectorCodeIconTile(
+                icon: icon,
+                foreground: VectorCodeTheme.subtle,
+                background: VectorCodeTheme.raised.opacity(0.72)
+            )
             Text(title)
                 .font(.callout.weight(.medium))
                 .foregroundStyle(VectorCodeTheme.text)
@@ -198,32 +350,111 @@ struct VectorCodeEmptyState: View {
                     .frame(maxWidth: 280)
             }
             if let actionTitle, let action {
-                Button(action: action) {
-                    HStack(spacing: 8) {
-                        if let actionIcon {
-                            VectorCodeIconView(icon: actionIcon, size: 15)
-                        }
-                        Text(actionTitle)
-                    }
-                    .frame(maxWidth: 220)
-                }
-                .buttonStyle(VectorCodeSecondaryButtonStyle())
+                VectorCodeEmptyStateActionButton(title: actionTitle, icon: actionIcon, action: action)
                 .padding(.top, 2)
             }
             if let secondaryActionTitle, let secondaryAction {
-                Button(action: secondaryAction) {
-                    HStack(spacing: 8) {
-                        if let secondaryActionIcon {
-                            VectorCodeIconView(icon: secondaryActionIcon, size: 15)
-                        }
-                        Text(secondaryActionTitle)
-                    }
-                    .frame(maxWidth: 220)
-                }
-                .buttonStyle(VectorCodeSecondaryButtonStyle())
+                VectorCodeEmptyStateActionButton(title: secondaryActionTitle, icon: secondaryActionIcon, action: secondaryAction)
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct VectorCodeEmptyStateActionButton: View {
+    let title: String
+    let icon: VectorCodeIcon?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let icon {
+                    VectorCodeIconView(icon: icon, size: 15)
+                }
+                Text(title)
+            }
+            .frame(maxWidth: 220)
+        }
+        .buttonStyle(VectorCodeSecondaryButtonStyle())
+    }
+}
+
+struct VectorCodeOutlinedTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .textFieldStyle(.plain)
+            .font(.system(size: 14, design: .monospaced))
+            .padding(10)
+            .background(VectorCodeTheme.raised)
+            .overlay {
+                RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
+                    .stroke(VectorCodeTheme.line, lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+    }
+}
+
+struct VectorCodeRenamePrompt<Item> {
+    let item: Item
+    var draft: String
+
+    init(item: Item, draft: String) {
+        self.item = item
+        self.draft = draft
+    }
+}
+
+extension View {
+    func vectorCodeRenameAlert<Item>(
+        _ title: String,
+        prompt: Binding<VectorCodeRenamePrompt<Item>?>,
+        action: @escaping (Item, String) -> Void
+    ) -> some View {
+        modifier(VectorCodeRenameAlertModifier(title: title, prompt: prompt, action: action))
+    }
+}
+
+private struct VectorCodeRenameAlertModifier<Item>: ViewModifier {
+    let title: String
+    @Binding var prompt: VectorCodeRenamePrompt<Item>?
+    let action: (Item, String) -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(title, isPresented: isPresented) {
+            TextField("Name", text: draft)
+            Button("Rename") {
+                if let prompt {
+                    action(prompt.item, prompt.draft)
+                }
+                prompt = nil
+            }
+            Button("Cancel", role: .cancel) {
+                prompt = nil
+            }
+        }
+    }
+
+    private var isPresented: Binding<Bool> {
+        Binding(
+            get: { prompt != nil },
+            set: { isPresented in
+                if !isPresented {
+                    prompt = nil
+                }
+            }
+        )
+    }
+
+    private var draft: Binding<String> {
+        Binding(
+            get: { prompt?.draft ?? "" },
+            set: { value in
+                var nextPrompt = prompt
+                nextPrompt?.draft = value
+                prompt = nextPrompt
+            }
+        )
     }
 }

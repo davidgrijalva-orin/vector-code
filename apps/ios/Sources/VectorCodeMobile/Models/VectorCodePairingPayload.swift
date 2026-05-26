@@ -15,12 +15,6 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
         case expiresAt
     }
 
-    private static let canonicalRelayHost = "relay.vectorcode.app"
-    private static let legacyRelayHosts: Set<String> = [
-        "relay-production-e21f.up.railway.app",
-        "sskpzvaw.up.railway.app",
-    ]
-
     public let protocolVersion: Int
     public let desktopId: String
     public let pairingId: String
@@ -34,14 +28,14 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
     public let expiresAt: String
 
     public init(
-        protocolVersion: Int = 1,
+        protocolVersion: Int = vectorCodeMobileProtocolVersion,
         desktopId: String,
         pairingId: String,
         desktopPublicKey: String,
         desktopPublicKeyFingerprint: String,
         pairingToken: String,
         relayHost: String,
-        userId: String? = "default",
+        userId: String? = VectorCodeHosts.defaultUserId,
         relayToken: String? = nil,
         relayTokenExpiresAt: String? = nil,
         expiresAt: String
@@ -52,7 +46,7 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
         self.desktopPublicKey = desktopPublicKey
         self.desktopPublicKeyFingerprint = desktopPublicKeyFingerprint
         self.pairingToken = pairingToken
-        self.relayHost = Self.normalizeRelayHost(relayHost)
+        self.relayHost = VectorCodeHosts.normalizeRelayHost(relayHost) ?? ""
         self.userId = userId
         self.relayToken = relayToken
         self.relayTokenExpiresAt = relayTokenExpiresAt
@@ -112,7 +106,7 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
     }
 
     private func validateRequiredFields() throws {
-        guard protocolVersion == 1 else {
+        guard protocolVersion == vectorCodeMobileProtocolVersion else {
             throw VectorCodePairingError.unsupportedProtocol(protocolVersion)
         }
         guard !desktopId.isEmpty else {
@@ -136,25 +130,6 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
         _ = try VectorCodeISO8601.date(from: expiresAt, field: "expiresAt")
     }
 
-    private static func normalizeRelayHost(_ value: String) -> String {
-        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedValue.isEmpty else {
-            return trimmedValue
-        }
-
-        let hostInput: String
-        if let components = URLComponents(string: trimmedValue), let host = components.host {
-            hostInput = components.port.map { "\(host):\($0)" } ?? host
-        } else {
-            hostInput = trimmedValue
-        }
-
-        let lowercasedHost = hostInput.lowercased()
-        if legacyRelayHosts.contains(lowercasedHost) {
-            return canonicalRelayHost
-        }
-        return lowercasedHost
-    }
 }
 
 public enum VectorCodePairingError: Error, Equatable, LocalizedError {

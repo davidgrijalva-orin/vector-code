@@ -160,15 +160,20 @@ public actor VectorCodeRemoteWorkspaceClient {
             guard response.requestId == requestId else {
                 continue
             }
-            if let error = response.error {
-                return VectorCodeRemoteEnvelope<ResponsePayload>(
+            func typedEnvelope(payload: ResponsePayload? = nil, error: VectorCodeRemoteError? = nil) -> VectorCodeRemoteEnvelope<ResponsePayload> {
+                VectorCodeRemoteEnvelope<ResponsePayload>(
                     kind: response.kind,
                     protocolVersion: response.protocolVersion,
                     requestId: response.requestId,
                     action: response.action,
                     projectId: response.projectId,
+                    payload: payload,
                     error: error
                 )
+            }
+
+            if let error = response.error {
+                return typedEnvelope(error: error)
             }
             guard response.kind == .response else {
                 throw VectorCodeRemoteWorkspaceClientError.invalidResponse
@@ -180,15 +185,7 @@ public actor VectorCodeRemoteWorkspaceClient {
                 let data = try JSONEncoder().encode(payload)
                 return try JSONDecoder().decode(responseType, from: data)
             }
-            return VectorCodeRemoteEnvelope<ResponsePayload>(
-                kind: response.kind,
-                protocolVersion: response.protocolVersion,
-                requestId: response.requestId,
-                action: response.action,
-                projectId: response.projectId,
-                payload: payload,
-                error: response.error
-            )
+            return typedEnvelope(payload: payload)
         }
     }
 }

@@ -3,9 +3,7 @@ import SwiftUI
 public struct VectorCodeFilesView: View {
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
     @State private var collapsedFolderPaths = Set<String>()
-    @State private var showingRename = false
-    @State private var renamingNode: VectorCodeFileNode?
-    @State private var renameDraft = ""
+    @State private var renamePrompt: VectorCodeRenamePrompt<VectorCodeFileNode>?
     @State private var copyingNode: VectorCodeFileNode?
     @State private var copyDestinationPath = ""
 
@@ -70,9 +68,7 @@ public struct VectorCodeFilesView: View {
                                 depth: 0,
                                 collapsedFolderPaths: $collapsedFolderPaths
                             ) { node in
-                                renamingNode = node
-                                renameDraft = node.name
-                                showingRename = true
+                                renamePrompt = VectorCodeRenamePrompt(item: node, draft: node.name)
                             } copyAction: { node in
                                 copyingNode = node
                                 copyDestinationPath = node.path
@@ -85,19 +81,8 @@ public struct VectorCodeFilesView: View {
             }
         }
         .background(VectorCodeTheme.background)
-        .alert("Rename", isPresented: $showingRename) {
-            TextField("Name", text: $renameDraft)
-            Button("Rename") {
-                if let renamingNode {
-                    model.renameFile(renamingNode, to: renameDraft)
-                }
-                renamingNode = nil
-                renameDraft = ""
-            }
-            Button("Cancel", role: .cancel) {
-                renamingNode = nil
-                renameDraft = ""
-            }
+        .vectorCodeRenameAlert("Rename", prompt: $renamePrompt) { node, name in
+            model.renameFile(node, to: name)
         }
         .sheet(item: $copyingNode) { node in
             VectorCodeCopyFileSheet(
@@ -255,15 +240,7 @@ private struct VectorCodeCopyFileSheet: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(VectorCodeTheme.muted)
                     TextField("path/in/project", text: $destinationPath)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 14, design: .monospaced))
-                        .padding(10)
-                        .background(VectorCodeTheme.raised)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                                .stroke(VectorCodeTheme.line, lineWidth: 1)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+                        .textFieldStyle(VectorCodeOutlinedTextFieldStyle())
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -275,24 +252,19 @@ private struct VectorCodeCopyFileSheet: View {
                             model.copyFile(node, to: project, destinationPath: destinationPath)
                             dismiss()
                         } label: {
-                            HStack(spacing: 10) {
-                                VectorCodeProjectIdentity(
-                                    project: project,
-                                    dotSize: 6,
-                                    titleFont: .callout.weight(.semibold),
-                                    pathFont: .caption
-                                )
-                                Spacer()
-                                VectorCodeIconView(icon: .copy, size: 14)
-                                    .foregroundStyle(VectorCodeTheme.subtle)
+                            VectorCodeListRowSurface {
+                                HStack(spacing: 10) {
+                                    VectorCodeProjectIdentity(
+                                        project: project,
+                                        dotSize: 6,
+                                        titleFont: .callout.weight(.semibold),
+                                        pathFont: .caption
+                                    )
+                                    Spacer()
+                                    VectorCodeIconView(icon: .copy, size: 14)
+                                        .foregroundStyle(VectorCodeTheme.subtle)
+                                }
                             }
-                            .padding(12)
-                            .background(VectorCodeTheme.panel)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                                    .stroke(VectorCodeTheme.line, lineWidth: 1)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
                         }
                         .buttonStyle(.plain)
                     }

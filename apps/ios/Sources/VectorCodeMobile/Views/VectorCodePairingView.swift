@@ -13,34 +13,19 @@ public struct VectorCodePairingView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                VectorCodeBrandWordmark()
-                Text("Phone Pairing")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(VectorCodeTheme.muted)
-                Spacer()
-                VectorCodeIconButton(icon: .close, size: 32) {
-                    dismiss()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(VectorCodeTheme.line)
-                    .frame(height: 1)
-            }
+            VectorCodeSheetHeader(title: "Phone Pairing", showsDivider: true)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     VectorCodeSectionSurface {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 10) {
-                                VectorCodeIconView(icon: .deviceMobile, size: 18)
-                                    .foregroundStyle(VectorCodeTheme.accent)
-                                    .frame(width: 36, height: 36)
-                                    .background(VectorCodeTheme.accentSoft)
-                                    .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+                                VectorCodeIconTile(
+                                    icon: .deviceMobile,
+                                    iconSize: 18,
+                                    tileSize: 36,
+                                    cornerRadius: VectorCodeTheme.compactRadius
+                                )
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("Desktop connection")
                                         .font(.headline.weight(.semibold))
@@ -175,41 +160,5 @@ private extension View {
         #else
         self.sheet(isPresented: isPresented, content: content)
         #endif
-    }
-}
-
-public struct VectorCodePrimaryButtonStyle: ButtonStyle {
-    public init() {}
-
-    public func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.callout.weight(.semibold))
-            .padding(.vertical, 11)
-            .padding(.horizontal, 14)
-            .foregroundStyle(configuration.isPressed ? VectorCodeTheme.text : VectorCodeTheme.accent)
-            .background(configuration.isPressed ? VectorCodeTheme.accentSoft : VectorCodeTheme.raised)
-            .overlay {
-                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                    .stroke(VectorCodeTheme.accent.opacity(configuration.isPressed ? 0.62 : 0.36), lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
-    }
-}
-
-public struct VectorCodeSecondaryButtonStyle: ButtonStyle {
-    public init() {}
-
-    public func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.callout.weight(.semibold))
-            .padding(.vertical, 11)
-            .padding(.horizontal, 14)
-            .foregroundStyle(VectorCodeTheme.text)
-            .background(configuration.isPressed ? VectorCodeTheme.hover : Color.clear)
-            .overlay {
-                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                    .stroke(VectorCodeTheme.line, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
     }
 }

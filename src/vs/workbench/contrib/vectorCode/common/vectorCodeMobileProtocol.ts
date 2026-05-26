@@ -3,20 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export const VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION = 1;
+import {
+	VECTOR_CODE_MOBILE_REMOTE_ACTION as GENERATED_VECTOR_CODE_MOBILE_REMOTE_ACTION,
+	VECTOR_CODE_MOBILE_REMOTE_ACTION_VALUES as GENERATED_VECTOR_CODE_MOBILE_REMOTE_ACTION_VALUES,
+	VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION as GENERATED_VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
+	VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND as GENERATED_VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND,
+	VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND_VALUES as GENERATED_VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND_VALUES,
+	VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE as GENERATED_VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE,
+	VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE_VALUES as GENERATED_VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE_VALUES,
+	type VectorCodeMobileRemoteActionValue,
+	type VectorCodeMobileTerminalControlCommandValue,
+	type VectorCodeMobileTerminalInputModeValue
+} from './vectorCodeGeneratedConfig.js';
 
-export const enum VectorCodeMobileRemoteAction {
-	StateRead = 'state.read',
-	FileTreeRead = 'file.tree.read',
-	FileRead = 'file.read',
-	FileWrite = 'file.write',
-	FileMove = 'file.move',
-	FileCopy = 'file.copy',
-	TerminalList = 'terminal.list',
-	TerminalCreate = 'terminal.create',
-	TerminalInput = 'terminal.input',
-	TerminalControl = 'terminal.control',
-	TerminalOutput = 'terminal.output',
+export const VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION = GENERATED_VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION;
+export const VectorCodeMobileRemoteAction = GENERATED_VECTOR_CODE_MOBILE_REMOTE_ACTION;
+export type VectorCodeMobileRemoteAction = VectorCodeMobileRemoteActionValue;
+export const VECTOR_CODE_MOBILE_REMOTE_ACTION_VALUES = GENERATED_VECTOR_CODE_MOBILE_REMOTE_ACTION_VALUES;
+
+export const VectorCodeMobileTerminalInputMode = GENERATED_VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE;
+export type VectorCodeMobileTerminalInputMode = VectorCodeMobileTerminalInputModeValue;
+export const VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE_VALUES = GENERATED_VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE_VALUES;
+
+export const VectorCodeMobileTerminalControlCommand = GENERATED_VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND;
+export type VectorCodeMobileTerminalControlCommand = VectorCodeMobileTerminalControlCommandValue;
+export const VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND_VALUES = GENERATED_VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND_VALUES;
+
+export function isVectorCodeMobileTerminalInputMode(value: string): value is VectorCodeMobileTerminalInputMode {
+	return (VECTOR_CODE_MOBILE_TERMINAL_INPUT_MODE_VALUES as readonly string[]).includes(value);
+}
+
+export function isVectorCodeMobileTerminalControlCommand(value: string): value is VectorCodeMobileTerminalControlCommand {
+	return (VECTOR_CODE_MOBILE_TERMINAL_CONTROL_COMMAND_VALUES as readonly string[]).includes(value);
 }
 
 export interface IVectorCodeMobileRemoteEnvelope<TPayload = unknown> {
@@ -32,6 +50,28 @@ export interface IVectorCodeMobileRemoteEnvelope<TPayload = unknown> {
 export interface IVectorCodeMobileRemoteError {
 	readonly code: string;
 	readonly message: string;
+}
+
+export function createVectorCodeMobileRemoteResponse<TPayload>(request: IVectorCodeMobileRemoteEnvelope, payload: TPayload): IVectorCodeMobileRemoteEnvelope<TPayload> {
+	return {
+		kind: 'response',
+		protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
+		requestId: request.requestId,
+		action: request.action,
+		projectId: request.projectId,
+		payload
+	};
+}
+
+export function createVectorCodeMobileRemoteErrorResponse(request: IVectorCodeMobileRemoteEnvelope, code: string, message: string): IVectorCodeMobileRemoteEnvelope {
+	return {
+		kind: 'response',
+		protocolVersion: VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION,
+		requestId: request.requestId,
+		action: request.action,
+		projectId: request.projectId,
+		error: { code, message }
+	};
 }
 
 export const enum VectorCodeMobileRelayFrameDirection {
@@ -128,13 +168,15 @@ export interface IVectorCodeMobileRemoteTerminalInputRequest {
 	readonly terminalId: string;
 	readonly input: string;
 	readonly submit: boolean;
-	readonly mode?: 'raw' | 'paste' | 'command';
+	readonly mode?: VectorCodeMobileTerminalInputMode;
 }
 
-export interface IVectorCodeMobileRemoteTerminalInputResponse {
+export interface IVectorCodeMobileRemoteTerminalAcceptedResponse {
 	readonly terminalId: string;
 	readonly accepted: boolean;
 }
+
+export type IVectorCodeMobileRemoteTerminalInputResponse = IVectorCodeMobileRemoteTerminalAcceptedResponse;
 
 export interface IVectorCodeMobileRemoteTerminalCreateRequest {
 	readonly title?: string;
@@ -143,16 +185,13 @@ export interface IVectorCodeMobileRemoteTerminalCreateRequest {
 
 export interface IVectorCodeMobileRemoteTerminalControlRequest {
 	readonly terminalId: string;
-	readonly command: 'resize' | 'interrupt' | 'clear' | 'rename' | 'close';
+	readonly command: VectorCodeMobileTerminalControlCommand;
 	readonly cols?: number;
 	readonly rows?: number;
 	readonly title?: string;
 }
 
-export interface IVectorCodeMobileRemoteTerminalControlResponse {
-	readonly terminalId: string;
-	readonly accepted: boolean;
-}
+export type IVectorCodeMobileRemoteTerminalControlResponse = IVectorCodeMobileRemoteTerminalAcceptedResponse;
 
 export interface IVectorCodeMobileRemoteTerminalOutputRequest {
 	readonly terminalId: string;
@@ -198,11 +237,13 @@ export interface IVectorCodeMobileRemoteFileMoveRequest {
 	readonly overwrite?: boolean;
 }
 
-export interface IVectorCodeMobileRemoteFileMoveResponse {
+export interface IVectorCodeMobileRemoteFileTransferResponse {
 	readonly path: string;
 	readonly targetPath: string;
 	readonly targetProjectId: string;
 }
+
+export type IVectorCodeMobileRemoteFileMoveResponse = IVectorCodeMobileRemoteFileTransferResponse;
 
 export interface IVectorCodeMobileRemoteFileCopyRequest {
 	readonly path: string;
@@ -211,8 +252,4 @@ export interface IVectorCodeMobileRemoteFileCopyRequest {
 	readonly overwrite?: boolean;
 }
 
-export interface IVectorCodeMobileRemoteFileCopyResponse {
-	readonly path: string;
-	readonly targetPath: string;
-	readonly targetProjectId: string;
-}
+export type IVectorCodeMobileRemoteFileCopyResponse = IVectorCodeMobileRemoteFileTransferResponse;

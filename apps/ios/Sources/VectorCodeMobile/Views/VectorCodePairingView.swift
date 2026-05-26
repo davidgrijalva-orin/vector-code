@@ -72,7 +72,6 @@ public struct VectorCodePairingView: View {
                                 .frame(minHeight: 154)
                                 .scrollContentBackground(.hidden)
                                 .padding(10)
-                                .background(VectorCodeTheme.terminalBackground)
                             if payloadText.isEmpty {
                                 Text("Paste QR payload")
                                     .font(.system(.body, design: .monospaced))
@@ -82,11 +81,7 @@ public struct VectorCodePairingView: View {
                                     .allowsHitTesting(false)
                             }
                         }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                                .stroke(VectorCodeTheme.line, lineWidth: 1)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
+                        .vectorCodeOutlinedSurface(background: VectorCodeTheme.terminalBackground)
                     }
 
                     if let errorText {

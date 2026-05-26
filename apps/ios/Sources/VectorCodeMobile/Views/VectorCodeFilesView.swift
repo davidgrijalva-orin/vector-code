@@ -252,7 +252,7 @@ private struct VectorCodeCopyFileSheet: View {
                             model.copyFile(node, to: project, destinationPath: destinationPath)
                             dismiss()
                         } label: {
-                            VectorCodeListRowSurface {
+                            VectorCodeSectionSurface(contentPadding: 12) {
                                 HStack(spacing: 10) {
                                     VectorCodeProjectIdentity(
                                         project: project,

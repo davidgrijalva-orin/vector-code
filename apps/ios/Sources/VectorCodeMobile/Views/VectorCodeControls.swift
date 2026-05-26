@@ -28,12 +28,7 @@ struct VectorCodeIconButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(foreground)
-        .background(background)
-        .overlay {
-            RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                .stroke(VectorCodeTheme.line, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+        .vectorCodeOutlinedSurface(background: background, cornerRadius: VectorCodeTheme.compactRadius)
     }
 }
 
@@ -165,12 +160,10 @@ private struct VectorCodeButtonChrome: View {
             .padding(.vertical, 11)
             .padding(.horizontal, 14)
             .foregroundStyle(configuration.isPressed ? pressedForeground : foreground)
-            .background(configuration.isPressed ? pressedBackground : background)
-            .overlay {
-                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                    .stroke(configuration.isPressed ? pressedStroke : stroke, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
+            .vectorCodeOutlinedSurface(
+                background: configuration.isPressed ? pressedBackground : background,
+                stroke: configuration.isPressed ? pressedStroke : stroke
+            )
     }
 }
 
@@ -229,12 +222,11 @@ struct VectorCodePillStrip<Item: Identifiable, Label: View>: View where Item.ID:
                         }
                     }
                     .foregroundStyle(isSelected ? VectorCodeTheme.text : VectorCodeTheme.muted)
-                    .background(isSelected ? VectorCodeTheme.accentSoft : Color.clear)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                            .stroke(isSelected ? VectorCodeTheme.accent.opacity(0.42) : VectorCodeTheme.line, lineWidth: 1)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+                    .vectorCodeOutlinedSurface(
+                        background: isSelected ? VectorCodeTheme.accentSoft : Color.clear,
+                        stroke: isSelected ? VectorCodeTheme.accent.opacity(0.42) : VectorCodeTheme.line,
+                        cornerRadius: VectorCodeTheme.compactRadius
+                    )
                 }
             }
             .padding(.horizontal, 12)
@@ -290,34 +282,17 @@ struct VectorCodeBrandWordmark: View {
 
 struct VectorCodeSectionSurface<Content: View>: View {
     let content: Content
+    let contentPadding: CGFloat
 
-    init(@ViewBuilder content: () -> Content) {
+    init(contentPadding: CGFloat = 0, @ViewBuilder content: () -> Content) {
         self.content = content()
+        self.contentPadding = contentPadding
     }
 
     var body: some View {
         content
-            .background(VectorCodeTheme.panel)
-            .overlay {
-                RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius)
-                    .stroke(VectorCodeTheme.line, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.cornerRadius))
-    }
-}
-
-struct VectorCodeListRowSurface<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        VectorCodeSectionSurface {
-            content
-                .padding(12)
-        }
+            .padding(contentPadding)
+            .vectorCodeOutlinedSurface()
     }
 }
 
@@ -387,12 +362,7 @@ struct VectorCodeOutlinedTextFieldStyle: TextFieldStyle {
             .textFieldStyle(.plain)
             .font(.system(size: 14, design: .monospaced))
             .padding(10)
-            .background(VectorCodeTheme.raised)
-            .overlay {
-                RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius)
-                    .stroke(VectorCodeTheme.line, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+            .vectorCodeOutlinedSurface(background: VectorCodeTheme.raised, cornerRadius: VectorCodeTheme.compactRadius)
     }
 }
 
@@ -407,12 +377,36 @@ struct VectorCodeRenamePrompt<Item> {
 }
 
 extension View {
+    nonisolated func vectorCodeOutlinedSurface(
+        background: Color = VectorCodeTheme.panel,
+        stroke: Color = VectorCodeTheme.line,
+        cornerRadius: CGFloat = VectorCodeTheme.cornerRadius
+    ) -> some View {
+        modifier(VectorCodeOutlinedSurfaceModifier(background: background, stroke: stroke, cornerRadius: cornerRadius))
+    }
+
     func vectorCodeRenameAlert<Item>(
         _ title: String,
         prompt: Binding<VectorCodeRenamePrompt<Item>?>,
         action: @escaping (Item, String) -> Void
     ) -> some View {
         modifier(VectorCodeRenameAlertModifier(title: title, prompt: prompt, action: action))
+    }
+}
+
+private struct VectorCodeOutlinedSurfaceModifier: ViewModifier {
+    let background: Color
+    let stroke: Color
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(background)
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(stroke, lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 }
 

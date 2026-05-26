@@ -263,21 +263,29 @@ public enum VectorCodeRelayInboundMessage: Codable, Equatable, Sendable {
         case message
     }
 
+    private enum PeerPresenceType: String {
+        case online = "relay.peer_online"
+        case offline = "relay.peer_offline"
+
+        func message(role: String, desktopId: String, deviceId: String?) -> VectorCodeRelayInboundMessage {
+            switch self {
+            case .online:
+                .peerOnline(role: role, desktopId: desktopId, deviceId: deviceId)
+            case .offline:
+                .peerOffline(role: role, desktopId: desktopId, deviceId: deviceId)
+            }
+        }
+    }
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
         case .ready:
             try container.encode("relay.ready", forKey: .type)
         case .peerOnline(let role, let desktopId, let deviceId):
-            try container.encode("relay.peer_online", forKey: .type)
-            try container.encode(role, forKey: .role)
-            try container.encode(desktopId, forKey: .desktopId)
-            try container.encodeIfPresent(deviceId, forKey: .deviceId)
+            try Self.encodePeerPresence(.online, role: role, desktopId: desktopId, deviceId: deviceId, to: &container)
         case .peerOffline(let role, let desktopId, let deviceId):
-            try container.encode("relay.peer_offline", forKey: .type)
-            try container.encode(role, forKey: .role)
-            try container.encode(desktopId, forKey: .desktopId)
-            try container.encodeIfPresent(deviceId, forKey: .deviceId)
+            try Self.encodePeerPresence(.offline, role: role, desktopId: desktopId, deviceId: deviceId, to: &container)
         case .frame(let frame):
             try container.encode("relay.frame", forKey: .type)
             try container.encode(frame, forKey: .frame)
@@ -297,17 +305,9 @@ public enum VectorCodeRelayInboundMessage: Codable, Equatable, Sendable {
         case "relay.ready":
             self = .ready
         case "relay.peer_online":
-            self = .peerOnline(
-                role: try container.decode(String.self, forKey: .role),
-                desktopId: try container.decode(String.self, forKey: .desktopId),
-                deviceId: try container.decodeIfPresent(String.self, forKey: .deviceId)
-            )
+            self = try Self.decodePeerPresence(.online, from: container)
         case "relay.peer_offline":
-            self = .peerOffline(
-                role: try container.decode(String.self, forKey: .role),
-                desktopId: try container.decode(String.self, forKey: .desktopId),
-                deviceId: try container.decodeIfPresent(String.self, forKey: .deviceId)
-            )
+            self = try Self.decodePeerPresence(.offline, from: container)
         case "relay.frame":
             self = .frame(try container.decode(VectorCodeRelayEncryptedFrame.self, forKey: .frame))
         case "relay.pong":
@@ -320,6 +320,27 @@ public enum VectorCodeRelayInboundMessage: Codable, Equatable, Sendable {
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unsupported relay inbound message")
         }
+    }
+
+    private static func encodePeerPresence(
+        _ type: PeerPresenceType,
+        role: String,
+        desktopId: String,
+        deviceId: String?,
+        to container: inout KeyedEncodingContainer<CodingKeys>
+    ) throws {
+        try container.encode(type.rawValue, forKey: .type)
+        try container.encode(role, forKey: .role)
+        try container.encode(desktopId, forKey: .desktopId)
+        try container.encodeIfPresent(deviceId, forKey: .deviceId)
+    }
+
+    private static func decodePeerPresence(_ type: PeerPresenceType, from container: KeyedDecodingContainer<CodingKeys>) throws -> Self {
+        type.message(
+            role: try container.decode(String.self, forKey: .role),
+            desktopId: try container.decode(String.self, forKey: .desktopId),
+            deviceId: try container.decodeIfPresent(String.self, forKey: .deviceId)
+        )
     }
 }
 

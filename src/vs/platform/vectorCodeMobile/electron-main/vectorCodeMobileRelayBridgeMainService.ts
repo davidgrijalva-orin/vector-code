@@ -87,14 +87,12 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 				return undefined;
 			}
 
-			const body = await response.json() as { token?: unknown; expiresAt?: unknown };
-			const relayToken = typeof body?.token === 'string' ? body.token.trim() : '';
-			const relayTokenExpiresAt = typeof body?.expiresAt === 'string' ? body.expiresAt.trim() : '';
-			if (!relayToken || !relayTokenExpiresAt) {
+			const relayToken = normalizeVectorCodeRelayTokenResponse(await response.json());
+			if (!relayToken) {
 				this.logService.warn('VectorCode mobile relay token response did not include a token and expiry.');
 				return undefined;
 			}
-			return { relayToken, relayTokenExpiresAt };
+			return relayToken;
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
 			this.logService.warn(`VectorCode mobile relay token request failed: ${detail}`);
@@ -120,6 +118,28 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 		this.connections.delete(connectionId);
 		connection.disposables.dispose();
 	}
+}
+
+export function normalizeVectorCodeRelayTokenResponse(value: unknown): IVectorCodeMobileRelayBridgeTokenResponse | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+	const relayToken = stringField(value, 'relayToken') ?? stringField(value, 'token');
+	const relayTokenExpiresAt = stringField(value, 'relayTokenExpiresAt') ?? stringField(value, 'expiresAt');
+	return relayToken && relayTokenExpiresAt ? { relayToken, relayTokenExpiresAt } : undefined;
+}
+
+function stringField(value: Record<string, unknown>, key: string): string | undefined {
+	const field = value[key];
+	if (typeof field !== 'string') {
+		return undefined;
+	}
+	const trimmed = field.trim();
+	return trimmed || undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
 }
 
 function waitForOpen(socket: WebSocketType): Promise<void> {

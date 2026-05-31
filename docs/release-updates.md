@@ -71,6 +71,7 @@ The deployable Railway service lives in `services/update-feed`. It serves:
 ```text
 GET /healthz
 GET /api/update/:platform/:quality/:commit
+HEAD /api/update/:platform/:quality/:commit
 ```
 
 The service reads release data from one of these sources, in order:
@@ -87,6 +88,8 @@ For the first Railway deployment, set `VECTOR_UPDATE_FEED_JSON` to:
 ```
 
 That makes the endpoint live while safely returning `204` until the first signed release asset is published.
+
+The app may use `HEAD` for cheap polling. The service returns the same status and headers as `GET`, but no body, so update checks can run without downloading the release payload JSON unless an actionable state needs details.
 
 Production is served from the branded VectorCode domain:
 

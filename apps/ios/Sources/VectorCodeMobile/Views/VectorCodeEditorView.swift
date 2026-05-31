@@ -4,6 +4,8 @@ import UIKit
 #endif
 
 public struct VectorCodeEditorView: View {
+    private static let largeEditorCharacterLimit = 240_000
+
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
 
     public init(model: VectorCodeMobileWorkspaceModel) {
@@ -35,6 +37,8 @@ public struct VectorCodeEditorView: View {
             }
 
             if let editor = model.selectedEditor {
+                let metrics = VectorCodeEditorMetrics(text: model.editorDraft)
+                let isLargeEditor = metrics.characterCount > Self.largeEditorCharacterLimit
                 VStack(spacing: 0) {
                     HStack {
                         Text(editor.path)
@@ -48,14 +52,49 @@ public struct VectorCodeEditorView: View {
                         VectorCodeIconButton(icon: .save, size: 32) {
                             model.saveEditor()
                         }
+                        .disabled(!editor.isDirty || isLargeEditor)
+                        .opacity(editor.isDirty && !isLargeEditor ? 1 : 0.48)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(VectorCodeTheme.elevated)
 
+                    VectorCodeEditorStatusBar(
+                        editor: editor,
+                        metrics: metrics,
+                        isReadOnly: isLargeEditor
+                    )
+
+                    if let conflict = model.selectedEditorConflict {
+                        VectorCodeEditorConflictPanel(
+                            conflict: conflict,
+                            localContent: model.editorDraft,
+                            keepDesktop: {
+                                model.keepDesktopEditorConflict()
+                            },
+                            overwrite: {
+                                model.overwriteEditorConflict()
+                            },
+                            cancel: {
+                                model.dismissEditorConflict()
+                            }
+                        )
+                    }
+
+                    if isLargeEditor {
+                        Text("Large file opened read-only on mobile.")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(VectorCodeTheme.warning)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(VectorCodeTheme.raised)
+                    }
+
                     MonacoLikeEditorSurface(
                         text: $model.editorDraft,
-                        language: editor.language
+                        language: editor.language,
+                        isEditable: !isLargeEditor
                     ) {
                         model.markEditorDirty()
                     }
@@ -76,14 +115,142 @@ public struct VectorCodeEditorView: View {
     }
 }
 
+private struct VectorCodeEditorConflictPanel: View {
+    let conflict: VectorCodeEditorConflict
+    let localContent: String
+    let keepDesktop: () -> Void
+    let overwrite: () -> Void
+    let cancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                VectorCodeIconView(icon: .warning, size: 15)
+                    .foregroundStyle(VectorCodeTheme.warning)
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Desktop changed this file")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(VectorCodeTheme.text)
+                    Text(conflict.path)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(VectorCodeTheme.muted)
+                        .lineLimit(1)
+                }
+                Spacer()
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                VectorCodeConflictPreview(title: "Phone draft", content: localContent)
+                VectorCodeConflictPreview(title: "Desktop", content: conflict.desktopContent)
+            }
+
+            HStack(spacing: 8) {
+                Button("Keep Desktop", action: keepDesktop)
+                    .buttonStyle(VectorCodeSecondaryButtonStyle())
+                Button("Cancel", action: cancel)
+                    .buttonStyle(VectorCodeSecondaryButtonStyle())
+                Button("Overwrite", action: overwrite)
+                    .buttonStyle(VectorCodePrimaryButtonStyle())
+            }
+        }
+        .padding(12)
+        .background(VectorCodeTheme.raised)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(VectorCodeTheme.warning.opacity(0.45))
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct VectorCodeConflictPreview: View {
+    let title: String
+    let content: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(VectorCodeTheme.muted)
+            Text(preview)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(VectorCodeTheme.text)
+                .lineLimit(5)
+                .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+                .padding(8)
+                .background(VectorCodeTheme.terminalBackground)
+                .clipShape(RoundedRectangle(cornerRadius: VectorCodeTheme.compactRadius))
+        }
+    }
+
+    private var preview: String {
+        let lines = content.split(separator: "\n", omittingEmptySubsequences: false).prefix(6)
+        let value = lines.joined(separator: "\n")
+        return value.isEmpty ? "Empty file" : value
+    }
+}
+
+private struct VectorCodeEditorMetrics {
+    let lineCount: Int
+    let characterCount: Int
+
+    init(text: String) {
+        lineCount = max(text.split(separator: "\n", omittingEmptySubsequences: false).count, 1)
+        characterCount = text.count
+    }
+}
+
+private struct VectorCodeEditorStatusBar: View {
+    let editor: VectorCodeEditorTab
+    let metrics: VectorCodeEditorMetrics
+    let isReadOnly: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            statusLabel
+            if let version = editor.version, !version.isEmpty {
+                Text("Version \(version)")
+            }
+            Spacer(minLength: 8)
+            Text("\(metrics.lineCount) lines")
+            Text("\(metrics.characterCount) chars")
+        }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(VectorCodeTheme.subtle)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(VectorCodeTheme.background)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(VectorCodeTheme.line)
+                .frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var statusLabel: some View {
+        if isReadOnly {
+            Text("Read-only")
+                .foregroundStyle(VectorCodeTheme.warning)
+        } else if editor.isDirty {
+            Text("Unsaved")
+                .foregroundStyle(VectorCodeTheme.warning)
+        } else {
+            Text("Saved")
+        }
+    }
+}
+
 private struct MonacoLikeEditorSurface: View {
     @Binding var text: String
     let language: String
+    let isEditable: Bool
     let onChange: () -> Void
 
     var body: some View {
         #if os(iOS)
-        VectorCodeTextKitEditor(text: $text, onChange: onChange)
+        VectorCodeTextKitEditor(text: $text, isEditable: isEditable, onChange: onChange)
             .background(VectorCodeTheme.terminalBackground)
             .overlay(alignment: .top) {
                 Rectangle()
@@ -127,6 +294,7 @@ private struct MonacoLikeEditorSurface: View {
                 .padding(.vertical, 8)
                 .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
                 .background(VectorCodeTheme.terminalBackground)
+                .disabled(!isEditable)
             }
             .frame(maxHeight: .infinity)
         }
@@ -143,11 +311,13 @@ private struct MonacoLikeEditorSurface: View {
 #if os(iOS)
 private struct VectorCodeTextKitEditor: UIViewRepresentable {
     @Binding var text: String
+    let isEditable: Bool
     let onChange: () -> Void
 
     func makeUIView(context: Context) -> VectorCodeTextKitEditorView {
         let view = VectorCodeTextKitEditorView()
         view.textView.delegate = context.coordinator
+        view.textView.isEditable = isEditable
         view.setText(text)
         return view
     }
@@ -156,6 +326,7 @@ private struct VectorCodeTextKitEditor: UIViewRepresentable {
         if uiView.textView.text != text {
             uiView.setText(text)
         }
+        uiView.textView.isEditable = isEditable
     }
 
     func makeCoordinator() -> Coordinator {

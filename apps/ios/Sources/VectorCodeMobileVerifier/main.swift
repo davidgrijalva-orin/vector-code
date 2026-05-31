@@ -123,6 +123,21 @@ func verifyVectorCodeMobile() async throws {
     model.closeTerminal(model.selectedTerminal!)
     precondition(model.selectedTerminals.count == 1)
 
+    let layoutSwitchModel = VectorCodeMobileWorkspaceModel(snapshot: .sample)
+    let layoutJobBoard = layoutSwitchModel.snapshot.projects.first { $0.id == "job-board" }!
+    let layoutNeuron = layoutSwitchModel.snapshot.projects.first { $0.id == "neuron" }!
+    layoutSwitchModel.viewport = .projects
+    layoutSwitchModel.switchProject(layoutNeuron)
+    precondition(layoutSwitchModel.viewport == .files)
+    layoutSwitchModel.viewport = .terminal
+    layoutSwitchModel.switchProject(layoutJobBoard)
+    precondition(layoutSwitchModel.viewport == .terminal)
+    precondition(layoutSwitchModel.selectedTerminal?.projectId == "job-board")
+    layoutSwitchModel.viewport = .editor
+    layoutSwitchModel.switchProject(layoutNeuron)
+    precondition(layoutSwitchModel.viewport == .editor)
+    precondition(layoutSwitchModel.selectedEditor?.projectId == "neuron")
+
     let collisionSnapshot = VectorCodeRemoteWorkspaceSnapshot(
         activeProjectId: "job-board",
         projects: VectorCodeRemoteWorkspaceSnapshot.sample.projects,
@@ -154,6 +169,34 @@ func verifyVectorCodeMobile() async throws {
     precondition(editorCollisionModel.selectedEditorId == "shared-editor")
     precondition(editorCollisionModel.selectedEditor?.projectId == "job-board")
     precondition(editorCollisionModel.editorDraft == "# job")
+
+    var dirtyCollisionRemoteSnapshot = collisionSnapshot
+    dirtyCollisionRemoteSnapshot.editorsByProject = [
+        "job-board": [
+            VectorCodeEditorTab(id: "shared-editor", projectId: "job-board", path: "README.md", title: "README.md", language: "markdown", content: "# remote job"),
+        ],
+        "neuron": [
+            VectorCodeEditorTab(id: "shared-editor", projectId: "neuron", path: "README.md", title: "README.md", language: "markdown", content: "# remote neuron"),
+        ],
+    ]
+    let dirtyCollisionRelayClient = VectorCodeRelayLoopbackClient(snapshot: dirtyCollisionRemoteSnapshot)
+    let dirtyCollisionWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: dirtyCollisionRelayClient)
+    let dirtyCollisionModel = VectorCodeMobileWorkspaceModel(snapshot: collisionSnapshot, remoteWorkspaceClient: dirtyCollisionWorkspaceClient)
+    dirtyCollisionModel.editorDraft = "# dirty job\n"
+    dirtyCollisionModel.markEditorDirty()
+    dirtyCollisionModel.selectEditor(collisionSnapshot.editorsByProject["neuron"]!.first!)
+    dirtyCollisionModel.editorDraft = "# dirty neuron\n"
+    dirtyCollisionModel.markEditorDirty()
+    dirtyCollisionModel.switchProject(jobBoard)
+    try dirtyCollisionModel.pair(from: payloadJSON, phoneId: "phone-dirty-editor-collision")
+    dirtyCollisionModel.connectToDesktop()
+    try await waitUntil("dirty editor collision model connected") {
+        dirtyCollisionModel.isRemoteConnected
+    }
+    dirtyCollisionModel.switchProject(jobBoard)
+    precondition(dirtyCollisionModel.editorDraft == "# dirty job\n")
+    dirtyCollisionModel.switchProject(neuron)
+    precondition(dirtyCollisionModel.editorDraft == "# dirty neuron\n")
 
     let terminalCollisionRelayClient = VectorCodeRelayLoopbackClient(snapshot: collisionSnapshot)
     let terminalCollisionWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: terminalCollisionRelayClient)
@@ -298,6 +341,297 @@ func verifyVectorCodeMobile() async throws {
     precondition(sentEnvelopes.contains { $0.payloadJSON.contains("\"rename\"") && $0.payloadJSON.contains("\"server\"") })
     precondition(sentEnvelopes.last?.payloadJSON.contains("\"close\"") == true)
 
+    let gatedRelayClient = VectorCodeRelayLoopbackClient(snapshot: remoteSnapshot, responseDelayNanoseconds: 120_000_000)
+    let gatedWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: gatedRelayClient)
+    let gatedFirstRead = Task {
+        try await gatedWorkspaceClient.readFile(projectId: "job-board", path: "README.md")
+    }
+    try await Task.sleep(nanoseconds: 20_000_000)
+    let gatedSecondRead = Task {
+        try await gatedWorkspaceClient.readFile(projectId: "job-board", path: "README.md")
+    }
+    try await Task.sleep(nanoseconds: 20_000_000)
+    gatedSecondRead.cancel()
+    do {
+        _ = try await gatedSecondRead.value
+        preconditionFailure("Cancelled queued request should not run")
+    } catch is CancellationError {}
+    let gatedFirstResponse = try await gatedFirstRead.value
+    precondition(gatedFirstResponse.content.contains("remote README"))
+    let gatedFileReadCount = await gatedRelayClient.sentEnvelopes.filter { $0.action == .fileRead }.count
+    precondition(gatedFileReadCount == 1)
+
+    let smokeRelayClient = VectorCodeRelayLoopbackClient(snapshot: remoteSnapshot)
+    let smokeWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: smokeRelayClient)
+    let smokeModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: smokeWorkspaceClient)
+    try smokeModel.pair(from: payloadJSON, phoneId: "phone-smoke")
+    smokeModel.connectToDesktop()
+    try await waitUntil("remote model smoke connected") {
+        smokeModel.isRemoteConnected
+    }
+    precondition(smokeModel.selectedProject?.id == "job-board")
+    let remoteReadme = smokeModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(remoteReadme != nil)
+    smokeModel.openFile(remoteReadme!)
+    try await waitUntil("remote model smoke opened file") {
+        smokeModel.selectedEditor?.content?.contains("remote README") == true
+    }
+    smokeModel.editorDraft = "# Updated from iPhone\n"
+    smokeModel.markEditorDirty()
+    smokeModel.saveEditor()
+    try await waitUntil("remote model smoke saved file") {
+        smokeModel.selectedEditor?.isDirty == false && smokeModel.selectedEditor?.version == "v2"
+    }
+    smokeModel.createTerminal()
+    try await waitUntil("remote model smoke created terminal") {
+        smokeModel.selectedTerminal?.id == "terminal-2"
+    }
+    smokeModel.sendTerminalInput("echo mobile", submit: false)
+    try await waitUntil("remote model smoke pasted terminal input") {
+        let envelopes = await smokeRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .terminalInput
+                && $0.payloadString("input") == "echo mobile"
+                && $0.payloadString("mode") == "paste"
+                && $0.payloadBool("submit") == false
+        }
+    }
+    smokeModel.renameFile(remoteReadme!, to: "README-mobile.md")
+    try await waitUntil("remote model smoke renamed file") {
+        let envelopes = await smokeRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .fileMove
+                && $0.projectId == "job-board"
+                && $0.payloadString("targetPath") == "README-mobile.md"
+                && $0.payloadBool("overwrite") == false
+        }
+    }
+
+    let dirtyOpenRelayClient = VectorCodeRelayLoopbackClient(snapshot: remoteSnapshot)
+    let dirtyOpenWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: dirtyOpenRelayClient)
+    let dirtyOpenModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: dirtyOpenWorkspaceClient)
+    try dirtyOpenModel.pair(from: payloadJSON, phoneId: "phone-dirty-open")
+    dirtyOpenModel.connectToDesktop()
+    try await waitUntil("dirty open model connected") {
+        dirtyOpenModel.isRemoteConnected
+    }
+    let dirtyOpenReadme = dirtyOpenModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(dirtyOpenReadme != nil)
+    dirtyOpenModel.editorDraft = "# Dirty local draft\n"
+    dirtyOpenModel.markEditorDirty()
+    let dirtyOpenFileReadCount = await dirtyOpenRelayClient.sentEnvelopes.filter { $0.action == .fileRead }.count
+    dirtyOpenModel.openFile(dirtyOpenReadme!)
+    precondition(dirtyOpenModel.statusText == "Unsaved draft open")
+    precondition(dirtyOpenModel.editorDraft == "# Dirty local draft\n")
+    let dirtyOpenFileReadCountAfter = await dirtyOpenRelayClient.sentEnvelopes.filter { $0.action == .fileRead }.count
+    precondition(dirtyOpenFileReadCountAfter == dirtyOpenFileReadCount)
+
+    let staleOpenRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample, responseDelayNanoseconds: 75_000_000)
+    let staleOpenWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: staleOpenRelayClient)
+    let staleOpenModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: staleOpenWorkspaceClient)
+    try staleOpenModel.pair(from: payloadJSON, phoneId: "phone-stale-open")
+    staleOpenModel.connectToDesktop()
+    try await waitUntil("stale open model connected") {
+        staleOpenModel.isRemoteConnected
+    }
+    let staleOpenReadme = staleOpenModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(staleOpenReadme != nil)
+    staleOpenModel.openFile(staleOpenReadme!)
+    staleOpenModel.switchProject(neuron)
+    try await Task.sleep(nanoseconds: 160_000_000)
+    precondition(staleOpenModel.selectedProject?.id == "neuron")
+    precondition(staleOpenModel.viewport == .files)
+
+    let staleFailedOpenRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample, failingFileReadAttempts: 1, responseDelayNanoseconds: 75_000_000)
+    let staleFailedOpenWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: staleFailedOpenRelayClient)
+    let staleFailedOpenModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: staleFailedOpenWorkspaceClient)
+    try staleFailedOpenModel.pair(from: payloadJSON, phoneId: "phone-stale-failed-open")
+    staleFailedOpenModel.connectToDesktop()
+    try await waitUntil("stale failed open model connected") {
+        staleFailedOpenModel.isRemoteConnected
+    }
+    let staleFailedOpenReadme = staleFailedOpenModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(staleFailedOpenReadme != nil)
+    staleFailedOpenModel.openFile(staleFailedOpenReadme!)
+    staleFailedOpenModel.switchProject(neuron)
+    try await Task.sleep(nanoseconds: 160_000_000)
+    precondition(staleFailedOpenModel.selectedProject?.id == "neuron")
+    precondition(staleFailedOpenModel.viewport == .files)
+    precondition(staleFailedOpenModel.statusText == "Connected")
+    precondition(staleFailedOpenModel.isRemoteConnected)
+
+    let conflictRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample, conflictingWriteAttempts: 1)
+    let conflictWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: conflictRelayClient)
+    let conflictModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: conflictWorkspaceClient)
+    try conflictModel.pair(from: payloadJSON, phoneId: "phone-conflict")
+    conflictModel.connectToDesktop()
+    try await waitUntil("conflict model connected") {
+        conflictModel.isRemoteConnected
+    }
+    let conflictReadme = conflictModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(conflictReadme != nil)
+    conflictModel.openFile(conflictReadme!)
+    try await waitUntil("conflict model opened file") {
+        conflictModel.selectedEditor?.version == "v1"
+    }
+    conflictModel.editorDraft = "# Phone draft\n"
+    conflictModel.markEditorDirty()
+    conflictModel.saveEditor()
+    try await waitUntil("conflict model reports conflict") {
+        conflictModel.selectedEditorConflict != nil
+    }
+    precondition(conflictModel.statusText == "File changed on desktop")
+    precondition(conflictModel.selectedEditor?.isDirty == true)
+    precondition(conflictModel.selectedEditorConflict?.desktopContent.contains("remote README") == true)
+    conflictModel.saveEditor()
+    precondition(conflictModel.statusText == "Resolve file conflict")
+    let conflictFileReadCount = await conflictRelayClient.sentEnvelopes.filter { $0.action == .fileRead }.count
+    conflictModel.openFile(conflictReadme!)
+    precondition(conflictModel.statusText == "Resolve file conflict")
+    precondition(conflictModel.editorDraft == "# Phone draft\n")
+    let conflictFileReadCountAfter = await conflictRelayClient.sentEnvelopes.filter { $0.action == .fileRead }.count
+    precondition(conflictFileReadCountAfter == conflictFileReadCount)
+    conflictModel.switchProject(neuron)
+    precondition(conflictModel.selectedEditorConflict == nil)
+    conflictModel.switchProject(jobBoard)
+    precondition(conflictModel.selectedEditorConflict != nil)
+    precondition(conflictModel.editorDraft == "# Phone draft\n")
+    conflictModel.keepDesktopEditorConflict()
+    precondition(conflictModel.selectedEditorConflict == nil)
+    precondition(conflictModel.selectedEditor?.isDirty == false)
+    precondition(conflictModel.editorDraft.contains("remote README"))
+
+    let overwriteConflictRelayClient = VectorCodeRelayLoopbackClient(snapshot: remoteSnapshot, conflictingWriteAttempts: 1)
+    let overwriteConflictWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: overwriteConflictRelayClient)
+    let overwriteConflictModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: overwriteConflictWorkspaceClient)
+    try overwriteConflictModel.pair(from: payloadJSON, phoneId: "phone-overwrite-conflict")
+    overwriteConflictModel.connectToDesktop()
+    try await waitUntil("overwrite conflict model connected") {
+        overwriteConflictModel.isRemoteConnected
+    }
+    let overwriteReadme = overwriteConflictModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(overwriteReadme != nil)
+    overwriteConflictModel.openFile(overwriteReadme!)
+    try await waitUntil("overwrite conflict model opened file") {
+        overwriteConflictModel.selectedEditor?.version == "v1"
+    }
+    overwriteConflictModel.editorDraft = "# Overwrite draft\n"
+    overwriteConflictModel.markEditorDirty()
+    overwriteConflictModel.saveEditor()
+    try await waitUntil("overwrite conflict is visible") {
+        overwriteConflictModel.selectedEditorConflict != nil
+    }
+    overwriteConflictModel.overwriteEditorConflict()
+    try await waitUntil("overwrite conflict saved") {
+        overwriteConflictModel.selectedEditor?.isDirty == false
+            && overwriteConflictModel.selectedEditor?.version == "v2"
+            && overwriteConflictModel.selectedEditorConflict == nil
+    }
+    let overwriteConflictEnvelopes = await overwriteConflictRelayClient.sentEnvelopes
+    precondition(overwriteConflictEnvelopes.filter { $0.action == .fileWrite }.count == 2)
+    precondition(overwriteConflictEnvelopes.contains { $0.action == .fileWrite && $0.payloadString("expectedVersion") == "v1" })
+
+    var switchedConflictSnapshot = remoteSnapshot
+    let switchedConflictPackageEditor = VectorCodeEditorTab(
+        id: "job-board:package.json",
+        projectId: "job-board",
+        path: "package.json",
+        title: "package.json",
+        language: "json",
+        content: "{ \"name\": \"job-board\" }\n",
+        version: "pkg-v1"
+    )
+    switchedConflictSnapshot.editorsByProject["job-board", default: []].append(switchedConflictPackageEditor)
+    let switchedConflictRelayClient = VectorCodeRelayLoopbackClient(
+        snapshot: switchedConflictSnapshot,
+        conflictingWriteAttempts: 1,
+        responseDelayNanoseconds: 50_000_000
+    )
+    let switchedConflictWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: switchedConflictRelayClient)
+    let switchedConflictModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: switchedConflictWorkspaceClient)
+    try switchedConflictModel.pair(from: payloadJSON, phoneId: "phone-switched-conflict")
+    switchedConflictModel.connectToDesktop()
+    try await waitUntil("switched conflict model connected") {
+        switchedConflictModel.isRemoteConnected
+    }
+    let switchedConflictReadme = switchedConflictModel.selectedEditor!
+    switchedConflictModel.editorDraft = "# Switched conflict draft\n"
+    switchedConflictModel.markEditorDirty()
+    switchedConflictModel.saveEditor()
+    switchedConflictModel.selectEditor(switchedConflictPackageEditor)
+    try await waitUntil("switched conflict is stored") {
+        switchedConflictModel.pendingEditorConflict != nil
+    }
+    precondition(switchedConflictModel.selectedEditor?.id == switchedConflictPackageEditor.id)
+    precondition(switchedConflictModel.editorDraft == switchedConflictPackageEditor.content)
+    precondition(switchedConflictModel.selectedEditorConflict == nil)
+    precondition(switchedConflictModel.statusText == "Connected")
+    switchedConflictModel.selectEditor(switchedConflictReadme)
+    precondition(switchedConflictModel.selectedEditorConflict != nil)
+    precondition(switchedConflictModel.editorDraft == "# Switched conflict draft\n")
+    precondition(switchedConflictModel.statusText == "Resolve file conflict")
+
+    let failedOverwriteRelayClient = VectorCodeRelayLoopbackClient(
+        snapshot: remoteSnapshot,
+        conflictingWriteAttempts: 1,
+        failingWriteAttempts: 1
+    )
+    let failedOverwriteWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: failedOverwriteRelayClient)
+    let failedOverwriteModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: failedOverwriteWorkspaceClient)
+    try failedOverwriteModel.pair(from: payloadJSON, phoneId: "phone-failed-overwrite")
+    failedOverwriteModel.connectToDesktop()
+    try await waitUntil("failed overwrite model connected") {
+        failedOverwriteModel.isRemoteConnected
+    }
+    let failedOverwriteReadme = failedOverwriteModel.selectedFiles.first { $0.path == "README.md" }
+    precondition(failedOverwriteReadme != nil)
+    failedOverwriteModel.openFile(failedOverwriteReadme!)
+    try await waitUntil("failed overwrite model opened file") {
+        failedOverwriteModel.selectedEditor?.version == "v1"
+    }
+    failedOverwriteModel.editorDraft = "# Failed overwrite draft\n"
+    failedOverwriteModel.markEditorDirty()
+    failedOverwriteModel.saveEditor()
+    try await waitUntil("failed overwrite conflict is visible") {
+        failedOverwriteModel.selectedEditorConflict != nil
+    }
+    failedOverwriteModel.overwriteEditorConflict()
+    try await waitUntil("failed overwrite keeps conflict") {
+        failedOverwriteModel.statusText == "Save failed"
+    }
+    precondition(failedOverwriteModel.selectedEditorConflict != nil)
+    precondition(failedOverwriteModel.selectedEditor?.isDirty == true)
+
+    let multiConflictRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample, conflictingWriteAttempts: 2)
+    let multiConflictWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: multiConflictRelayClient)
+    let multiConflictModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: multiConflictWorkspaceClient)
+    try multiConflictModel.pair(from: payloadJSON, phoneId: "phone-multi-conflict")
+    multiConflictModel.connectToDesktop()
+    try await waitUntil("multi conflict model connected") {
+        multiConflictModel.isRemoteConnected
+    }
+    multiConflictModel.editorDraft = "# Job conflict draft\n"
+    multiConflictModel.markEditorDirty()
+    multiConflictModel.saveEditor()
+    try await waitUntil("multi conflict job conflict is visible") {
+        multiConflictModel.selectedEditorConflict != nil
+    }
+    multiConflictModel.editorDraft = "# Job conflict revised draft\n"
+    multiConflictModel.markEditorDirty()
+    multiConflictModel.switchProject(neuron)
+    multiConflictModel.editorDraft = "# Neuron conflict draft\n"
+    multiConflictModel.markEditorDirty()
+    multiConflictModel.saveEditor()
+    try await waitUntil("multi conflict neuron conflict is visible") {
+        multiConflictModel.selectedEditorConflict != nil
+    }
+    precondition(multiConflictModel.editorDraft == "# Neuron conflict draft\n")
+    multiConflictModel.switchProject(jobBoard)
+    precondition(multiConflictModel.selectedEditorConflict?.localContent == "# Job conflict revised draft\n")
+    precondition(multiConflictModel.editorDraft == "# Job conflict revised draft\n")
+    multiConflictModel.switchProject(neuron)
+    precondition(multiConflictModel.selectedEditorConflict?.localContent == "# Neuron conflict draft\n")
+
     let copyRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample)
     let copyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: copyRelayClient)
     let copyModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: copyWorkspaceClient)
@@ -332,6 +666,34 @@ func verifyVectorCodeMobile() async throws {
     precondition(nestedCopyEnvelopes.last?.action == .fileTreeRead)
     precondition(nestedCopyEnvelopes.last?.projectId == "neuron")
     precondition(nestedCopyEnvelopes.last?.payloadString("path") == "products")
+    copyModel.copyFile(copySource!, to: copyDestinationProject!, destinationPath: "FORCE.md", overwrite: true)
+    try await waitUntil("copy overwrite flag is forwarded") {
+        let envelopes = await copyRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .fileCopy
+                && $0.payloadString("targetPath") == "FORCE.md"
+                && $0.payloadBool("overwrite") == true
+        }
+    }
+    copyModel.switchProject(copyDestinationProject!)
+    copyModel.copyFile(copySource!, from: jobBoard, to: copyDestinationProject!, destinationPath: "SOURCE-STABLE.md")
+    try await waitUntil("copy uses captured source project") {
+        let envelopes = await copyRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .fileCopy
+                && $0.projectId == "job-board"
+                && $0.payloadString("targetPath") == "SOURCE-STABLE.md"
+        }
+    }
+    copyModel.renameFile(copySource!, in: jobBoard, to: "README-renamed.md")
+    try await waitUntil("rename uses captured source project") {
+        let envelopes = await copyRelayClient.sentEnvelopes
+        return envelopes.contains {
+            $0.action == .fileMove
+                && $0.projectId == "job-board"
+                && $0.payloadString("targetPath") == "README-renamed.md"
+        }
+    }
 
     var unloadedNestedCopySnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
     unloadedNestedCopySnapshot.filesByProject["neuron"] = [
@@ -412,6 +774,23 @@ func verifyVectorCodeMobile() async throws {
     let rawRouteEnvelopeCountAfterStaleActions = await rawRouteRelayClient.sentEnvelopes.count
     precondition(rawRouteEnvelopeCountAfterStaleActions == rawRouteEnvelopeCount)
 
+    let staleTerminalCreateRelayClient = VectorCodeRelayLoopbackClient(snapshot: .sample, responseDelayNanoseconds: 75_000_000)
+    let staleTerminalCreateWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: staleTerminalCreateRelayClient)
+    let staleTerminalCreateModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: staleTerminalCreateWorkspaceClient)
+    try staleTerminalCreateModel.pair(from: payloadJSON, phoneId: "phone-stale-terminal-create")
+    staleTerminalCreateModel.connectToDesktop()
+    try await waitUntil("stale terminal create model connected") {
+        staleTerminalCreateModel.isRemoteConnected
+    }
+    staleTerminalCreateModel.createTerminal()
+    staleTerminalCreateModel.switchProject(neuron)
+    try await Task.sleep(nanoseconds: 160_000_000)
+    precondition(staleTerminalCreateModel.selectedProject?.id == "neuron")
+    precondition(staleTerminalCreateModel.viewport == .files)
+    precondition(staleTerminalCreateModel.selectedTerminal?.projectId == "neuron")
+    staleTerminalCreateModel.switchProject(jobBoard)
+    precondition(staleTerminalCreateModel.selectedTerminal?.id == "terminal-2")
+
     var rawInterruptSnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
     if var terminals = rawInterruptSnapshot.terminalsByProject["job-board"] {
         terminals[0].rawOutput = "\u{001B}[32mdavid@Mac job_board %\u{001B}[0m"
@@ -463,6 +842,26 @@ func verifyVectorCodeMobile() async throws {
     precondition(partialModel.snapshot.filesByProject["job-board"]?.first?.name == "REMOTE.md")
     precondition(partialModel.snapshot.filesByProject["neuron"]?.contains { $0.name == "README.md" } == true)
     precondition(partialModel.snapshot.terminalsByProject["neuron"]?.first?.rawOutput?.contains("\u{001B}[32m") == true)
+
+    var backgroundDirtyRemoteSnapshot = VectorCodeRemoteWorkspaceSnapshot.sample
+    backgroundDirtyRemoteSnapshot.editorsByProject["job-board"] = []
+    let backgroundDirtyRelayClient = VectorCodeRelayLoopbackClient(snapshot: backgroundDirtyRemoteSnapshot)
+    let backgroundDirtyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: backgroundDirtyRelayClient)
+    let backgroundDirtyModel = VectorCodeMobileWorkspaceModel(snapshot: .sample, remoteWorkspaceClient: backgroundDirtyWorkspaceClient)
+    backgroundDirtyModel.editorDraft = "# Unsaved on phone\n"
+    backgroundDirtyModel.markEditorDirty()
+    precondition(backgroundDirtyModel.selectedEditor?.isDirty == true)
+    backgroundDirtyModel.switchProject(neuron)
+    try backgroundDirtyModel.pair(from: payloadJSON, phoneId: "phone-background-dirty")
+    backgroundDirtyModel.connectToDesktop()
+    try await waitUntil("background dirty editor survives refresh") {
+        backgroundDirtyModel.isRemoteConnected
+    }
+    precondition(backgroundDirtyModel.selectedProject?.id == "neuron")
+    backgroundDirtyModel.switchProject(jobBoard)
+    precondition(backgroundDirtyModel.selectedEditor?.path == "README.md")
+    precondition(backgroundDirtyModel.selectedEditor?.isDirty == true)
+    precondition(backgroundDirtyModel.editorDraft == "# Unsaved on phone\n")
 
     let flakyRelayClient = VectorCodeConnectThenFailingStateRelayClient(snapshot: remoteSnapshot)
     let flakyWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: flakyRelayClient)
@@ -633,10 +1032,25 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
     private let snapshot: VectorCodeRemoteWorkspaceSnapshot
     private(set) var lastSentEnvelope: VectorCodeSentEnvelope?
     private(set) var sentEnvelopes: [VectorCodeSentEnvelope] = []
+    private var lastMoveTargetPath: String?
     private var lastCopyTargetPath: String?
+    private var remainingFileReadFailures: Int
+    private var remainingWriteConflicts: Int
+    private var remainingWriteFailures: Int
+    private let responseDelayNanoseconds: UInt64
 
-    init(snapshot: VectorCodeRemoteWorkspaceSnapshot) {
+    init(
+        snapshot: VectorCodeRemoteWorkspaceSnapshot,
+        failingFileReadAttempts: Int = 0,
+        conflictingWriteAttempts: Int = 0,
+        failingWriteAttempts: Int = 0,
+        responseDelayNanoseconds: UInt64 = 0
+    ) {
         self.snapshot = snapshot
+        self.remainingFileReadFailures = failingFileReadAttempts
+        self.remainingWriteConflicts = conflictingWriteAttempts
+        self.remainingWriteFailures = failingWriteAttempts
+        self.responseDelayNanoseconds = responseDelayNanoseconds
     }
 
     func connect(configuration: VectorCodeRelayConfiguration) async throws {}
@@ -648,6 +1062,9 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
         let sentEnvelope = VectorCodeSentEnvelope(action: envelope.action, projectId: envelope.projectId, requestId: envelope.requestId, payloadJSON: payloadJSON)
         lastSentEnvelope = sentEnvelope
         sentEnvelopes.append(sentEnvelope)
+        if sentEnvelope.action == .fileMove {
+            lastMoveTargetPath = sentEnvelope.payloadString("targetPath")
+        }
         if sentEnvelope.action == .fileCopy {
             lastCopyTargetPath = sentEnvelope.payloadString("targetPath")
         }
@@ -658,6 +1075,11 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
         case .stateRead:
             return try response(snapshot, action: .stateRead)
         case .fileRead:
+            try await sleepIfConfigured()
+            if remainingFileReadFailures > 0 {
+                remainingFileReadFailures -= 1
+                return try errorResponse(code: "file_not_found", message: "The desktop file is unavailable.", action: .fileRead)
+            }
             return try response(
                 VectorCodeFileReadResponse(path: "README.md", content: "# remote README\n", language: "markdown", version: "v1"),
                 action: .fileRead
@@ -688,7 +1110,22 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
                 action: .fileTreeRead
             )
         case .fileWrite:
+            try await sleepIfConfigured()
+            if remainingWriteConflicts > 0 {
+                remainingWriteConflicts -= 1
+                return try errorResponse(code: "file_modified_since", message: "The desktop file changed since the phone opened it.", action: .fileWrite)
+            }
+            if remainingWriteFailures > 0 {
+                remainingWriteFailures -= 1
+                return try errorResponse(code: "write_failed", message: "The desktop could not write the file.", action: .fileWrite)
+            }
             return try response(VectorCodeFileWriteResponse(path: "README.md", version: "v2"), action: .fileWrite)
+        case .fileMove:
+            let targetPath = lastMoveTargetPath ?? "README-mobile.md"
+            return try response(
+                VectorCodeFileMoveResponse(path: "README.md", targetPath: targetPath, targetProjectId: lastSentEnvelope?.projectId ?? "job-board"),
+                action: .fileMove
+            )
         case .fileCopy:
             let targetPath = lastCopyTargetPath ?? "COPIED.md"
             return try response(
@@ -696,6 +1133,7 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
                 action: .fileCopy
             )
         case .terminalCreate:
+            try await sleepIfConfigured()
             return try response(
                 VectorCodeTerminalTab(id: "terminal-2", projectId: "job-board", title: "zsh 2", cwd: "~/OrinTech/job_board", isActive: true),
                 action: .terminalCreate
@@ -721,6 +1159,25 @@ private actor VectorCodeRelayLoopbackClient: VectorCodeRelayClientProtocol {
             action: action,
             payload: payload
         )
+    }
+
+    private func errorResponse(
+        code: String,
+        message: String,
+        action: VectorCodeRemoteAction
+    ) throws -> VectorCodeRemoteEnvelope<VectorCodeJSONValue> {
+        VectorCodeRemoteEnvelope(
+            kind: .response,
+            requestId: lastSentEnvelope?.requestId ?? "loopback-error-response",
+            action: action,
+            error: VectorCodeRemoteError(code: code, message: message)
+        )
+    }
+
+    private func sleepIfConfigured() async throws {
+        if responseDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: responseDelayNanoseconds)
+        }
     }
 }
 

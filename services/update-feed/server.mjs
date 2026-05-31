@@ -8,6 +8,11 @@ const CACHE_TTL_MS = Number.parseInt(process.env.VECTOR_UPDATE_FEED_CACHE_TTL_MS
 let cachedManifest;
 let cachedAt = 0;
 
+export function resetVectorUpdateFeedCache() {
+  cachedManifest = undefined;
+  cachedAt = 0;
+}
+
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -160,12 +165,12 @@ async function loadManifest() {
   return manifest;
 }
 
-function sendJson(response, statusCode, body) {
+function sendJson(request, response, statusCode, body) {
   response.writeHead(statusCode, {
     'cache-control': 'no-store',
     'content-type': 'application/json; charset=utf-8'
   });
-  response.end(JSON.stringify(body));
+  response.end(request.method === 'HEAD' ? undefined : JSON.stringify(body));
 }
 
 function sendNoContent(response) {
@@ -185,13 +190,13 @@ export function createUpdateFeedServer() {
       }
 
       if (url.pathname === '/healthz') {
-        sendJson(response, 200, { ok: true, service: 'vector-code-update-feed' });
+        sendJson(request, response, 200, { ok: true, service: 'vector-code-update-feed' });
         return;
       }
 
       const match = url.pathname.match(/^\/api\/update\/([^/]+)\/([^/]+)\/([^/]+)$/);
       if (!match) {
-        sendJson(response, 404, { error: 'not_found' });
+        sendJson(request, response, 404, { error: 'not_found' });
         return;
       }
 
@@ -203,10 +208,10 @@ export function createUpdateFeedServer() {
         return;
       }
 
-      sendJson(response, 200, result.body);
+      sendJson(request, response, 200, result.body);
     } catch (error) {
       console.error(error);
-      sendJson(response, 500, { error: 'update_feed_error' });
+      sendJson(request, response, 500, { error: 'update_feed_error' });
     }
   });
 }

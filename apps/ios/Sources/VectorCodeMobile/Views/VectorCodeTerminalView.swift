@@ -4,6 +4,7 @@ public struct VectorCodeTerminalView: View {
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
     @State private var input = ""
     @State private var renamePrompt: VectorCodeRenamePrompt<VectorCodeTerminalTab>?
+    @State private var pendingTerminalAction: VectorCodePendingTerminalAction?
 
     public init(model: VectorCodeMobileWorkspaceModel) {
         self.model = model
@@ -21,7 +22,7 @@ public struct VectorCodeTerminalView: View {
                     ) { terminal in
                         model.selectTerminal(terminal)
                     } trailingAction: { terminal in
-                        model.closeTerminal(terminal)
+                        pendingTerminalAction = VectorCodePendingTerminalAction(.close, terminal: terminal)
                     } label: { terminal in
                         HStack(spacing: 7) {
                             VectorCodeIconView(icon: .terminal, size: 13)
@@ -60,10 +61,10 @@ public struct VectorCodeTerminalView: View {
                             }
                         }
                         VectorCodeIconButton(icon: .clearAll, size: 31) {
-                            model.clearTerminal(terminal)
+                            pendingTerminalAction = VectorCodePendingTerminalAction(.clear, terminal: terminal)
                         }
                         VectorCodeIconButton(icon: .debugStop, foreground: VectorCodeTheme.warning, size: 31) {
-                            model.interruptTerminal(terminal)
+                            pendingTerminalAction = VectorCodePendingTerminalAction(.interrupt, terminal: terminal)
                         }
                     }
                     .padding(.horizontal, 12)
@@ -84,7 +85,7 @@ public struct VectorCodeTerminalView: View {
                             .onSubmit {
                                 submitInput()
                             }
-                        VectorCodeIconButton(icon: .copy, size: 34) {
+                        VectorCodeIconButton(icon: .keyboard, size: 34) {
                             model.sendTerminalInput(input, submit: false)
                             input = ""
                         }
@@ -128,8 +129,31 @@ public struct VectorCodeTerminalView: View {
             }
         }
         .background(VectorCodeTheme.background)
+        .onChange(of: model.selectedProjectId) {
+            clearPendingTerminalChrome()
+        }
+        .onChange(of: model.selectedTerminalId) {
+            clearPendingTerminalChrome()
+        }
         .vectorCodeRenameAlert("Rename terminal", prompt: $renamePrompt) { terminal, title in
             model.renameTerminal(terminal, title: title)
+        }
+        .confirmationDialog(
+            pendingTerminalAction?.title ?? "Terminal action",
+            isPresented: pendingTerminalActionIsPresented,
+            titleVisibility: .visible
+        ) {
+            if let action = pendingTerminalAction {
+                Button(action.confirmTitle, role: action.role) {
+                    runTerminalAction(action)
+                    pendingTerminalAction = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let action = pendingTerminalAction {
+                Text(action.message)
+            }
         }
     }
 
@@ -140,6 +164,33 @@ public struct VectorCodeTerminalView: View {
         }
         model.sendTerminalInput(command, submit: true)
         input = ""
+    }
+
+    private func clearPendingTerminalChrome() {
+        renamePrompt = nil
+        pendingTerminalAction = nil
+    }
+
+    private var pendingTerminalActionIsPresented: Binding<Bool> {
+        Binding(
+            get: { pendingTerminalAction != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingTerminalAction = nil
+                }
+            }
+        )
+    }
+
+    private func runTerminalAction(_ action: VectorCodePendingTerminalAction) {
+        switch action.kind {
+        case .close:
+            model.closeTerminal(action.terminal)
+        case .clear:
+            model.clearTerminal(action.terminal)
+        case .interrupt:
+            model.interruptTerminal(action.terminal)
+        }
     }
 
     private func terminalLineColor(_ line: String) -> Color {
@@ -209,6 +260,63 @@ public struct VectorCodeTerminalView: View {
             }
         }
         #endif
+    }
+}
+
+private struct VectorCodePendingTerminalAction: Identifiable {
+    enum Kind {
+        case close
+        case clear
+        case interrupt
+    }
+
+    let id = UUID()
+    let kind: Kind
+    let terminal: VectorCodeTerminalTab
+
+    init(_ kind: Kind, terminal: VectorCodeTerminalTab) {
+        self.kind = kind
+        self.terminal = terminal
+    }
+
+    var title: String {
+        switch kind {
+        case .close:
+            "Close terminal?"
+        case .clear:
+            "Clear terminal?"
+        case .interrupt:
+            "Interrupt terminal?"
+        }
+    }
+
+    var confirmTitle: String {
+        switch kind {
+        case .close:
+            "Close"
+        case .clear:
+            "Clear"
+        case .interrupt:
+            "Interrupt"
+        }
+    }
+
+    var message: String {
+        switch kind {
+        case .close:
+            "This closes \(terminal.title) on the paired desktop."
+        case .clear:
+            "This clears the visible output for \(terminal.title) on the paired desktop."
+        case .interrupt:
+            "This sends Control-C to \(terminal.title) on the paired desktop."
+        }
+    }
+
+    var role: ButtonRole? {
+        switch kind {
+        case .close, .clear, .interrupt:
+            .destructive
+        }
     }
 }
 

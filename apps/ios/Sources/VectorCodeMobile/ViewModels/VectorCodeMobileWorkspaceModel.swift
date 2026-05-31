@@ -3,6 +3,8 @@ import Foundation
 
 @MainActor
 public final class VectorCodeMobileWorkspaceModel: ObservableObject {
+    private static let fileModifiedSinceErrorCode = "file_modified_since"
+
     public enum Viewport: String, CaseIterable, Identifiable {
         case projects = "Projects"
         case files = "Files"
@@ -21,6 +23,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     @Published public var selectedTerminalId: String?
     @Published public var editorDraft: String
     @Published public var statusText: String
+    @Published private var editorConflictsByKey: [String: VectorCodeEditorConflict]
     @Published public private(set) var isRemoteConnected: Bool
 
     private let remoteWorkspaceClient: VectorCodeRemoteWorkspaceClient
@@ -28,6 +31,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     private var remoteSyncTask: Task<Void, Never>?
     private var editorSelections = VectorCodeProjectScopedSelectionStore()
     private var terminalSelections = VectorCodeProjectScopedSelectionStore()
+    private var pendingRemoteFileOpenByProject: [String: String] = [:]
 
     public init(
         snapshot: VectorCodeRemoteWorkspaceSnapshot = .empty,
@@ -47,6 +51,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         self.selectedTerminalId = snapshot.terminalsByProject[initialProjectId ?? ""]?.first?.id
         self.editorDraft = snapshot.editorsByProject[initialProjectId ?? ""]?.first?.content ?? ""
         self.statusText = storedConfiguration == nil ? "Not paired" : "Ready to connect"
+        self.editorConflictsByKey = [:]
         self.isRemoteConnected = false
         if let storedPairing, let storedConfiguration {
             self.pairingPayload = storedPairing.payload
@@ -93,6 +98,17 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
     public var selectedEditor: VectorCodeEditorTab? {
         selectedEditors.first { $0.id == selectedEditorId } ?? selectedEditors.first
+    }
+
+    public var selectedEditorConflict: VectorCodeEditorConflict? {
+        guard let selectedEditor else {
+            return nil
+        }
+        return editorConflictsByKey[Self.editorConflictKey(projectId: selectedEditor.projectId, editorId: selectedEditor.id)]
+    }
+
+    public var pendingEditorConflict: VectorCodeEditorConflict? {
+        selectedEditorConflict ?? editorConflictsByKey.values.sorted { $0.id < $1.id }.first
     }
 
     public var selectedTerminal: VectorCodeTerminalTab? {
@@ -155,6 +171,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         selectedEditorId = nil
         selectedTerminalId = nil
         editorDraft = ""
+        editorConflictsByKey.removeAll()
+        pendingRemoteFileOpenByProject.removeAll()
         editorSelections.clear()
         terminalSelections.clear()
         viewport = .projects
@@ -163,13 +181,19 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
     public func switchProject(_ project: VectorCodeProjectSummary) {
         rememberCurrentProjectSelection()
+        let previousViewport = viewport
         selectedProjectId = project.id
         selectedEditorId = restoredEditorId(for: project.id)
         selectedTerminalId = restoredTerminalId(for: project.id)
         editorSelections.remember(projectId: project.id, selectedId: selectedEditorId)
         terminalSelections.remember(projectId: project.id, selectedId: selectedTerminalId)
-        editorDraft = snapshot.editorsByProject[project.id]?.first { $0.id == selectedEditorId }?.content ?? ""
-        viewport = .files
+        editorDraft = selectedEditorDraftContent(projectId: project.id, editorId: selectedEditorId)
+        if previousViewport == .projects {
+            viewport = .files
+        }
+        if isRemoteConnected {
+            statusText = "Connected"
+        }
         if isRemoteConnected, snapshot.filesByProject[project.id]?.isEmpty != false {
             Task { [weak self] in
                 await self?.loadRemoteFolderChildren(projectId: project.id, path: "")
@@ -182,7 +206,12 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
+        if selectProtectedLocalEditorIfNeeded(projectId: project.id, path: node.path) {
+            return
+        }
+
         if isRemoteConnected {
+            pendingRemoteFileOpenByProject[project.id] = node.path
             statusText = "Opening \(node.name)"
             Task { [weak self] in
                 await self?.openRemoteFile(node, project: project)
@@ -208,6 +237,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         guard let projectId = selectedProject?.id, let editor = selectedEditor else {
             return
         }
+        guard selectedEditorConflict == nil else {
+            statusText = "Resolve file conflict"
+            return
+        }
         let content = editorDraft
 
         if isRemoteConnected {
@@ -219,6 +252,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
 
         updateEditor(projectId: projectId, editorId: editor.id, content: content, isDirty: false)
+        clearEditorConflictIfMatching(projectId: projectId, editorId: editor.id)
         statusText = "Saved locally"
     }
 
@@ -226,6 +260,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         guard let project = selectedProject else {
             return
         }
+        renameFile(node, in: project, to: newName)
+    }
+
+    public func renameFile(_ node: VectorCodeFileNode, in project: VectorCodeProjectSummary, to newName: String) {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty, !trimmedName.contains("/") else {
             statusText = "Rename needs a file name"
@@ -247,10 +285,20 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    public func copyFile(_ node: VectorCodeFileNode, to destinationProject: VectorCodeProjectSummary, destinationPath: String) {
+    public func copyFile(_ node: VectorCodeFileNode, to destinationProject: VectorCodeProjectSummary, destinationPath: String, overwrite: Bool = false) {
         guard let sourceProject = selectedProject else {
             return
         }
+        copyFile(node, from: sourceProject, to: destinationProject, destinationPath: destinationPath, overwrite: overwrite)
+    }
+
+    public func copyFile(
+        _ node: VectorCodeFileNode,
+        from sourceProject: VectorCodeProjectSummary,
+        to destinationProject: VectorCodeProjectSummary,
+        destinationPath: String,
+        overwrite: Bool = false
+    ) {
         let trimmedPath = destinationPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPath.isEmpty else {
             statusText = "Copy needs a destination"
@@ -267,7 +315,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
                 sourceProjectId: sourceProject.id,
                 path: node.path,
                 targetProjectId: destinationProject.id,
-                targetPath: trimmedPath
+                targetPath: trimmedPath,
+                overwrite: overwrite
             )
         }
     }
@@ -302,10 +351,19 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func selectEditor(_ editor: VectorCodeEditorTab) {
-        selectedProjectId = editor.projectId
-        selectedEditorId = editor.id
-        editorSelections.remember(projectId: editor.projectId, selectedId: editor.id)
-        editorDraft = editor.content ?? ""
+        let currentEditor = snapshot.editorsByProject[editor.projectId]?.first { $0.id == editor.id } ?? editor
+        selectedProjectId = currentEditor.projectId
+        selectedEditorId = currentEditor.id
+        editorSelections.remember(projectId: currentEditor.projectId, selectedId: currentEditor.id)
+        if let conflict = editorConflictsByKey[Self.editorConflictKey(projectId: currentEditor.projectId, editorId: currentEditor.id)] {
+            editorDraft = conflict.localContent
+            statusText = "Resolve file conflict"
+        } else {
+            editorDraft = currentEditor.content ?? ""
+            if isRemoteConnected {
+                statusText = "Connected"
+            }
+        }
         viewport = .editor
     }
 
@@ -327,12 +385,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         let nextEditor = closeSelection.nextId.flatMap { nextId in remainingEditors.first { $0.id == nextId } }
         if closeSelection.closedCurrentSelection {
             selectedEditorId = nextEditor?.id
-            editorDraft = nextEditor?.content ?? ""
+            editorDraft = selectedEditorDraftContent(projectId: editor.projectId, editorId: nextEditor?.id)
         }
 
         if selectedProjectId == editor.projectId && selectedEditorId == nil {
             editorDraft = ""
         }
+        clearEditorConflictIfMatching(projectId: editor.projectId, editorId: editor.id)
     }
 
     private func openLocalFile(_ node: VectorCodeFileNode, project: VectorCodeProjectSummary, content: String? = nil, language: String? = nil, version: String? = nil) {
@@ -372,6 +431,40 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         viewport = .editor
     }
 
+    public func dismissEditorConflict() {
+        if let conflict = selectedEditorConflict {
+            clearEditorConflictIfMatching(projectId: conflict.projectId, editorId: conflict.editorId)
+        }
+        statusText = "Resolve before saving"
+    }
+
+    public func keepDesktopEditorConflict() {
+        guard let conflict = selectedEditorConflict else {
+            return
+        }
+        updateEditor(
+            projectId: conflict.projectId,
+            editorId: conflict.editorId,
+            content: conflict.desktopContent,
+            isDirty: false,
+            version: conflict.desktopVersion
+        )
+        setEditorDraftIfSelected(projectId: conflict.projectId, editorId: conflict.editorId, content: conflict.desktopContent)
+        clearEditorConflictIfMatching(projectId: conflict.projectId, editorId: conflict.editorId)
+        statusText = "Desktop version kept"
+    }
+
+    public func overwriteEditorConflict() {
+        guard let conflict = selectedEditorConflict else {
+            return
+        }
+        let content = editorDraft
+        statusText = "Overwriting desktop"
+        Task { [weak self] in
+            await self?.overwriteRemoteEditorConflict(conflict, content: content)
+        }
+    }
+
     public func markEditorDirty() {
         guard let projectId = selectedProject?.id, let editorId = selectedEditorId else {
             return
@@ -381,6 +474,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
         snapshot.editorsByProject[projectId]?[index].isDirty = true
         snapshot.editorsByProject[projectId]?[index].content = editorDraft
+        updateEditorConflictLocalContent(projectId: projectId, editorId: editorId, content: editorDraft)
     }
 
     public func selectTerminal(_ terminal: VectorCodeTerminalTab) {
@@ -391,6 +485,9 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             for index in indices {
                 snapshot.terminalsByProject[terminal.projectId]?[index].isActive = snapshot.terminalsByProject[terminal.projectId]?[index].id == terminal.id
             }
+        }
+        if isRemoteConnected {
+            statusText = "Connected"
         }
         viewport = .terminal
     }
@@ -668,13 +765,10 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     private func applySnapshot(_ nextSnapshot: VectorCodeRemoteWorkspaceSnapshot) {
         rememberCurrentProjectSelection()
         let currentProjectId = selectedProjectId
-        let dirtyEditor = selectedEditor?.isDirty == true ? selectedEditor : nil
-        let dirtyDraft = dirtyEditor == nil ? nil : editorDraft
+        let dirtyEditors = dirtyEditorDrafts()
         let mergedSnapshot = Self.mergeProjectScopedSnapshot(current: snapshot, next: nextSnapshot)
         snapshot = mergedSnapshot
-        if let dirtyEditor, let dirtyDraft {
-            restoreDirtyEditor(dirtyEditor, draft: dirtyDraft)
-        }
+        restoreDirtyEditors(dirtyEditors)
         let nextProjectId: String?
         if let currentProjectId, mergedSnapshot.projects.contains(where: { $0.id == currentProjectId }) {
             nextProjectId = currentProjectId
@@ -686,7 +780,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         selectedTerminalId = nextProjectId.flatMap { restoredTerminalId(for: $0) }
         editorSelections.remember(projectId: nextProjectId, selectedId: selectedEditorId)
         terminalSelections.remember(projectId: nextProjectId, selectedId: selectedTerminalId)
-        editorDraft = snapshot.editorsByProject[nextProjectId ?? ""]?.first { $0.id == selectedEditorId }?.content ?? ""
+        editorDraft = selectedEditorDraftContent(projectId: nextProjectId, editorId: selectedEditorId)
         if nextProjectId == nil {
             viewport = .projects
         } else if viewport == .projects {
@@ -744,16 +838,113 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    private func restoreDirtyEditor(_ dirtyEditor: VectorCodeEditorTab, draft: String) {
-        guard let editors = snapshot.editorsByProject[dirtyEditor.projectId] else {
+    private func dirtyEditorDrafts() -> [VectorCodeDirtyEditorDraft] {
+        let selectedDirtyEditor = selectedEditor?.isDirty == true ? selectedEditor : nil
+        return snapshot.editorsByProject.values.flatMap { editors in
+            editors.compactMap { editor in
+                guard editor.isDirty else {
+                    return nil
+                }
+                return VectorCodeDirtyEditorDraft(
+                    editor: editor,
+                    content: Self.isSameEditor(editor, selectedDirtyEditor) ? editorDraft : editor.content ?? ""
+                )
+            }
+        }
+    }
+
+    private static func isSameEditor(_ editor: VectorCodeEditorTab, _ other: VectorCodeEditorTab?) -> Bool {
+        editor.projectId == other?.projectId && editor.id == other?.id
+    }
+
+    private static func editorConflictKey(projectId: String, editorId: String) -> String {
+        "\(projectId):\(editorId)"
+    }
+
+    private func isSelectedEditor(projectId: String, editorId: String) -> Bool {
+        selectedProjectId == projectId && selectedEditorId == editorId
+    }
+
+    private func setEditorDraftIfSelected(projectId: String, editorId: String, content: String) {
+        guard isSelectedEditor(projectId: projectId, editorId: editorId) else {
             return
         }
-        guard let index = editors.firstIndex(where: { $0.id == dirtyEditor.id || $0.path == dirtyEditor.path }) else {
+        editorDraft = content
+    }
+
+    private func selectedEditorDraftContent(projectId: String?, editorId: String?) -> String {
+        guard let projectId, let editorId else {
+            return ""
+        }
+        if let conflict = editorConflictsByKey[Self.editorConflictKey(projectId: projectId, editorId: editorId)] {
+            return conflict.localContent
+        }
+        return snapshot.editorsByProject[projectId]?.first { $0.id == editorId }?.content ?? ""
+    }
+
+    private func editor(projectId: String, editorId: String) -> VectorCodeEditorTab? {
+        snapshot.editorsByProject[projectId]?.first { $0.id == editorId }
+    }
+
+    private func editor(projectId: String, path: String) -> VectorCodeEditorTab? {
+        snapshot.editorsByProject[projectId]?.first { $0.path == path }
+    }
+
+    private func editorConflict(projectId: String, path: String) -> VectorCodeEditorConflict? {
+        editorConflictsByKey.values.first { $0.projectId == projectId && $0.path == path }
+    }
+
+    private func selectProtectedLocalEditorIfNeeded(projectId: String, path: String) -> Bool {
+        if let conflict = editorConflict(projectId: projectId, path: path),
+           let conflictedEditor = editor(projectId: projectId, editorId: conflict.editorId) {
+            selectEditor(conflictedEditor)
+            statusText = "Resolve file conflict"
+            return true
+        }
+
+        guard let existingEditor = editor(projectId: projectId, path: path), existingEditor.isDirty else {
+            return false
+        }
+        selectEditor(existingEditor)
+        statusText = "Unsaved draft open"
+        return true
+    }
+
+    private func updateEditorConflictLocalContent(projectId: String, editorId: String, content: String) {
+        let key = Self.editorConflictKey(projectId: projectId, editorId: editorId)
+        guard var conflict = editorConflictsByKey[key] else {
             return
         }
-        snapshot.editorsByProject[dirtyEditor.projectId]?[index].content = draft
-        snapshot.editorsByProject[dirtyEditor.projectId]?[index].isDirty = true
-        snapshot.editorsByProject[dirtyEditor.projectId]?[index].version = dirtyEditor.version
+        conflict.localContent = content
+        editorConflictsByKey[key] = conflict
+    }
+
+    private func clearEditorConflictIfMatching(projectId: String, editorId: String) {
+        editorConflictsByKey.removeValue(forKey: Self.editorConflictKey(projectId: projectId, editorId: editorId))
+    }
+
+    private func restoreDirtyEditors(_ dirtyEditors: [VectorCodeDirtyEditorDraft]) {
+        let projectIds = Set(snapshot.projects.map(\.id))
+        for dirtyEditor in dirtyEditors where projectIds.contains(dirtyEditor.editor.projectId) {
+            restoreDirtyEditor(dirtyEditor)
+        }
+    }
+
+    private func restoreDirtyEditor(_ dirtyEditor: VectorCodeDirtyEditorDraft) {
+        var restoredEditor = dirtyEditor.editor
+        restoredEditor.content = dirtyEditor.content
+        restoredEditor.isDirty = true
+
+        guard let editors = snapshot.editorsByProject[restoredEditor.projectId] else {
+            snapshot.editorsByProject[restoredEditor.projectId] = [restoredEditor]
+            return
+        }
+        guard let index = editors.firstIndex(where: { $0.id == restoredEditor.id || $0.path == restoredEditor.path }) else {
+            snapshot.editorsByProject[restoredEditor.projectId, default: []].append(restoredEditor)
+            return
+        }
+
+        snapshot.editorsByProject[restoredEditor.projectId]?[index] = restoredEditor
     }
 
     private func runRemoteOperation<Value: Sendable>(
@@ -776,20 +967,128 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     private func openRemoteFile(_ node: VectorCodeFileNode, project: VectorCodeProjectSummary) async {
-        await runRemoteOperation(failureStatus: "File unavailable") { [remoteWorkspaceClient] in
-            try await remoteWorkspaceClient.readFile(projectId: project.id, path: node.path)
-        } onSuccess: { response in
+        do {
+            let response = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+                try await remoteWorkspaceClient.readFile(projectId: project.id, path: node.path)
+            }
+            guard pendingRemoteFileOpenByProject[project.id] == node.path else {
+                return
+            }
+            pendingRemoteFileOpenByProject.removeValue(forKey: project.id)
+            guard selectedProjectId == project.id else {
+                return
+            }
+            guard !selectProtectedLocalEditorIfNeeded(projectId: project.id, path: node.path) else {
+                return
+            }
             openLocalFile(node, project: project, content: response.content, language: response.language, version: response.version)
             statusText = "Connected"
+        } catch {
+            let wasPendingOpen = pendingRemoteFileOpenByProject[project.id] == node.path
+            if wasPendingOpen {
+                pendingRemoteFileOpenByProject.removeValue(forKey: project.id)
+            }
+            await handleScopedRemoteFailure(
+                error,
+                statusText: "File unavailable",
+                isVisible: wasPendingOpen && selectedProjectId == project.id
+            )
         }
     }
 
     private func saveRemoteEditor(_ editor: VectorCodeEditorTab, projectId: String, content: String) async {
-        await runRemoteOperation(failureStatus: "Save failed") { [remoteWorkspaceClient] in
-            try await remoteWorkspaceClient.writeFile(projectId: projectId, path: editor.path, content: content, expectedVersion: editor.version)
-        } onSuccess: { response in
+        do {
+            let response = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+                try await remoteWorkspaceClient.writeFile(projectId: projectId, path: editor.path, content: content, expectedVersion: editor.version)
+            }
             updateEditor(projectId: projectId, editorId: editor.id, content: content, isDirty: false, version: response.version)
-            statusText = "Saved"
+            clearEditorConflictIfMatching(projectId: projectId, editorId: editor.id)
+            if isSelectedEditor(projectId: projectId, editorId: editor.id) {
+                statusText = "Saved"
+            }
+        } catch {
+            if Self.isFileModifiedSinceError(error) {
+                await prepareEditorConflict(editor, projectId: projectId, localContent: content)
+                return
+            }
+            await handleScopedRemoteFailure(
+                error,
+                statusText: "Save failed",
+                isVisible: isSelectedEditor(projectId: projectId, editorId: editor.id)
+            )
+        }
+    }
+
+    private func overwriteRemoteEditorConflict(_ conflict: VectorCodeEditorConflict, content: String) async {
+        do {
+            let response = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+                try await remoteWorkspaceClient.writeFile(projectId: conflict.projectId, path: conflict.path, content: content, expectedVersion: conflict.desktopVersion)
+            }
+            updateEditor(projectId: conflict.projectId, editorId: conflict.editorId, content: content, isDirty: false, version: response.version)
+            setEditorDraftIfSelected(projectId: conflict.projectId, editorId: conflict.editorId, content: content)
+            clearEditorConflictIfMatching(projectId: conflict.projectId, editorId: conflict.editorId)
+            if isSelectedEditor(projectId: conflict.projectId, editorId: conflict.editorId) {
+                statusText = "Saved"
+            }
+        } catch {
+            if Self.isFileModifiedSinceError(error) {
+                await prepareEditorConflict(conflict, localContent: content)
+                return
+            }
+            await handleScopedRemoteFailure(
+                error,
+                statusText: "Save failed",
+                isVisible: isSelectedEditor(projectId: conflict.projectId, editorId: conflict.editorId)
+            )
+        }
+    }
+
+    private func prepareEditorConflict(_ editor: VectorCodeEditorTab, projectId: String, localContent: String) async {
+        await prepareEditorConflict(
+            projectId: projectId,
+            editorId: editor.id,
+            path: editor.path,
+            title: editor.title,
+            localContent: localContent
+        )
+    }
+
+    private func prepareEditorConflict(_ conflict: VectorCodeEditorConflict, localContent: String) async {
+        await prepareEditorConflict(
+            projectId: conflict.projectId,
+            editorId: conflict.editorId,
+            path: conflict.path,
+            title: conflict.title,
+            localContent: localContent
+        )
+    }
+
+    private func prepareEditorConflict(projectId: String, editorId: String, path: String, title: String, localContent: String) async {
+        do {
+            let latest = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+                try await remoteWorkspaceClient.readFile(projectId: projectId, path: path)
+            }
+            updateEditor(projectId: projectId, editorId: editorId, content: localContent, isDirty: true)
+            setEditorDraftIfSelected(projectId: projectId, editorId: editorId, content: localContent)
+            let conflict = VectorCodeEditorConflict(
+                projectId: projectId,
+                editorId: editorId,
+                path: path,
+                title: title,
+                localContent: localContent,
+                desktopContent: latest.content,
+                desktopVersion: latest.version
+            )
+            editorConflictsByKey[Self.editorConflictKey(projectId: projectId, editorId: editorId)] = conflict
+            if isSelectedEditor(projectId: projectId, editorId: editorId) {
+                statusText = "File changed on desktop"
+            }
+        } catch {
+            await handleScopedRemoteFailure(
+                error,
+                statusText: "Save conflict",
+                isVisible: isSelectedEditor(projectId: projectId, editorId: editorId)
+            )
         }
     }
 
@@ -805,9 +1104,9 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    private func copyRemoteFile(sourceProjectId: String, path: String, targetProjectId: String, targetPath: String) async {
+    private func copyRemoteFile(sourceProjectId: String, path: String, targetProjectId: String, targetPath: String, overwrite: Bool = false) async {
         await runRemoteOperation(failureStatus: "Copy failed") { [remoteWorkspaceClient] in
-            try await remoteWorkspaceClient.copyFile(projectId: sourceProjectId, path: path, targetProjectId: targetProjectId, targetPath: targetPath)
+            try await remoteWorkspaceClient.copyFile(projectId: sourceProjectId, path: path, targetProjectId: targetProjectId, targetPath: targetPath, overwrite: overwrite)
         } onSuccess: { response in
             await refreshRemoteFileTreeAfterMutation(projectId: response.targetProjectId, changedPath: response.targetPath)
             statusText = "Copied"
@@ -841,9 +1140,11 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         } onSuccess: { terminal in
             snapshot.terminalsByProject[project.id, default: []].removeAll { $0.id == terminal.id }
             snapshot.terminalsByProject[project.id, default: []].append(terminal)
-            selectedTerminalId = terminal.id
             terminalSelections.remember(projectId: project.id, selectedId: terminal.id)
-            viewport = .terminal
+            if selectedProjectId == project.id {
+                selectedTerminalId = terminal.id
+                viewport = .terminal
+            }
             statusText = "Connected"
         }
     }
@@ -981,6 +1282,13 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         isRemoteConnected = false
     }
 
+    private func handleScopedRemoteFailure(_ error: Error, statusText: String, isVisible: Bool) async {
+        guard Self.shouldDisconnectAfterRemoteFailure(error) || isVisible else {
+            return
+        }
+        await handleRemoteFailure(error, statusText: statusText)
+    }
+
     private static func shouldDisconnectAfterRemoteFailure(_ error: Error) -> Bool {
         if error is CancellationError {
             return false
@@ -1000,6 +1308,16 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         case .missingPayload, .invalidResponse, .unexpectedAction, .unexpectedRequestId:
             return true
         }
+    }
+
+    private static func isFileModifiedSinceError(_ error: Error) -> Bool {
+        guard let clientError = error as? VectorCodeRemoteWorkspaceClientError else {
+            return false
+        }
+        guard case .remoteError(let remoteError) = clientError else {
+            return false
+        }
+        return remoteError.code == fileModifiedSinceErrorCode
     }
 
     private static func withTimeout<Value: Sendable>(
@@ -1023,6 +1341,22 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 }
 
+private struct VectorCodeDirtyEditorDraft {
+    let editor: VectorCodeEditorTab
+    let content: String
+}
+
 private enum VectorCodeRemoteSyncError: Error {
     case timeout
+}
+
+public struct VectorCodeEditorConflict: Identifiable, Equatable, Sendable {
+    public var id: String { "\(projectId):\(editorId):\(desktopVersion ?? "unknown")" }
+    public let projectId: String
+    public let editorId: String
+    public let path: String
+    public let title: String
+    public var localContent: String
+    public let desktopContent: String
+    public let desktopVersion: String?
 }

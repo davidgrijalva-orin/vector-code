@@ -17,6 +17,7 @@ enum VectorCodeIcon: String {
     case files = "\u{EAF0}"
     case folder = "\u{EA83}"
     case folderOpened = "\u{EAF7}"
+    case keyboard = "\u{EA65}"
     case link = "\u{EB15}"
     case projects = "\u{EB46}"
     case refresh = "\u{EB37}"
@@ -26,6 +27,7 @@ enum VectorCodeIcon: String {
     case sourceControl = "\u{EA68}"
     case terminal = "\u{EA85}"
     case trash = "\u{EA81}"
+    case warning = "\u{EA6C}"
 }
 
 enum VectorCodeIconFont {

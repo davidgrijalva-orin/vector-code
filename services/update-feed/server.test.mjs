@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseVectorUpdateFeed, resolveVectorUpdate } from './server.mjs';
+import { createUpdateFeedServer, parseVectorUpdateFeed, resetVectorUpdateFeedCache, resolveVectorUpdate } from './server.mjs';
 
 const feed = parseVectorUpdateFeed({
   schemaVersion: 1,
@@ -64,4 +64,109 @@ describe('resolveVectorUpdate', () => {
       commit: 'old-commit'
     }), { statusCode: 204 });
   });
+
+  it('treats the product version as current when commit metadata is unavailable', () => {
+    assert.deepEqual(resolveVectorUpdate(feed, {
+      platform: 'darwin-arm64',
+      quality: 'stable',
+      commit: '0.1.1'
+    }), { statusCode: 204 });
+  });
 });
+
+describe('createUpdateFeedServer', () => {
+  it('serves health and HEAD update checks without response bodies', async () => {
+    await withUpdateFeedServer({
+      schemaVersion: 1,
+      releases: [
+        {
+          version: '0.1.2',
+          commit: 'next-commit',
+          quality: 'stable',
+          timestamp: 300,
+          assets: {
+            'darwin-universal': {
+              url: 'https://vectorcode.app/releases/0.1.2/Vector-Code-darwin-universal.zip',
+              sha256hash: 'def'
+            }
+          }
+        }
+      ]
+    }, async origin => {
+      const health = await fetch(`${origin}/healthz`);
+      assert.equal(health.status, 200);
+      assert.deepEqual(await health.json(), { ok: true, service: 'vector-code-update-feed' });
+
+      const update = await fetch(`${origin}/api/update/darwin-arm64/stable/old-commit`, { method: 'HEAD' });
+      assert.equal(update.status, 200);
+      assert.equal(await update.text(), '');
+      assert.equal(update.headers.get('cache-control'), 'no-store');
+      assert.match(update.headers.get('content-type'), /application\/json/);
+    });
+  });
+
+  it('rejects unsupported methods before loading a manifest', async () => {
+    await withUpdateFeedServer({ schemaVersion: 1, releases: [] }, async origin => {
+      const response = await fetch(`${origin}/healthz`, { method: 'POST' });
+      assert.equal(response.status, 405);
+      assert.equal(response.headers.get('allow'), 'GET, HEAD');
+      assert.equal(await response.text(), '');
+    });
+  });
+
+  it('keeps manifest cache isolated when tests swap feed sources', async () => {
+    await withUpdateFeedServer(updateFeedManifest('0.1.3', 'first-commit', 400), async origin => {
+      const response = await fetch(`${origin}/api/update/darwin-arm64/stable/old-commit`);
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).version, 'first-commit');
+    });
+
+    await withUpdateFeedServer(updateFeedManifest('0.1.4', 'second-commit', 500), async origin => {
+      const response = await fetch(`${origin}/api/update/darwin-arm64/stable/old-commit`);
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).version, 'second-commit');
+    });
+  });
+});
+
+function updateFeedManifest(version, commit, timestamp) {
+  return {
+    schemaVersion: 1,
+    releases: [
+      {
+        version,
+        commit,
+        quality: 'stable',
+        timestamp,
+        assets: {
+          'darwin-universal': {
+            url: `https://vectorcode.app/releases/${version}/Vector-Code-darwin-universal.zip`
+          }
+        }
+      }
+    ]
+  };
+}
+
+async function withUpdateFeedServer(manifest, run) {
+  const previousManifest = process.env.VECTOR_UPDATE_FEED_JSON;
+  process.env.VECTOR_UPDATE_FEED_JSON = JSON.stringify(manifest);
+  resetVectorUpdateFeedCache();
+
+  const server = createUpdateFeedServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+
+  try {
+    const address = server.address();
+    assert.equal(typeof address, 'object');
+    await run(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    if (previousManifest === undefined) {
+      delete process.env.VECTOR_UPDATE_FEED_JSON;
+    } else {
+      process.env.VECTOR_UPDATE_FEED_JSON = previousManifest;
+    }
+    resetVectorUpdateFeedCache();
+  }
+}

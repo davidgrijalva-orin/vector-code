@@ -214,29 +214,47 @@ public enum VectorCodeRemoteWorkspaceClientError: Error, LocalizedError {
 }
 
 private actor VectorCodeAsyncRequestGate {
-    private var isLocked = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
-
-    func run<Value: Sendable>(_ operation: @Sendable () async throws -> Value) async throws -> Value {
-        await lock()
-        do {
-            let value = try await operation()
-            unlock()
-            return value
-        } catch {
-            unlock()
-            throw error
-        }
+    private struct Waiter {
+        let id: UUID
+        let continuation: CheckedContinuation<Void, Error>
     }
 
-    private func lock() async {
+    private var isLocked = false
+    private var waiters: [Waiter] = []
+
+    func run<Value: Sendable>(_ operation: @Sendable () async throws -> Value) async throws -> Value {
+        try await lock()
+        defer {
+            unlock()
+        }
+        try Task.checkCancellation()
+        return try await operation()
+    }
+
+    private func lock() async throws {
         if !isLocked {
             isLocked = true
             return
         }
-        await withCheckedContinuation { continuation in
-            waiters.append(continuation)
+
+        let waiterId = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                waiters.append(Waiter(id: waiterId, continuation: continuation))
+            }
+        } onCancel: {
+            Task {
+                await self.cancelWaiter(id: waiterId)
+            }
         }
+    }
+
+    private func cancelWaiter(id: UUID) {
+        guard let index = waiters.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let waiter = waiters.remove(at: index)
+        waiter.continuation.resume(throwing: CancellationError())
     }
 
     private func unlock() {
@@ -245,6 +263,6 @@ private actor VectorCodeAsyncRequestGate {
             return
         }
         let next = waiters.removeFirst()
-        next.resume()
+        next.continuation.resume()
     }
 }

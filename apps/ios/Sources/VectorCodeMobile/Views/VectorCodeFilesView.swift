@@ -2,9 +2,9 @@ import SwiftUI
 
 public struct VectorCodeFilesView: View {
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
-    @State private var collapsedFolderPaths = Set<String>()
-    @State private var renamePrompt: VectorCodeRenamePrompt<VectorCodeFileNode>?
-    @State private var copyingNode: VectorCodeFileNode?
+    @State private var collapsedFolderPathsByProject = [String: Set<String>]()
+    @State private var renamePrompt: VectorCodeRenamePrompt<VectorCodeProjectFileAction>?
+    @State private var copyingFile: VectorCodeProjectFileAction?
     @State private var copyDestinationPath = ""
 
     public init(model: VectorCodeMobileWorkspaceModel) {
@@ -47,7 +47,7 @@ public struct VectorCodeFilesView: View {
                             }
                             Spacer()
                             VectorCodeIconButton(icon: .clearAll, size: 30) {
-                                collapsedFolderPaths = Set(Self.folderPaths(in: model.selectedFiles))
+                                collapsedFolderPaths.wrappedValue = Set(Self.folderPaths(in: model.selectedFiles))
                             }
                         }
                         .padding(.horizontal, 2)
@@ -66,12 +66,19 @@ public struct VectorCodeFilesView: View {
                                 model: model,
                                 node: node,
                                 depth: 0,
-                                collapsedFolderPaths: $collapsedFolderPaths
+                                collapsedFolderPaths: collapsedFolderPaths
                             ) { node in
-                                renamePrompt = VectorCodeRenamePrompt(item: node, draft: node.name)
+                                if let project = model.selectedProject {
+                                    renamePrompt = VectorCodeRenamePrompt(
+                                        item: VectorCodeProjectFileAction(project: project, node: node),
+                                        draft: node.name
+                                    )
+                                }
                             } copyAction: { node in
-                                copyingNode = node
-                                copyDestinationPath = node.path
+                                if let project = model.selectedProject {
+                                    copyingFile = VectorCodeProjectFileAction(project: project, node: node)
+                                    copyDestinationPath = node.path
+                                }
                             }
                         }
                     }
@@ -81,16 +88,33 @@ public struct VectorCodeFilesView: View {
             }
         }
         .background(VectorCodeTheme.background)
-        .vectorCodeRenameAlert("Rename", prompt: $renamePrompt) { node, name in
-            model.renameFile(node, to: name)
+        .vectorCodeRenameAlert("Rename", prompt: $renamePrompt) { file, name in
+            model.renameFile(file.node, in: file.project, to: name)
         }
-        .sheet(item: $copyingNode) { node in
+        .sheet(item: $copyingFile) { file in
             VectorCodeCopyFileSheet(
                 model: model,
-                node: node,
+                file: file,
                 destinationPath: $copyDestinationPath
             )
         }
+    }
+
+    private var collapsedFolderPaths: Binding<Set<String>> {
+        Binding(
+            get: {
+                guard let projectId = model.selectedProject?.id else {
+                    return []
+                }
+                return collapsedFolderPathsByProject[projectId] ?? []
+            },
+            set: { paths in
+                guard let projectId = model.selectedProject?.id else {
+                    return
+                }
+                collapsedFolderPathsByProject[projectId] = paths
+            }
+        )
     }
 
     private static func folderPaths(in nodes: [VectorCodeFileNode]) -> [String] {
@@ -100,6 +124,15 @@ public struct VectorCodeFilesView: View {
             }
             return [node.path] + folderPaths(in: node.children)
         }
+    }
+}
+
+private struct VectorCodeProjectFileAction: Identifiable {
+    let project: VectorCodeProjectSummary
+    let node: VectorCodeFileNode
+
+    var id: String {
+        "\(project.id):\(node.path)"
     }
 }
 
@@ -185,7 +218,7 @@ private struct VectorCodeFileRow: View {
 
     private func toggleFolder() {
         if expanded {
-            if node.childrenTruncated, node.children.isEmpty {
+            if node.childrenTruncated {
                 model.loadFolderChildren(node)
                 return
             }
@@ -211,12 +244,17 @@ private struct VectorCodeFileRow: View {
 
 private struct VectorCodeCopyFileSheet: View {
     @ObservedObject var model: VectorCodeMobileWorkspaceModel
-    let node: VectorCodeFileNode
+    let file: VectorCodeProjectFileAction
     @Binding var destinationPath: String
+    @State private var allowsOverwrite = false
     @Environment(\.dismiss) private var dismiss
 
+    private var node: VectorCodeFileNode {
+        file.node
+    }
+
     private var destinationProjects: [VectorCodeProjectSummary] {
-        model.snapshot.projects.filter { $0.id != model.selectedProject?.id }
+        model.snapshot.projects.filter { $0.id != file.project.id }
     }
 
     var body: some View {
@@ -243,13 +281,31 @@ private struct VectorCodeCopyFileSheet: View {
                         .textFieldStyle(VectorCodeOutlinedTextFieldStyle())
                 }
 
+                Toggle(isOn: $allowsOverwrite) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Allow overwrite")
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(VectorCodeTheme.text)
+                        Text("Only replace an existing desktop file when this is on.")
+                            .font(.caption)
+                            .foregroundStyle(VectorCodeTheme.muted)
+                    }
+                }
+                .toggleStyle(.switch)
+                .padding(12)
+                .vectorCodeOutlinedSurface(background: VectorCodeTheme.raised, cornerRadius: VectorCodeTheme.compactRadius)
+
+                Text("Copy applies immediately on the paired desktop.")
+                    .font(.caption)
+                    .foregroundStyle(VectorCodeTheme.subtle)
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Copy to")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(VectorCodeTheme.muted)
                     ForEach(destinationProjects) { project in
                         Button {
-                            model.copyFile(node, to: project, destinationPath: destinationPath)
+                            model.copyFile(file.node, from: file.project, to: project, destinationPath: destinationPath, overwrite: allowsOverwrite)
                             dismiss()
                         } label: {
                             VectorCodeSectionSurface(contentPadding: 12) {
@@ -274,7 +330,7 @@ private struct VectorCodeCopyFileSheet: View {
             .padding(16)
             .background(VectorCodeTheme.background.ignoresSafeArea())
             .foregroundStyle(VectorCodeTheme.text)
-            .navigationTitle("Copy file")
+            .navigationTitle(node.kind == .folder ? "Copy folder" : "Copy file")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

@@ -11,7 +11,7 @@ import { isEqualOrParent } from '../../../../base/common/resources.js';
 import { hasKey } from '../../../../base/common/types.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { FileType, IFileService } from '../../../../platform/files/common/files.js';
+import { FileOperationError, FileOperationResult, FileType, IFileService } from '../../../../platform/files/common/files.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
@@ -406,7 +406,15 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 
 		const expectedVersion = getOptionalMobilePayloadString(payload, 'expectedVersion');
-		const stat = await this.fileService.writeFile(target.resource, VSBuffer.fromString(content), expectedVersion ? { etag: expectedVersion } : undefined);
+		let stat;
+		try {
+			stat = await this.fileService.writeFile(target.resource, VSBuffer.fromString(content), expectedVersion ? { etag: expectedVersion } : undefined);
+		} catch (error) {
+			if (error instanceof FileOperationError && error.fileOperationResult === FileOperationResult.FILE_MODIFIED_SINCE) {
+				return createVectorCodeMobileRemoteErrorResponse(request, 'file_modified_since', 'The desktop file changed since the phone opened it.');
+			}
+			throw error;
+		}
 		const response: IVectorCodeMobileRemoteFileWriteResponse = {
 			path: target.relativePath,
 			version: stat.etag

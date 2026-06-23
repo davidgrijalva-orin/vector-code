@@ -1,0 +1,41 @@
+@media (max-width: 920px) {
+  .hero,
+  .section,
+  .workflow-section {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+    padding-top: 2.75rem;
+  }
+
+  .value-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header,
+  .site-footer,
+  .download-section {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-size: 3.25rem;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+  }
+
+  .workflow-list div {
+    grid-template-columns: 2.4rem 1fr;
+  }
+}

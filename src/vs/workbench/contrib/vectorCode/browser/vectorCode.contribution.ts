@@ -84,7 +84,7 @@ abstract class VectorCodeViewPane extends ViewPane {
 
 class VectorCodeProjectsView extends VectorCodeViewPane {
 
-	protected static override readonly viewOptions = { minimumBodySize: 76, maximumBodySize: 124 };
+	protected static override readonly viewOptions = { minimumBodySize: 96, maximumBodySize: 220 };
 	protected static override readonly collapsible = false;
 
 	protected override renderBody(container: HTMLElement): void {
@@ -133,6 +133,7 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 			item.className = 'vector-code-project-switcher__project';
 			item.classList.toggle('vector-code-project-switcher__project--active', projectUri === activeProjectUri);
 			item.type = 'button';
+			item.title = `${project.name}\n${project.uriLabel}`;
 			const name = append(item, $('.vector-code-project-switcher__project-name'));
 			name.textContent = project.name;
 			const path = append(item, $('.vector-code-project-switcher__project-path'));

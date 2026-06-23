@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createUpdateFeedServer, parseVectorUpdateFeed, resetVectorUpdateFeedCache, resolveVectorUpdate } from './server.mjs';
+import {
+  createUpdateFeedServer,
+  parseVectorUpdateFeed,
+  resetVectorUpdateFeedCache,
+  resolveVectorUpdate,
+  selectLatestDownload
+} from './server.mjs';
 
 const feed = parseVectorUpdateFeed({
   schemaVersion: 1,
@@ -32,6 +38,16 @@ const feed = parseVectorUpdateFeed({
 });
 
 describe('resolveVectorUpdate', () => {
+  it('selects the latest platform-compatible download asset', () => {
+    assert.deepEqual(selectLatestDownload(feed, 'darwin-arm64', 'stable'), {
+      release: feed.releases[0],
+      asset: {
+        url: 'https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-universal.zip',
+        sha256hash: 'abc'
+      }
+    });
+  });
+
   it('returns 204 when current commit already matches latest release', () => {
     assert.deepEqual(resolveVectorUpdate(feed, {
       platform: 'darwin-arm64',
@@ -75,6 +91,29 @@ describe('resolveVectorUpdate', () => {
 });
 
 describe('createUpdateFeedServer', () => {
+  it('serves the landing page and download redirect', async () => {
+    await withUpdateFeedServer(updateFeedManifest('0.1.5', 'landing-commit', 600), async origin => {
+      const landing = await fetch(`${origin}/`);
+      assert.equal(landing.status, 200);
+      assert.match(landing.headers.get('content-type'), /text\/html/);
+      assert.match(await landing.text(), /Vector Code/);
+
+      const styles = await fetch(`${origin}/styles.css`, { method: 'HEAD' });
+      assert.equal(styles.status, 200);
+      assert.equal(await styles.text(), '');
+      assert.match(styles.headers.get('content-type'), /text\/css/);
+
+      const sections = await fetch(`${origin}/sections.css`, { method: 'HEAD' });
+      assert.equal(sections.status, 200);
+      assert.equal(await sections.text(), '');
+      assert.match(sections.headers.get('content-type'), /text\/css/);
+
+      const download = await fetch(`${origin}/download`, { redirect: 'manual' });
+      assert.equal(download.status, 302);
+      assert.equal(download.headers.get('location'), 'https://vectorcode.app/releases/0.1.5/Vector-Code-darwin-universal.zip');
+    });
+  });
+
   it('serves health and HEAD update checks without response bodies', async () => {
     await withUpdateFeedServer({
       schemaVersion: 1,

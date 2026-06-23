@@ -1,0 +1,4 @@
+interface:
+  display_name: "VectorCode Release Update"
+  short_description: "Prepare and verify VectorCode desktop update releases."
+  default_prompt: "Prepare a VectorCode desktop release update from the current repo changes and update feed."

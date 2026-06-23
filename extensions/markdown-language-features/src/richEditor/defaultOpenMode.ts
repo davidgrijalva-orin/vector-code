@@ -28,7 +28,7 @@ export function registerMarkdownDefaultOpenMode(): vscode.Disposable {
 }
 
 async function applyMarkdownDefaultOpenMode(): Promise<void> {
-	const mode = vscode.workspace.getConfiguration('markdown').get<MarkdownDefaultOpenMode>(markdownDefaultOpenModeSetting, 'rich');
+	const mode = vscode.workspace.getConfiguration('markdown').get<MarkdownDefaultOpenMode>(markdownDefaultOpenModeSetting, 'markdown');
 	const workbenchConfiguration = vscode.workspace.getConfiguration('workbench');
 	const currentAssociations = workbenchConfiguration.get<Record<string, string>>(editorAssociationsSetting, {});
 	const nextAssociations = { ...currentAssociations };

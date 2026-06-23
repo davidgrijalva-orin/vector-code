@@ -931,6 +931,7 @@ body,
 	box-sizing: border-box;
 	display: grid;
 	gap: 8px;
+	grid-template-rows: auto minmax(0, 1fr);
 	height: 100%;
 	min-height: 0;
 	padding: 8px 10px 10px;
@@ -1518,7 +1519,7 @@ body,
 	border: 1px solid rgba(238, 244, 242, 0.08);
 	border-radius: 16px;
 	gap: 10px;
-	grid-template-rows: 36px auto minmax(0, 1fr);
+	grid-template-rows: auto minmax(0, 1fr);
 	padding: 12px;
 }
 

@@ -1,9 +1,12 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { isPublicRoute, sendPublicFile } from './public-files.mjs';
 
 const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
 const DEFAULT_MANIFEST_PATH = new URL('./manifest.example.json', import.meta.url);
 const CACHE_TTL_MS = Number.parseInt(process.env.VECTOR_UPDATE_FEED_CACHE_TTL_MS ?? '30000', 10);
+const DEFAULT_DOWNLOAD_PLATFORM = process.env.VECTOR_CODE_DOWNLOAD_PLATFORM ?? 'darwin-arm64';
+const DEFAULT_DOWNLOAD_QUALITY = process.env.VECTOR_CODE_DOWNLOAD_QUALITY ?? 'stable';
 
 let cachedManifest;
 let cachedAt = 0;
@@ -110,6 +113,20 @@ function selectLatestRelease(feed, platform, quality) {
     .sort((a, b) => b.timestamp - a.timestamp || b.version.localeCompare(a.version))[0];
 }
 
+export function selectLatestDownload(feed, platform = DEFAULT_DOWNLOAD_PLATFORM, quality = DEFAULT_DOWNLOAD_QUALITY) {
+  const release = selectLatestRelease(feed, platform, quality);
+  if (!release) {
+    return undefined;
+  }
+
+  const asset = getReleaseAsset(release, platform);
+  if (!asset) {
+    return undefined;
+  }
+
+  return { release, asset };
+}
+
 export function resolveVectorUpdate(feed, request) {
   const latest = selectLatestRelease(feed, request.platform, request.quality);
   if (!latest || latest.commit === request.commit || latest.version === request.commit) {
@@ -178,6 +195,22 @@ function sendNoContent(response) {
   response.end();
 }
 
+function sendRedirect(response, location) {
+  response.writeHead(302, {
+    'cache-control': 'no-store',
+    location
+  });
+  response.end();
+}
+
+function sendNotFound(request, response) {
+  sendJson(request, response, 404, { error: 'not_found' });
+}
+
+function sendDownloadUnavailable(request, response) {
+  sendJson(request, response, 503, { error: 'download_unavailable' });
+}
+
 export function createUpdateFeedServer() {
   return createServer(async (request, response) => {
     try {
@@ -194,9 +227,24 @@ export function createUpdateFeedServer() {
         return;
       }
 
+      if (url.pathname === '/download' || url.pathname === '/download/macos' || url.pathname === '/download/macos-arm64') {
+        const download = selectLatestDownload(await loadManifest());
+        if (!download) {
+          sendDownloadUnavailable(request, response);
+          return;
+        }
+
+        sendRedirect(response, download.asset.url);
+        return;
+      }
+
+      if (isPublicRoute(url.pathname) && await sendPublicFile(request, response, url.pathname)) {
+        return;
+      }
+
       const match = url.pathname.match(/^\/api\/update\/([^/]+)\/([^/]+)\/([^/]+)$/);
       if (!match) {
-        sendJson(request, response, 404, { error: 'not_found' });
+        sendNotFound(request, response);
         return;
       }
 

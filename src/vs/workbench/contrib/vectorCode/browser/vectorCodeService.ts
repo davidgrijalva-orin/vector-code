@@ -7,7 +7,7 @@ import { localize } from '../../../../nls.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { isEqualOrParent } from '../../../../base/common/resources.js';
+import { isEqualOrParent, relativePath } from '../../../../base/common/resources.js';
 import { hasKey } from '../../../../base/common/types.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
@@ -17,7 +17,7 @@ import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { EditorInputWithOptions } from '../../../common/editor.js';
+import { EditorResourceAccessor, SideBySideEditor } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
 import { ADD_ROOT_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCommands.js';
 import { GroupsOrder, IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
@@ -73,15 +73,10 @@ const VECTOR_CODE_MOBILE_FILE_TREE_EXCLUDED_NAMES = new Set([
 
 interface IVectorCodeEditorEntry {
 	readonly editor: EditorInput;
+	readonly resource: URI;
+	readonly path: string;
 	readonly groupIndex: number;
 	readonly index: number;
-	readonly pinned: boolean;
-	readonly sticky: boolean;
-	readonly active: boolean;
-}
-
-interface IVectorCodeEditorState {
-	readonly entries: readonly IVectorCodeEditorEntry[];
 }
 
 interface IVectorCodeTerminalLayoutState {
@@ -124,7 +119,6 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	readonly onDidChangeActiveProject = this._onDidChangeActiveProject.event;
 
 	private activeProjectUri: URI | undefined;
-	private readonly projectEditorStates = new Map<string, IVectorCodeEditorState>();
 	private readonly terminalState = this._register(new VectorCodeMobileTerminalStateStore(VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES));
 	private projectSwitching = false;
 	private projectSwitchQueue = Promise.resolve();
@@ -219,15 +213,15 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	private createMobileWorkspaceSnapshot(projects: readonly IVectorCodeProjectSummary[], filesByProject: Record<string, IVectorCodeMobileRemoteFileNode[]>, fileTreeTruncatedByProject: Record<string, boolean>): IVectorCodeMobileRemoteWorkspaceSnapshot {
 		const activeProjectKey = this.activeProjectUri?.toString();
 		if (activeProjectKey) {
-			this.saveProjectEditorState(activeProjectKey);
 			this.captureProjectTerminalState(activeProjectKey);
 		}
 
+		const editorEntriesByProject = this.getEditorEntriesByProject(projects);
 		const editorsByProject: Record<string, IVectorCodeMobileRemoteEditorTab[]> = {};
 		const terminalsByProject: Record<string, IVectorCodeMobileRemoteTerminalTab[]> = {};
 		for (const project of projects) {
 			const projectKey = project.uri.toString();
-			editorsByProject[projectKey] = this.getMobileEditorTabs(projectKey);
+			editorsByProject[projectKey] = this.getMobileEditorTabs(projectKey, editorEntriesByProject.get(projectKey) ?? []);
 			terminalsByProject[projectKey] = this.getMobileTerminalTabs(projectKey);
 		}
 
@@ -655,7 +649,9 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 					const cols = getPositiveIntegerMobilePayloadValue(payload, 'cols');
 					const rows = getPositiveIntegerMobilePayloadValue(payload, 'rows');
 					if (cols && rows) {
-						instance.setOverrideDimensions({ cols, rows });
+						if (instance.cols !== cols || instance.rows !== rows) {
+							instance.setOverrideDimensions({ cols, rows });
+						}
 					} else {
 						accepted = false;
 					}
@@ -745,17 +741,14 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			let previousTerminalInstances: readonly ITerminalInstance[] = [];
 
 			if (previousProjectKey) {
-				this.saveProjectEditorState(previousProjectKey);
 				previousTerminalInstances = this.captureProjectTerminalState(previousProjectKey);
-				this.activeProjectUri = projectUri;
-				await this.restoreProjectEditorState(nextProjectKey);
+			}
+			this.activeProjectUri = projectUri;
+			if (previousProjectKey) {
 				await this.restoreProjectTerminalState(nextProjectKey);
 				this.hideTerminalInstances(previousTerminalInstances);
-			} else {
-				this.activeProjectUri = projectUri;
-				if (nextProjectKey) {
-					this.captureProjectTerminalState(nextProjectKey);
-				}
+			} else if (nextProjectKey) {
+				this.captureProjectTerminalState(nextProjectKey);
 			}
 
 			await this.showProjectFiles(projectUri);
@@ -766,84 +759,35 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 	}
 
-	private saveProjectEditorState(projectKey: string): void {
-		const entries: IVectorCodeEditorEntry[] = [];
+	private getEditorEntriesByProject(projects: readonly IVectorCodeProjectSummary[]): Map<string, IVectorCodeEditorEntry[]> {
+		const entriesByProject = new Map<string, IVectorCodeEditorEntry[]>();
 		const groups = this.editorGroupsService.getGroups(GroupsOrder.GRID_APPEARANCE);
 		for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
 			const group = groups[groupIndex];
-			const groupIsActive = group === this.editorGroupsService.activeGroup;
 			for (const editor of group.editors) {
+				const resource = EditorResourceAccessor.getOriginalUri(editor, { supportSideBySide: SideBySideEditor.PRIMARY });
+				if (!resource) {
+					continue;
+				}
+
+				const projectResource = this.getEditorProjectResource(resource, projects);
+				if (!projectResource) {
+					continue;
+				}
+
+				const entries = entriesByProject.get(projectResource.projectKey) ?? [];
 				entries.push({
 					editor,
+					resource,
+					path: projectResource.relativePath,
 					groupIndex,
-					index: group.getIndexOfEditor(editor),
-					pinned: group.isPinned(editor),
-					sticky: group.isSticky(editor),
-					active: groupIsActive && group.activeEditor === editor
+					index: group.getIndexOfEditor(editor)
 				});
+				entriesByProject.set(projectResource.projectKey, entries);
 			}
 		}
 
-		this.projectEditorStates.set(projectKey, { entries });
-	}
-
-	private async restoreProjectEditorState(projectKey: string | undefined): Promise<void> {
-		await this.closeVisibleEditorsForProjectSwitch();
-
-		if (!projectKey) {
-			return;
-		}
-
-		const state = this.projectEditorStates.get(projectKey);
-		if (!state?.entries.length) {
-			return;
-		}
-
-		const activeEntry = state.entries.find(entry => entry.active) ?? state.entries.at(-1);
-		const groups = this.editorGroupsService.getGroups(GroupsOrder.GRID_APPEARANCE);
-		const entriesByGroup = new Map<number, IVectorCodeEditorEntry[]>();
-		for (const entry of state.entries) {
-			const groupEntries = entriesByGroup.get(entry.groupIndex) ?? [];
-			groupEntries.push(entry);
-			entriesByGroup.set(entry.groupIndex, groupEntries);
-		}
-
-		for (const [groupIndex, entries] of entriesByGroup) {
-			const targetGroup = groups[groupIndex] ?? groups.at(-1) ?? this.editorGroupsService.activeGroup;
-			const inactiveEditors: EditorInputWithOptions[] = entries.map(entry => ({
-				editor: entry.editor,
-				options: {
-					index: entry.index,
-					pinned: entry.pinned,
-					sticky: entry.sticky,
-					preserveFocus: true,
-					inactive: true
-				}
-			}));
-			await targetGroup.openEditors(inactiveEditors);
-		}
-
-		if (activeEntry) {
-			const activeGroups = this.editorGroupsService.getGroups(GroupsOrder.GRID_APPEARANCE);
-			const targetGroup = activeGroups[activeEntry.groupIndex] ?? activeGroups.at(-1) ?? this.editorGroupsService.activeGroup;
-			await targetGroup.openEditor(activeEntry.editor, {
-				index: activeEntry.index,
-				pinned: activeEntry.pinned,
-				sticky: activeEntry.sticky,
-				preserveFocus: true
-			});
-		}
-	}
-
-	private async closeVisibleEditorsForProjectSwitch(): Promise<void> {
-		const preserveEditorGroups = this.editorGroupsService.enforcePartOptions({ closeEmptyGroups: false });
-		try {
-			for (const group of this.editorGroupsService.getGroups(GroupsOrder.MOST_RECENTLY_ACTIVE)) {
-				await group.closeAllEditors({ excludeConfirming: true });
-			}
-		} finally {
-			preserveEditorGroups.dispose();
-		}
+		return entriesByProject;
 	}
 
 	private captureProjectTerminalState(projectKey: string): readonly ITerminalInstance[] {
@@ -900,17 +844,11 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 	}
 
-	private getMobileEditorTabs(projectKey: string): IVectorCodeMobileRemoteEditorTab[] {
-		const state = this.projectEditorStates.get(projectKey);
-		if (!state?.entries.length) {
-			return [];
-		}
-
-		return state.entries.map((entry, index) => {
-			const resource = entry.editor.resource;
-			const path = resource ? this.labelService.getUriLabel(resource, { relative: true }) : entry.editor.getName();
+	private getMobileEditorTabs(projectKey: string, entries: readonly IVectorCodeEditorEntry[]): IVectorCodeMobileRemoteEditorTab[] {
+		return entries.map(entry => {
+			const path = entry.path;
 			return {
-				id: `${projectKey}:editor:${index}:${resource?.toString() ?? entry.editor.getName()}`,
+				id: `${projectKey}:editor:${entry.groupIndex}:${entry.index}:${entry.resource.toString()}`,
 				projectId: projectKey,
 				path,
 				title: entry.editor.getName(),
@@ -975,6 +913,27 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 	private getProjectById(projectId: string): IVectorCodeProjectSummary | undefined {
 		return this.getProjectSummaries().find(project => project.uri.toString() === projectId);
+	}
+
+	private getEditorProjectResource(resource: URI, projects: readonly IVectorCodeProjectSummary[]): { readonly projectKey: string; readonly relativePath: string } | undefined {
+		let bestProject: IVectorCodeProjectSummary | undefined;
+		for (const project of projects) {
+			if (!isEqualOrParent(resource, project.uri, true)) {
+				continue;
+			}
+			if (!bestProject || project.uri.path.length > bestProject.uri.path.length) {
+				bestProject = project;
+			}
+		}
+		if (!bestProject) {
+			return undefined;
+		}
+
+		const projectRelativePath = relativePath(bestProject.uri, resource);
+		return {
+			projectKey: bestProject.uri.toString(),
+			relativePath: projectRelativePath || this.labelService.getUriLabel(resource, { relative: true })
+		};
 	}
 
 	private resolveMobileProjectResource(project: IVectorCodeProjectSummary, relativePath: string, allowRoot: boolean): IVectorCodeMobileProjectResource | undefined {
@@ -1084,11 +1043,6 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 	private pruneProjectState(): void {
 		const projectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
-		for (const projectKey of this.projectEditorStates.keys()) {
-			if (!projectKeys.has(projectKey)) {
-				this.projectEditorStates.delete(projectKey);
-			}
-		}
 		this.terminalState.prune(projectKeys);
 
 		const activeProjectKey = this.activeProjectUri?.toString();

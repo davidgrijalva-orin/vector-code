@@ -1,0 +1,88 @@
+.section,
+.workflow-section {
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 0.9fr 1.1fr;
+  padding: 2.25rem 0 3rem;
+}
+
+.section-heading {
+  max-width: 380px;
+}
+
+.value-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.value-grid article {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.value-grid h3 {
+  font-size: 1rem;
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin: 0 0 0.6rem;
+}
+
+.value-grid p {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.workflow-list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.workflow-list div {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 3rem 1fr;
+  padding: 1rem;
+}
+
+.workflow-list div:last-child {
+  border-bottom: 0;
+}
+
+.workflow-list span {
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.workflow-list p {
+  margin: 0;
+}
+
+.download-section {
+  align-items: center;
+  background: var(--color-text);
+  border-radius: 8px;
+  color: var(--color-surface);
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+}
+
+.download-section h2 {
+  margin-bottom: 0.6rem;
+}
+
+.download-section p:not(.eyebrow) {
+  color: #c9d4d1;
+  margin: 0;
+}

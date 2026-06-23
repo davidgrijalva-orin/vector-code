@@ -1,6 +1,6 @@
 {
   "name": "vector-code-dev",
-  "version": "1.122.0",
+  "version": "1.122.1",
   "distro": "9897f32f1899b7b2c8e5d0701c5d99458bb8de9e",
   "author": {
     "name": "OrinTech"
@@ -45,6 +45,7 @@
     "update-grammars": "node build/npm/update-all-grammars.ts",
     "update-localization-extension": "node build/npm/update-localization-extension.ts",
     "vector-update-feed": "node build/lib/vectorUpdateFeed.ts",
+    "vector-release-update": "node scripts/vector-release-update.mjs",
     "generate-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs",
     "check-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs --check",
     "smoke-vector-relay": "node scripts/smoke-vector-code-relay.mjs",

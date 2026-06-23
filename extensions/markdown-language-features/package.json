@@ -414,15 +414,15 @@
           "markdown.defaultOpenMode": {
             "type": "string",
             "scope": "window",
-            "default": "rich",
+            "default": "markdown",
             "markdownDescription": "%configuration.markdown.defaultOpenMode.description%",
             "enum": [
-              "rich",
-              "markdown"
+              "markdown",
+              "rich"
             ],
             "enumDescriptions": [
-              "%configuration.markdown.defaultOpenMode.rich%",
-              "%configuration.markdown.defaultOpenMode.markdown%"
+              "%configuration.markdown.defaultOpenMode.markdown%",
+              "%configuration.markdown.defaultOpenMode.rich%"
             ]
           },
           "markdown.links.openLocation": {
@@ -856,8 +856,8 @@
     ],
     "configurationDefaults": {
       "workbench.editorAssociations": {
-        "*.md": "vectorcode.markdown.richEditor",
-        "*.markdown": "vectorcode.markdown.richEditor"
+        "*.md": "default",
+        "*.markdown": "default"
       },
       "[markdown]": {
         "editor.wordWrap": "on",

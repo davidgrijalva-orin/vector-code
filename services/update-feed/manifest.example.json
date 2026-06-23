@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "releases": [
     {
+      "version": "1.122.3",
+      "commit": "3588cf3373c2dd52ec82eff1d76f8c5853a6fe60",
+      "quality": "stable",
+      "timestamp": 1782234789696,
+      "assets": {
+        "darwin-arm64": {
+          "url": "https://github.com/davidgrijalva-orin/vector-code/releases/download/v1.122.3/Vector-Code-1.122.3-arm64.zip",
+          "sha256hash": "9ad845d537e2994cf27d6c8476a07c0b8966ad88337176c78bdb6e525126a97f",
+          "size": 367501079
+        }
+      }
+    },
+    {
       "version": "1.122.1",
       "commit": "471b3a2eaca4f0ffb759c1691fcfcb383f6f16bf",
       "quality": "stable",

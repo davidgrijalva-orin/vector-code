@@ -8,11 +8,12 @@ import severity from '../../../../base/common/severity.js';
 import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { URI } from '../../../../base/common/uri.js';
 import { IActivityService, NumberBadge, IBadge, ProgressBadge } from '../../../services/activity/common/activity.js';
+import { IStatusbarEntry, IStatusbarEntryAccessor, IStatusbarService, StatusbarAlignment } from '../../../services/statusbar/browser/statusbar.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IUpdateService, State as UpdateState, StateType } from '../../../../platform/update/common/update.js';
+import { IUpdate, IUpdateService, State as UpdateState, StateType } from '../../../../platform/update/common/update.js';
 import { INotificationService, NotificationPriority, Severity } from '../../../../platform/notification/common/notification.js';
 import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IBrowserWorkbenchEnvironmentService } from '../../../services/environment/browser/environmentService.js';
@@ -207,6 +208,7 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 
 	private state: UpdateState;
 	private readonly badgeDisposable = this._register(new MutableDisposable());
+	private readonly statusbarEntry = this._register(new MutableDisposable<IStatusbarEntryAccessor>());
 	private updateStateContextKey: IContextKey<string>;
 	private majorMinorUpdateAvailableContextKey: IContextKey<boolean>;
 
@@ -215,6 +217,7 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IUpdateService private readonly updateService: IUpdateService,
 		@IActivityService private readonly activityService: IActivityService,
+		@IStatusbarService private readonly statusbarService: IStatusbarService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IProductService private readonly productService: IProductService,
 	) {
@@ -224,6 +227,7 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 		this.majorMinorUpdateAvailableContextKey = MAJOR_MINOR_UPDATE_AVAILABLE.bindTo(contextKeyService);
 
 		this._register(updateService.onStateChange(this.onUpdateStateChange, this));
+		this.registerGlobalActivityActions();
 		this.onUpdateStateChange(this.updateService.state);
 
 		/*
@@ -243,7 +247,6 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 			storageService.remove('update/updateNotificationTime', StorageScope.APPLICATION);
 		}
 
-		this.registerGlobalActivityActions();
 	}
 
 	private async onUpdateStateChange(state: UpdateState): Promise<void> {
@@ -279,7 +282,108 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 			this.badgeDisposable.value = this.activityService.showGlobalActivity({ badge });
 		}
 
+		this.updateStatusbarEntry(state);
 		this.state = state;
+	}
+
+	private updateStatusbarEntry(state: UpdateState): void {
+		const entry = this.getStatusbarEntry(state);
+		if (!entry) {
+			this.statusbarEntry.clear();
+			return;
+		}
+
+		if (this.statusbarEntry.value) {
+			this.statusbarEntry.value.update(entry);
+		} else {
+			this.statusbarEntry.value = this.statusbarService.addEntry(entry, 'status.update', StatusbarAlignment.RIGHT, 10000);
+		}
+	}
+
+	private getStatusbarEntry(state: UpdateState): IStatusbarEntry | undefined {
+		const productName = this.productService.nameShort;
+
+		switch (state.type) {
+			case StateType.CheckingForUpdates:
+				if (!state.explicit) {
+					return undefined;
+				}
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: nls.localize('status.update.checking', "Checking for Updates..."),
+					ariaLabel: nls.localize('status.update.checking.aria', "Checking for {0} updates", productName),
+					tooltip: nls.localize('status.update.checking.tooltip', "Checking for {0} updates...", productName),
+					showProgress: 'loading'
+				};
+
+			case StateType.AvailableForDownload:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: `$(cloud-download) ${nls.localize('status.update.download', "Download Update")}`,
+					ariaLabel: nls.localize('status.update.download.aria', "Download {0} update{1}", productName, this.getStatusbarVersionSuffix(state.update)),
+					tooltip: nls.localize('status.update.download.tooltip', "{0} update{1} is available. Click to download it.", productName, this.getStatusbarVersionSuffix(state.update)),
+					command: 'update.downloadNow',
+					kind: 'prominent'
+				};
+
+			case StateType.Downloading:
+			case StateType.Overwriting:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: nls.localize('status.update.downloading', "Downloading Update..."),
+					ariaLabel: nls.localize('status.update.downloading.aria', "Downloading {0} update{1}", productName, this.getStatusbarVersionSuffix(state.update)),
+					tooltip: nls.localize('status.update.downloading.tooltip', "Downloading {0} update{1}...", productName, this.getStatusbarVersionSuffix(state.update)),
+					showProgress: 'loading',
+					kind: 'prominent'
+				};
+
+			case StateType.Downloaded:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: `$(cloud-upload) ${nls.localize('status.update.install', "Install Update")}`,
+					ariaLabel: nls.localize('status.update.install.aria', "Install {0} update{1}", productName, this.getStatusbarVersionSuffix(state.update)),
+					tooltip: nls.localize('status.update.install.tooltip', "{0} update{1} has downloaded. Click to install it.", productName, this.getStatusbarVersionSuffix(state.update)),
+					command: 'update.install',
+					kind: 'prominent'
+				};
+
+			case StateType.Updating:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: nls.localize('status.update.installing', "Installing Update..."),
+					ariaLabel: nls.localize('status.update.installing.aria', "Installing {0} update{1}", productName, this.getStatusbarVersionSuffix(state.update)),
+					tooltip: nls.localize('status.update.installing.tooltip', "Installing {0} update{1}...", productName, this.getStatusbarVersionSuffix(state.update)),
+					showProgress: 'loading',
+					kind: 'prominent'
+				};
+
+			case StateType.Ready:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: `$(sync) ${nls.localize('status.update.restart', "Restart to Update")}`,
+					ariaLabel: nls.localize('status.update.restart.aria', "Restart {0} to update{1}", productName, this.getStatusbarVersionSuffix(state.update)),
+					tooltip: nls.localize('status.update.restart.tooltip', "{0} update{1} is ready. Click to restart and update.", productName, this.getStatusbarVersionSuffix(state.update)),
+					command: 'update.restart',
+					kind: 'prominent'
+				};
+
+			case StateType.Restarting:
+				return {
+					name: nls.localize('status.update.name', "Update"),
+					text: nls.localize('status.update.restarting', "Restarting..."),
+					ariaLabel: nls.localize('status.update.restarting.aria', "Restarting {0} to update", productName),
+					tooltip: nls.localize('status.update.restarting.tooltip', "Restarting {0} to update...", productName),
+					showProgress: 'loading',
+					kind: 'prominent'
+				};
+		}
+
+		return undefined;
+	}
+
+	private getStatusbarVersionSuffix(update: IUpdate | undefined): string {
+		const version = update?.productVersion ?? update?.version;
+		return version ? nls.localize('updateStatus.versionSuffix', " to {0}", version) : '';
 	}
 
 	private registerGlobalActivityActions(): void {

@@ -1710,6 +1710,24 @@ body,
 	margin-bottom: 6px !important;
 }
 
+.monaco-workbench .part.activitybar > .content > .composite-bar .badge {
+	height: 34px;
+	left: 10px;
+	overflow: visible;
+	width: 34px;
+}
+
+.monaco-workbench .part.activitybar > .content > .composite-bar .badge .badge-content {
+	box-sizing: border-box;
+	font-size: 9px;
+	height: 14px;
+	line-height: 14px;
+	min-width: 14px;
+	padding: 0 3px;
+	right: 0;
+	top: 18px;
+}
+
 .monaco-workbench .activitybar > .content > div:not(.composite-bar) .action-item {
 	border-radius: 8px;
 	height: 32px;

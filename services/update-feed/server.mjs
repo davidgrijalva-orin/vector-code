@@ -7,6 +7,9 @@ const DEFAULT_MANIFEST_PATH = new URL('./manifest.example.json', import.meta.url
 const CACHE_TTL_MS = Number.parseInt(process.env.VECTOR_UPDATE_FEED_CACHE_TTL_MS ?? '30000', 10);
 const DEFAULT_DOWNLOAD_PLATFORM = process.env.VECTOR_CODE_DOWNLOAD_PLATFORM ?? 'darwin-arm64';
 const DEFAULT_DOWNLOAD_QUALITY = process.env.VECTOR_CODE_DOWNLOAD_QUALITY ?? 'stable';
+const MANIFEST_SOURCE_FILE = 'file';
+const MANIFEST_SOURCE_JSON = 'json';
+const MANIFEST_SOURCE_URL = 'url';
 
 let cachedManifest;
 let cachedAt = 0;
@@ -150,24 +153,44 @@ export function resolveVectorUpdate(feed, request) {
   };
 }
 
-async function readManifestSource() {
-  if (process.env.VECTOR_UPDATE_FEED_JSON) {
-    return process.env.VECTOR_UPDATE_FEED_JSON;
+function readRequiredEnv(name) {
+  const value = process.env[name];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${name} must be set when VECTOR_UPDATE_FEED_SOURCE=${process.env.VECTOR_UPDATE_FEED_SOURCE}`);
   }
 
-  if (process.env.VECTOR_UPDATE_FEED_URL) {
-    const response = await fetch(process.env.VECTOR_UPDATE_FEED_URL, {
-      headers: { 'accept': 'application/json' }
-    });
+  return value;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch update manifest: ${response.status} ${response.statusText}`);
-    }
-
-    return response.text();
-  }
-
+async function readManifestFile() {
   return readFile(process.env.VECTOR_UPDATE_FEED_PATH ?? DEFAULT_MANIFEST_PATH, 'utf8');
+}
+
+async function readManifestUrl() {
+  const manifestUrl = readRequiredEnv('VECTOR_UPDATE_FEED_URL');
+  const response = await fetch(manifestUrl, {
+    headers: { 'accept': 'application/json' }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch update manifest: ${response.status} ${response.statusText}`);
+  }
+
+  return response.text();
+}
+
+async function readManifestSource() {
+  const source = (process.env.VECTOR_UPDATE_FEED_SOURCE ?? MANIFEST_SOURCE_FILE).trim().toLowerCase();
+  switch (source) {
+    case MANIFEST_SOURCE_FILE:
+      return readManifestFile();
+    case MANIFEST_SOURCE_JSON:
+      return readRequiredEnv('VECTOR_UPDATE_FEED_JSON');
+    case MANIFEST_SOURCE_URL:
+      return readManifestUrl();
+    default:
+      throw new Error(`Invalid VECTOR_UPDATE_FEED_SOURCE: ${source}`);
+  }
 }
 
 async function loadManifest() {

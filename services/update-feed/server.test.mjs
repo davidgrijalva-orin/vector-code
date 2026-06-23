@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import {
   createUpdateFeedServer,
@@ -166,6 +169,22 @@ describe('createUpdateFeedServer', () => {
       assert.equal((await response.json()).version, 'second-commit');
     });
   });
+
+  it('uses the deployed manifest file by default even when stale env JSON exists', async () => {
+    await withTemporaryManifestFile(updateFeedManifest('0.1.6', 'file-commit', 700), async manifestPath => {
+      await withManifestEnv({
+        VECTOR_UPDATE_FEED_PATH: manifestPath,
+        VECTOR_UPDATE_FEED_JSON: JSON.stringify(updateFeedManifest('0.1.5', 'env-commit', 600)),
+        VECTOR_UPDATE_FEED_SOURCE: undefined
+      }, async () => {
+        await withRunningUpdateFeedServer(async origin => {
+          const response = await fetch(`${origin}/api/update/darwin-arm64/stable/old-commit`);
+          assert.equal(response.status, 200);
+          assert.equal((await response.json()).version, 'file-commit');
+        });
+      });
+    });
+  });
 });
 
 function updateFeedManifest(version, commit, timestamp) {
@@ -188,8 +207,15 @@ function updateFeedManifest(version, commit, timestamp) {
 }
 
 async function withUpdateFeedServer(manifest, run) {
-  const previousManifest = process.env.VECTOR_UPDATE_FEED_JSON;
-  process.env.VECTOR_UPDATE_FEED_JSON = JSON.stringify(manifest);
+  await withManifestEnv({
+    VECTOR_UPDATE_FEED_JSON: JSON.stringify(manifest),
+    VECTOR_UPDATE_FEED_SOURCE: 'json'
+  }, async () => {
+    await withRunningUpdateFeedServer(run);
+  });
+}
+
+async function withRunningUpdateFeedServer(run) {
   resetVectorUpdateFeedCache();
 
   const server = createUpdateFeedServer();
@@ -201,11 +227,45 @@ async function withUpdateFeedServer(manifest, run) {
     await run(`http://127.0.0.1:${address.port}`);
   } finally {
     await new Promise(resolve => server.close(resolve));
-    if (previousManifest === undefined) {
-      delete process.env.VECTOR_UPDATE_FEED_JSON;
+    resetVectorUpdateFeedCache();
+  }
+}
+
+async function withManifestEnv(nextEnv, run) {
+  const keys = Object.keys(nextEnv);
+  const previousEnv = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  for (const [key, value] of Object.entries(nextEnv)) {
+    if (value === undefined) {
+      delete process.env[key];
     } else {
-      process.env.VECTOR_UPDATE_FEED_JSON = previousManifest;
+      process.env[key] = value;
+    }
+  }
+
+  resetVectorUpdateFeedCache();
+
+  try {
+    await run();
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
     }
     resetVectorUpdateFeedCache();
+  }
+}
+
+async function withTemporaryManifestFile(manifest, run) {
+  const directory = await mkdtemp(join(tmpdir(), 'vector-update-feed-'));
+  const manifestPath = join(directory, 'manifest.json');
+  await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+  try {
+    await run(manifestPath);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 }

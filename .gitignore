@@ -28,6 +28,7 @@ product.overrides.json
 .chat-simulation-data
 vscode-telemetry-docs/
 test-output.json
+services/update-feed/public/releases/
 test/componentFixtures/.screenshots/*
 !test/componentFixtures/.screenshots/baseline/
 dist

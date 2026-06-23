@@ -2,22 +2,28 @@
   "schemaVersion": 1,
   "releases": [
     {
-      "version": "0.1.1",
-      "commit": "abc123releasecommit",
+      "version": "1.122.1",
+      "commit": "471b3a2eaca4f0ffb759c1691fcfcb383f6f16bf",
       "quality": "stable",
-      "timestamp": 1779553124000,
+      "timestamp": 1782185332056,
       "assets": {
         "darwin-arm64": {
-          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-arm64.zip",
-          "sha256hash": "..."
-        },
-        "darwin-universal": {
-          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-darwin-universal.zip",
-          "sha256hash": "..."
-        },
-        "linux-arm64": {
-          "url": "https://vectorcode.app/releases/0.1.1/Vector-Code-linux-arm64.tar.gz",
-          "sha256hash": "..."
+          "url": "https://github.com/davidgrijalva-orin/vector-code/releases/download/v1.122.1/Vector-Code-1.122.1-arm64.zip",
+          "sha256hash": "a0986fcbe01f2b8d42a932608e5c05676791407f3a2d0ebd31b5670cd6e35228",
+          "size": 373486367
+        }
+      }
+    },
+    {
+      "version": "1.122.0",
+      "commit": "7d0d7a4f35b35df4be2d280524543624e34e111f",
+      "quality": "stable",
+      "timestamp": 1780247559504,
+      "assets": {
+        "darwin-arm64": {
+          "url": "https://vectorcode.app/releases/1.122.0/Vector-Code-1.122.0-arm64.dmg",
+          "sha256hash": "bc7a1c07491915610fc91310c44987fd8bc51363ec9d948162a050a9a883ef36",
+          "size": 127555155
         }
       }
     }

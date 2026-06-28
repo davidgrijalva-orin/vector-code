@@ -39,7 +39,9 @@ struct VectorCodeNativeTerminalSurface: UIViewRepresentable {
         var onInput: (String) -> Void
         var onResize: (Int, Int) -> Void
         var onTitleChange: (String) -> Void
-        private var lastSize: (cols: Int, rows: Int)?
+        private var lastReportedSize: (cols: Int, rows: Int)?
+        private var lastSentSize: (cols: Int, rows: Int)?
+        private var pendingResize: DispatchWorkItem?
 
         init(
             onInput: @escaping (String) -> Void,
@@ -52,11 +54,30 @@ struct VectorCodeNativeTerminalSurface: UIViewRepresentable {
         }
 
         func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
-            guard lastSize?.cols != newCols || lastSize?.rows != newRows else {
+            guard newCols > 0, newRows > 0 else {
                 return
             }
-            lastSize = (newCols, newRows)
-            onResize(newCols, newRows)
+            guard lastReportedSize?.cols != newCols || lastReportedSize?.rows != newRows else {
+                return
+            }
+            lastReportedSize = (newCols, newRows)
+            // Debounce so transient sizes from keyboard and layout animations never
+            // reach the desktop PTY; every PTY resize forces full-screen apps to
+            // repaint, which stacks duplicate frames into the scrollback.
+            pendingResize?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.pendingResize = nil
+                guard self.lastSentSize?.cols != newCols || self.lastSentSize?.rows != newRows else {
+                    return
+                }
+                self.lastSentSize = (newCols, newRows)
+                self.onResize(newCols, newRows)
+            }
+            pendingResize = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
         }
 
         func setTerminalTitle(source: TerminalView, title: String) {
@@ -114,16 +135,10 @@ final class VectorCodeSwiftTermHostView: TerminalView {
             return
         }
 
-        if renderedTerminalId == terminalId, let renderedSnapshot, snapshot.hasPrefix(renderedSnapshot) {
-            let delta = String(snapshot.dropFirst(renderedSnapshot.count))
-            if !delta.isEmpty {
-                feed(text: delta)
-            }
-            self.renderedSnapshot = snapshot
-            setNeedsLayout()
-            return
-        }
-
+        // The snapshot is a serialized terminal buffer, not an append-only output
+        // stream: it embeds cursor, erase, and mode sequences that are only valid
+        // when replayed into a reset terminal, so feeding a suffix of it corrupts
+        // the screen. Always replay the full snapshot from a clean state.
         renderedTerminalId = terminalId
         getTerminal().resetToInitialState()
         if !snapshot.isEmpty {

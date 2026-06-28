@@ -222,6 +222,14 @@ jobs:
             '--clobber'
           )
           gh @uploadArgs
+      - name: Refresh branch before manifest update
+        if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git fetch origin "${{ github.ref_name }}"
+          git reset --hard "origin/${{ github.ref_name }}"
+
       - name: Update website update manifest
         if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}
         shell: pwsh
@@ -235,9 +243,9 @@ jobs:
           $systemSetup = '${{ steps.package.outputs.system_setup }}'
           $archive = '${{ steps.package.outputs.archive }}'
 
-          npm run vector-release-update -- --artifact "$artifactDir\$userSetup" --version $version --platform win32-x64-user --asset-name $userSetup --url "$releaseBase/$userSetup" --allow-dirty
-          npm run vector-release-update -- --artifact "$artifactDir\$systemSetup" --version $version --platform win32-x64 --asset-name $systemSetup --url "$releaseBase/$systemSetup" --allow-dirty
-          npm run vector-release-update -- --artifact "$artifactDir\$archive" --version $version --platform win32-x64-archive --asset-name $archive --url "$releaseBase/$archive" --allow-dirty
+          node scripts/vector-release-update.mjs --artifact "$artifactDir\$userSetup" --version $version --commit "${{ github.sha }}" --platform win32-x64-user --asset-name $userSetup --url "$releaseBase/$userSetup" --allow-dirty
+          node scripts/vector-release-update.mjs --artifact "$artifactDir\$systemSetup" --version $version --commit "${{ github.sha }}" --platform win32-x64 --asset-name $systemSetup --url "$releaseBase/$systemSetup" --allow-dirty
+          node scripts/vector-release-update.mjs --artifact "$artifactDir\$archive" --version $version --commit "${{ github.sha }}" --platform win32-x64-archive --asset-name $archive --url "$releaseBase/$archive" --allow-dirty
 
       - name: Push website manifest update
         if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}

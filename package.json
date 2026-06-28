@@ -44,7 +44,7 @@
     "7z": "7z",
     "update-grammars": "node build/npm/update-all-grammars.ts",
     "update-localization-extension": "node build/npm/update-localization-extension.ts",
-    "vector-update-feed": "node build/lib/vectorUpdateFeed.ts",
+    "vector-update-feed": "node --experimental-strip-types build/lib/vectorUpdateFeed.ts",
     "vector-release-update": "node scripts/vector-release-update.mjs",
     "generate-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs",
     "check-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs --check",

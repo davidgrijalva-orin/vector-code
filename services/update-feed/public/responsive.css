@@ -23,8 +23,14 @@
     flex-direction: column;
   }
 
-  .nav-links {
+  .nav-links,
+  .download-actions,
+  .footer-links {
     flex-wrap: wrap;
+  }
+
+  .download-actions {
+    justify-content: flex-start;
   }
 
   h1 {

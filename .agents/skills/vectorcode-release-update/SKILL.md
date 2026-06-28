@@ -21,7 +21,7 @@ Use this skill to move a desktop fix from source changes to a release manifest e
 Prepare or update the manifest entry from a release artifact:
 
 ```bash
-npm run vector-release-update -- \
+npm run vector-release-update -- -- \
   --artifact <path-to-signed-dmg> \
   --version <new-version> \
   --platform darwin-arm64 \
@@ -47,11 +47,11 @@ The command computes `sha256hash` and `size`, updates `services/update-feed/mani
    ```
 3. Commit the release changes, or stop and ask if the user has not approved committing.
 4. Build/package the macOS artifact. Prefer the established CI release artifact. For local smoke tests, use the repo's Darwin build flow from `build/azure-pipelines/darwin/steps/product-build-darwin-compile.yml`.
-5. Run `npm run vector-release-update -- --artifact ... --version ...`.
+5. Run `npm run vector-release-update -- -- --artifact ... --version ...`.
 6. Verify the feed locally:
    ```bash
-   npm run vector-update-feed -- --manifest services/update-feed/manifest.example.json --platform darwin-arm64 --quality stable --commit <old-installed-app-commit>
-   npm run vector-update-feed -- --manifest services/update-feed/manifest.example.json --platform darwin-arm64 --quality stable --commit <new-release-commit>
+   npm run vector-update-feed -- -- --manifest services/update-feed/manifest.example.json --platform darwin-arm64 --quality stable --commit <old-installed-app-commit>
+   npm run vector-update-feed -- -- --manifest services/update-feed/manifest.example.json --platform darwin-arm64 --quality stable --commit <new-release-commit>
    ```
    Expect JSON for the old commit and `204` for the new commit.
 7. Deploy or restart the update-feed service only after the artifact URL is reachable.

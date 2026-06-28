@@ -99,7 +99,10 @@ describe('createUpdateFeedServer', () => {
       const landing = await fetch(`${origin}/`);
       assert.equal(landing.status, 200);
       assert.match(landing.headers.get('content-type'), /text\/html/);
-      assert.match(await landing.text(), /Vector Code/);
+      const landingText = await landing.text();
+      assert.match(landingText, /Vector Code/);
+      assert.match(landingText, /\/download\/windows/);
+      assert.match(landingText, /\/download\/macos/);
 
       const styles = await fetch(`${origin}/styles.css`, { method: 'HEAD' });
       assert.equal(styles.status, 200);

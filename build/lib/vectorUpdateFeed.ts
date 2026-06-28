@@ -173,6 +173,10 @@ function parseArgs(argv: readonly string[]): Record<string, string | true> {
 
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
+		if (arg === '--') {
+			continue;
+		}
+
 		if (!arg.startsWith('--')) {
 			throw new Error(`Unexpected argument: ${arg}`);
 		}

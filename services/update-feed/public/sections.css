@@ -86,3 +86,22 @@
   color: #c9d4d1;
   margin: 0;
 }
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.download-section .button.secondary {
+  background: transparent;
+  border-color: #6f7d79;
+  color: var(--color-surface);
+}
+
+.download-section .button.secondary:hover,
+.download-section .button.secondary:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+  border-color: var(--color-surface);
+}

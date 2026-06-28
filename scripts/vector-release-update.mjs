@@ -16,6 +16,10 @@ function parseArgs(argv) {
 	const args = {};
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
+		if (arg === '--') {
+			continue;
+		}
+
 		if (!arg.startsWith('--')) {
 			throw new Error(`Unexpected argument: ${arg}`);
 		}
@@ -34,7 +38,7 @@ function parseArgs(argv) {
 
 function usage() {
 	console.log([
-		'Usage: npm run vector-release-update -- --artifact <path> [options]',
+		'Usage: npm run vector-release-update -- -- --artifact <path> [options]',
 		'',
 		'Prepares services/update-feed/manifest.example.json for a VectorCode desktop update release.',
 		'',

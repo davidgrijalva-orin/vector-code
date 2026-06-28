@@ -75,4 +75,4 @@ Do not rely on `VECTOR_UPDATE_FEED_JSON` being present by itself. It is ignored 
 - Endpoint serves an older release after deploy: verify `VECTOR_UPDATE_FEED_SOURCE` is unset or `file` unless an emergency JSON/URL override is intentional.
 - CTA appears but download fails: verify the asset URL with `curl -I <url>` and make sure the hash/size match the uploaded file.
 - UI shows same product version: release `version` was not bumped, even if the commit changed. Pass `--version` to `npm run vector-release-update`.
-- Local testing needs a static file: run `npm run vector-release-update -- --artifact <dmg> --version <version> --copy-to-public`.
+- Local testing needs a static file: run `npm run vector-release-update -- -- --artifact <dmg> --version <version> --copy-to-public`.

@@ -25,10 +25,10 @@
 	"win32ShellNameShort": "Vector C&ode",
 	"win32ContextMenu": {
 		"x64": {
-			"clsid": "{1C6DF0C0-192A-4451-BE36-6A59A86A692E}"
+			"clsid": "1C6DF0C0-192A-4451-BE36-6A59A86A692E"
 		},
 		"arm64": {
-			"clsid": "{1C6DF0C0-192A-4451-BE36-6A59A86A692E}"
+			"clsid": "1C6DF0C0-192A-4451-BE36-6A59A86A692E"
 		}
 	},
 	"win32TunnelServiceMutex": "vectorcode-tunnelservice",

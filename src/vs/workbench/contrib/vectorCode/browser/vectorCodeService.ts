@@ -23,6 +23,7 @@ import { ADD_ROOT_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCo
 import { GroupsOrder, IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
 import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
+import { IWorkspaceEditingService } from '../../../services/workspaces/common/workspaceEditing.js';
 import { REVEAL_IN_EXPLORER_COMMAND_ID } from '../../files/browser/fileConstants.js';
 import { VIEW_ID as EXPLORER_FILE_VIEW_ID, VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import { ITerminalGroupService, ITerminalInstance, ITerminalService } from '../../terminal/browser/terminal.js';
@@ -135,6 +136,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		@ITerminalService private readonly terminalService: ITerminalService,
 		@IViewsService private readonly viewsService: IViewsService,
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
 	) {
 		super();
 		this._register(this.terminalService.onDidCreateInstance(instance => this.terminalState.adopt(instance, this.activeProjectUri?.toString())));
@@ -268,6 +270,10 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	async addProjectToWorkspace(): Promise<void> {
 		await this.commandService.executeCommand(ADD_ROOT_FOLDER_COMMAND_ID);
 		await this.viewsService.openViewContainer(EXPLORER_VIEWLET_ID, true);
+	}
+
+	async closeProject(projectUri: URI): Promise<void> {
+		await this.workspaceEditingService.removeFolders([projectUri]);
 	}
 
 	async connectMobileApp(): Promise<void> {

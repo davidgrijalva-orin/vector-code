@@ -129,20 +129,30 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 
 		for (const project of projects) {
 			const projectUri = project.uri.toString();
-			const item = document.createElement('button');
+			const item = document.createElement('div');
 			item.className = 'vector-code-project-switcher__project';
 			item.classList.toggle('vector-code-project-switcher__project--active', projectUri === activeProjectUri);
-			item.type = 'button';
 			item.title = `${project.name}\n${project.uriLabel}`;
-			const name = append(item, $('.vector-code-project-switcher__project-name'));
+			const selectButton = document.createElement('button');
+			selectButton.className = 'vector-code-project-switcher__project-select';
+			selectButton.type = 'button';
+			selectButton.setAttribute('aria-label', localize('vectorCodeSelectProject', 'Select {0}', project.name));
+			const name = append(selectButton, $('.vector-code-project-switcher__project-name'));
 			name.textContent = project.name;
-			const path = append(item, $('.vector-code-project-switcher__project-path'));
+			const path = append(selectButton, $('.vector-code-project-switcher__project-path'));
 			path.textContent = project.uriLabel;
 			path.title = project.uriLabel;
+			item.appendChild(selectButton);
+			const closeButton = this.renderIconButton(item, localize('vectorCodeCloseProject', 'Close {0}', project.name), Codicon.close);
+			closeButton.classList.add('vector-code-project-switcher__project-close');
 			container.appendChild(item);
 
-			disposables.add(addDisposableListener(item, EventType.CLICK, () => {
+			disposables.add(addDisposableListener(selectButton, EventType.CLICK, () => {
 				void this.vectorCodeWorkbenchService.switchProject(project.uri);
+			}));
+			disposables.add(addDisposableListener(closeButton, EventType.CLICK, event => {
+				event.stopPropagation();
+				void this.vectorCodeWorkbenchService.closeProject(project.uri);
 			}));
 		}
 	}

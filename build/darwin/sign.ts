@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import { sign, type SignOptions } from '@electron/osx-sign';
 import { spawn } from '@malept/cross-spawn-promise';
 
@@ -29,6 +30,122 @@ function getEntitlementsForFile(filePath: string): string {
 		return path.join(baseDir, 'azure-pipelines', 'darwin', 'helper-entitlements.plist');
 	}
 	return path.join(baseDir, 'azure-pipelines', 'darwin', 'app-entitlements.plist');
+}
+
+function isMachO(filePath: string): boolean {
+	const buffer = Buffer.alloc(4);
+	let file: number | undefined;
+
+	try {
+		file = fs.openSync(filePath, 'r');
+		if (fs.readSync(file, buffer, 0, buffer.length, 0) !== buffer.length) {
+			return false;
+		}
+	} catch {
+		return false;
+	} finally {
+		if (file !== undefined) {
+			fs.closeSync(file);
+		}
+	}
+
+	const magic = buffer.readUInt32BE(0);
+	return magic === 0xfeedface
+		|| magic === 0xcefaedfe
+		|| magic === 0xfeedfacf
+		|| magic === 0xcffaedfe
+		|| magic === 0xcafebabe
+		|| magic === 0xbebafeca
+		|| magic === 0xcafebabf
+		|| magic === 0xbfbafeca;
+}
+
+function collectMachOBinaries(rootPath: string): string[] {
+	if (!fs.existsSync(rootPath)) {
+		return [];
+	}
+
+	const binaries: string[] = [];
+	for (const entry of fs.readdirSync(rootPath, { withFileTypes: true })) {
+		const entryPath = path.join(rootPath, entry.name);
+		if (entry.isDirectory()) {
+			binaries.push(...collectMachOBinaries(entryPath));
+		} else if (entry.isFile() && isMachO(entryPath)) {
+			binaries.push(entryPath);
+		}
+	}
+	return binaries;
+}
+
+function getAdditionalMachOBinaries(appPath: string): string[] {
+	const roots = [
+		path.join(appPath, 'Contents', 'Frameworks', 'Electron Framework.framework', 'Versions', 'A', 'Libraries'),
+		path.join(appPath, 'Contents', 'Resources', 'app', 'node_modules'),
+		path.join(appPath, 'Contents', 'Resources', 'app', 'extensions'),
+	];
+
+	return [...new Set(roots.flatMap(collectMachOBinaries))];
+}
+
+function runCodesign(args: string[]): string {
+	const result = spawnSync('codesign', args, { encoding: 'utf8' });
+	const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+
+	if (result.status !== 0) {
+		throw new Error(`codesign ${args.join(' ')} failed:\n${output}`);
+	}
+
+	return output;
+}
+
+function getTeamIdentifier(filePath: string): string {
+	const details = runCodesign(['-dvvv', filePath]);
+	const match = /^TeamIdentifier=(.+)$/m.exec(details);
+	if (!match) {
+		throw new Error(`Missing TeamIdentifier in code signature: ${filePath}`);
+	}
+	return match[1];
+}
+
+function assertTeamIdentifier(filePath: string, expectedTeamIdentifier: string): void {
+	const teamIdentifier = getTeamIdentifier(filePath);
+	if (teamIdentifier !== expectedTeamIdentifier) {
+		throw new Error(`Unexpected TeamIdentifier for ${filePath}: expected ${expectedTeamIdentifier}, got ${teamIdentifier}`);
+	}
+}
+
+function assertEntitlements(filePath: string, requiredEntitlements: string[]): void {
+	const entitlements = runCodesign(['-d', '--xml', '--entitlements', '-', filePath]);
+	for (const entitlement of requiredEntitlements) {
+		if (!entitlements.includes(`<key>${entitlement}</key>`)) {
+			throw new Error(`Missing entitlement ${entitlement}: ${filePath}`);
+		}
+	}
+}
+
+function validateSignedApp(appPath: string, additionalBinaries: string[]): void {
+	const teamIdentifier = getTeamIdentifier(appPath);
+	const helperBaseName = `${product.nameShort} Helper`;
+	const helperEntitlements = new Map<string, string[]>([
+		[`${helperBaseName}.app`, ['com.apple.security.cs.allow-jit']],
+		[`${helperBaseName} (Renderer).app`, ['com.apple.security.cs.allow-jit']],
+		[`${helperBaseName} (GPU).app`, ['com.apple.security.cs.allow-jit']],
+		[`${helperBaseName} (Plugin).app`, [
+			'com.apple.security.cs.allow-jit',
+			'com.apple.security.cs.allow-unsigned-executable-memory',
+			'com.apple.security.cs.disable-library-validation'
+		]],
+	]);
+
+	for (const [helperName, entitlements] of helperEntitlements) {
+		const helperPath = path.join(appPath, 'Contents', 'Frameworks', helperName);
+		assertEntitlements(helperPath, entitlements);
+		assertTeamIdentifier(helperPath, teamIdentifier);
+	}
+
+	for (const binary of additionalBinaries) {
+		assertTeamIdentifier(binary, teamIdentifier);
+	}
 }
 
 async function retrySignOnKeychainError<T>(fn: () => Promise<T>, maxRetries: number = 3): Promise<T> {
@@ -75,11 +192,13 @@ async function main(buildDir?: string): Promise<void> {
 
 	const appRoot = path.join(buildDir, `VSCode-darwin-${arch}`);
 	const appName = product.nameLong + '.app';
+	const appPath = path.join(appRoot, appName);
 	const infoPlistPath = path.resolve(appRoot, appName, 'Contents', 'Info.plist');
 
 	const appOpts: SignOptions = {
-		app: path.join(appRoot, appName),
+		app: appPath,
 		platform: 'darwin',
+		binaries: getAdditionalMachOBinaries(appPath),
 		optionsForFile: (filePath) => ({
 			entitlements: getEntitlementsForFile(filePath),
 			hardenedRuntime: true,
@@ -132,6 +251,7 @@ async function main(buildDir?: string): Promise<void> {
 	}
 
 	await retrySignOnKeychainError(() => sign(appOpts));
+	validateSignedApp(appPath, appOpts.binaries ?? []);
 }
 
 if (import.meta.main) {

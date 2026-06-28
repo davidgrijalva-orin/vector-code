@@ -86,6 +86,7 @@ export interface IVectorCodeWorkbenchService {
 	isProjectSwitching(): boolean;
 	switchProject(projectUri: URI | undefined): Promise<void>;
 	addProjectToWorkspace(): Promise<void>;
+	closeProject(projectUri: URI): Promise<void>;
 	connectMobileApp(): Promise<void>;
 	toggleActiveProjectTerminalPanel(): Promise<void>;
 }

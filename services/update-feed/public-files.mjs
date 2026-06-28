@@ -8,6 +8,7 @@ const PUBLIC_ROOT = fileURLToPath(new URL('./public/', import.meta.url));
 const CONTENT_TYPES = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.dmg', 'application/x-apple-diskimage'],
+  ['.exe', 'application/vnd.microsoft.portable-executable'],
   ['.html', 'text/html; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'],
   ['.png', 'image/png'],

@@ -23,6 +23,14 @@
 	"win32arm64UserAppId": "{{71AEF09A-3849-40A2-BE85-C5926CA6985D}",
 	"win32AppUserModelId": "Vector.Code",
 	"win32ShellNameShort": "Vector C&ode",
+	"win32ContextMenu": {
+		"x64": {
+			"clsid": "{1C6DF0C0-192A-4451-BE36-6A59A86A692E}"
+		},
+		"arm64": {
+			"clsid": "{1C6DF0C0-192A-4451-BE36-6A59A86A692E}"
+		}
+	},
 	"win32TunnelServiceMutex": "vectorcode-tunnelservice",
 	"win32TunnelMutex": "vectorcode-tunnel",
 	"darwinBundleIdentifier": "com.orintech.vectorcode",

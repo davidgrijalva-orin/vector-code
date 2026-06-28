@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -114,9 +114,37 @@ describe('createUpdateFeedServer', () => {
       const download = await fetch(`${origin}/download`, { redirect: 'manual' });
       assert.equal(download.status, 302);
       assert.equal(download.headers.get('location'), 'https://vectorcode.app/releases/0.1.5/Vector-Code-darwin-universal.zip');
+
+      const windowsDownload = await fetch(`${origin}/download/windows`, { redirect: 'manual' });
+      assert.equal(windowsDownload.status, 302);
+      assert.equal(windowsDownload.headers.get('location'), 'https://vectorcode.app/releases/0.1.5/Vector-Code-0.1.5-win32-x64-user-setup.exe');
+
+      const windowsDetectedDownload = await fetch(`${origin}/download`, {
+        redirect: 'manual',
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      });
+      assert.equal(windowsDetectedDownload.status, 302);
+      assert.equal(windowsDetectedDownload.headers.get('location'), 'https://vectorcode.app/releases/0.1.5/Vector-Code-0.1.5-win32-x64-user-setup.exe');
     });
   });
 
+  it('serves Windows release executables from public releases', async () => {
+    const releaseDir = new URL('./public/releases/test/', import.meta.url);
+    const releaseExe = new URL('Vector-Code-test.exe', releaseDir);
+    await mkdir(releaseDir, { recursive: true });
+    await writeFile(releaseExe, 'setup');
+
+    try {
+      await withUpdateFeedServer({ schemaVersion: 1, releases: [] }, async origin => {
+        const response = await fetch(`${origin}/releases/test/Vector-Code-test.exe`, { method: 'HEAD' });
+        assert.equal(response.status, 200);
+        assert.equal(await response.text(), '');
+        assert.match(response.headers.get('content-type'), /application\/vnd\.microsoft\.portable-executable/);
+      });
+    } finally {
+      await rm(releaseDir, { recursive: true, force: true });
+    }
+  });
   it('serves health and HEAD update checks without response bodies', async () => {
     await withUpdateFeedServer({
       schemaVersion: 1,
@@ -199,6 +227,15 @@ function updateFeedManifest(version, commit, timestamp) {
         assets: {
           'darwin-universal': {
             url: `https://vectorcode.app/releases/${version}/Vector-Code-darwin-universal.zip`
+          },
+          'win32-x64-user': {
+            url: `https://vectorcode.app/releases/${version}/Vector-Code-${version}-win32-x64-user-setup.exe`
+          },
+          'win32-x64': {
+            url: `https://vectorcode.app/releases/${version}/Vector-Code-${version}-win32-x64-system-setup.exe`
+          },
+          'win32-x64-archive': {
+            url: `https://vectorcode.app/releases/${version}/Vector-Code-${version}-win32-x64.zip`
           }
         }
       }

@@ -1,0 +1,236 @@
+name: Build Windows x64 Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag. Defaults to v<package.json version>.'
+        required: false
+        type: string
+      publish_github_release:
+        description: 'Upload the Windows artifacts to the GitHub Release.'
+        required: true
+        default: true
+        type: boolean
+      update_site_manifest:
+        description: 'Update services/update-feed/manifest.example.json and push it to this branch.'
+        required: true
+        default: true
+        type: boolean
+      make_latest:
+        description: 'Mark a newly-created GitHub Release as latest.'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-x64-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows-x64:
+    name: Build Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      VSCODE_ARCH: x64
+      NPM_ARCH: x64
+      npm_config_arch: x64
+      npm_config_foreground_scripts: 'true'
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      artifact_dir: ${{ steps.package.outputs.artifact_dir }}
+      user_setup: ${{ steps.package.outputs.user_setup }}
+      system_setup: ${{ steps.package.outputs.system_setup }}
+      archive: ${{ steps.package.outputs.archive }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Compute release metadata
+        id: meta
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
+          $version = [string]$package.version
+          $tag = '${{ inputs.release_tag }}'
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = "v$version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+          "asset_prefix=Vector-Code-$version-win32-x64" >> $env:GITHUB_OUTPUT
+
+      - name: Add Windows SDK tools to PATH
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $kitsRoot = 'C:\Program Files (x86)\Windows Kits\10\bin'
+          $sdk = Get-ChildItem -Path $kitsRoot -Directory |
+            Sort-Object Name -Descending |
+            ForEach-Object { Join-Path $_.FullName 'x64' } |
+            Where-Object { (Test-Path (Join-Path $_ 'signtool.exe')) -and (Test-Path (Join-Path $_ 'makeappx.exe')) } |
+            Select-Object -First 1
+          if (-not $sdk) {
+            throw "Windows SDK tools not found under $kitsRoot"
+          }
+          $sdk >> $env:GITHUB_PATH
+          Write-Host "Using Windows SDK tools: $sdk"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: npm ci
+
+      - name: Compile core
+        shell: pwsh
+        run: npm run gulp -- core-ci
+
+      - name: Prepare Windows Explorer context-menu assets
+        shell: pwsh
+        run: node build/win32/explorer-dll-fetcher.ts .build/win32/appx
+
+      - name: Build Windows x64 client
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run gulp -- vscode-win32-x64-min-ci
+          npm run gulp -- vscode-win32-x64-inno-updater
+
+      - name: Pack Windows AppX context-menu manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clientRoot = Resolve-Path '..\VSCode-win32-x64'
+          $manifestDir = Join-Path $clientRoot 'appx\manifest'
+          if (-not (Test-Path $manifestDir)) {
+            throw "Expected AppX manifest directory was not produced: $manifestDir"
+          }
+          $appxPath = Join-Path $clientRoot 'appx\code_x64.appx'
+          makeappx pack /d $manifestDir /p $appxPath /nv
+          Remove-Item -LiteralPath $manifestDir -Recurse -Force
+
+      - name: Build Windows setup installers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run gulp -- vscode-win32-x64-user-setup
+          npm run gulp -- vscode-win32-x64-system-setup
+
+      - name: Package release artifacts
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.meta.outputs.version }}'
+          $assetPrefix = '${{ steps.meta.outputs.asset_prefix }}'
+          $artifactDir = '.build\windows-x64-artifacts'
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $userSetup = "$assetPrefix-user-setup.exe"
+          $systemSetup = "$assetPrefix-system-setup.exe"
+          $archive = "$assetPrefix.zip"
+
+          Copy-Item -LiteralPath '.build\win32-x64\user-setup\VSCodeSetup.exe' -Destination (Join-Path $artifactDir $userSetup) -Force
+          Copy-Item -LiteralPath '.build\win32-x64\system-setup\VSCodeSetup.exe' -Destination (Join-Path $artifactDir $systemSetup) -Force
+
+          $archivePath = Join-Path $artifactDir $archive
+          if (Test-Path $archivePath) {
+            Remove-Item -LiteralPath $archivePath -Force
+          }
+          7z.exe a -tzip $archivePath '..\VSCode-win32-x64\*' '-xr!CodeSignSummary*.md'
+          7z.exe l $archivePath
+
+          Get-ChildItem -LiteralPath $artifactDir -File |
+            Sort-Object Name |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path -Leaf $_.Path)" } |
+            Set-Content -LiteralPath (Join-Path $artifactDir 'SHA256SUMS.txt')
+
+          "artifact_dir=$artifactDir" >> $env:GITHUB_OUTPUT
+          "user_setup=$userSetup" >> $env:GITHUB_OUTPUT
+          "system_setup=$systemSetup" >> $env:GITHUB_OUTPUT
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: vector-code-windows-x64-${{ steps.meta.outputs.version }}
+          path: .build/windows-x64-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release assets
+        if: ${{ inputs.publish_github_release }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ steps.meta.outputs.release_tag }}'
+          $version = '${{ steps.meta.outputs.version }}'
+          $releaseTitle = "Vector Code $version"
+          $notes = "Unsigned Windows x64 smoke build. Sign these assets before broad public distribution."
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $args = @('release', 'create', $tag, '--target', '${{ github.sha }}', '--title', $releaseTitle, '--notes', $notes)
+            if ('${{ inputs.make_latest }}' -ne 'true') {
+              $args += '--latest=false'
+            }
+            gh @args
+          }
+
+          $uploadArgs = @(
+            'release', 'upload', $tag,
+            (Join-Path '${{ steps.package.outputs.artifact_dir }}' '${{ steps.package.outputs.user_setup }}'),
+            (Join-Path '${{ steps.package.outputs.artifact_dir }}' '${{ steps.package.outputs.system_setup }}'),
+            (Join-Path '${{ steps.package.outputs.artifact_dir }}' '${{ steps.package.outputs.archive }}'),
+            (Join-Path '${{ steps.package.outputs.artifact_dir }}' 'SHA256SUMS.txt'),
+            '--clobber'
+          )
+          gh @uploadArgs
+      - name: Update website update manifest
+        if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.meta.outputs.version }}'
+          $tag = '${{ steps.meta.outputs.release_tag }}'
+          $releaseBase = "https://github.com/${{ github.repository }}/releases/download/$tag"
+          $artifactDir = '${{ steps.package.outputs.artifact_dir }}'
+          $userSetup = '${{ steps.package.outputs.user_setup }}'
+          $systemSetup = '${{ steps.package.outputs.system_setup }}'
+          $archive = '${{ steps.package.outputs.archive }}'
+
+          npm run vector-release-update -- --artifact "$artifactDir\$userSetup" --platform win32-x64-user --asset-name $userSetup --url "$releaseBase/$userSetup" --allow-dirty
+          npm run vector-release-update -- --artifact "$artifactDir\$systemSetup" --platform win32-x64 --asset-name $systemSetup --url "$releaseBase/$systemSetup" --allow-dirty
+          npm run vector-release-update -- --artifact "$artifactDir\$archive" --platform win32-x64-archive --asset-name $archive --url "$releaseBase/$archive" --allow-dirty
+
+      - name: Push website manifest update
+        if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $changed = git status --porcelain -- services/update-feed/manifest.example.json
+          if (-not $changed) {
+            Write-Host 'No update-feed manifest changes to push.'
+            exit 0
+          }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add services/update-feed/manifest.example.json
+          git commit -m "build: publish Windows x64 release metadata [skip ci]"
+          git push origin "HEAD:${{ github.ref_name }}"

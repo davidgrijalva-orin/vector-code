@@ -7,6 +7,40 @@ const DEFAULT_MANIFEST_PATH = new URL('./manifest.example.json', import.meta.url
 const CACHE_TTL_MS = Number.parseInt(process.env.VECTOR_UPDATE_FEED_CACHE_TTL_MS ?? '30000', 10);
 const DEFAULT_DOWNLOAD_PLATFORM = process.env.VECTOR_CODE_DOWNLOAD_PLATFORM ?? 'darwin-arm64';
 const DEFAULT_DOWNLOAD_QUALITY = process.env.VECTOR_CODE_DOWNLOAD_QUALITY ?? 'stable';
+const DOWNLOAD_ROUTES = new Map([
+  ['/download/macos', 'darwin-arm64'],
+  ['/download/macos-arm64', 'darwin-arm64'],
+  ['/download/windows', 'win32-x64-user'],
+  ['/download/windows-user', 'win32-x64-user'],
+  ['/download/windows-system', 'win32-x64'],
+  ['/download/windows-archive', 'win32-x64-archive']
+]);
+const DOWNLOAD_PLATFORM_IDS = new Set(DOWNLOAD_ROUTES.values());
+
+function inferDefaultDownloadPlatform(request) {
+  const userAgent = String(request.headers['user-agent'] ?? '').toLowerCase();
+  if (userAgent.includes('windows')) {
+    return 'win32-x64-user';
+  }
+  if (userAgent.includes('macintosh') || userAgent.includes('mac os')) {
+    return 'darwin-arm64';
+  }
+  return DEFAULT_DOWNLOAD_PLATFORM;
+}
+
+function getDownloadPlatform(url, request) {
+  const routePlatform = DOWNLOAD_ROUTES.get(url.pathname);
+  if (routePlatform) {
+    return routePlatform;
+  }
+
+  const queryPlatform = url.searchParams.get('platform');
+  if (queryPlatform && DOWNLOAD_PLATFORM_IDS.has(queryPlatform)) {
+    return queryPlatform;
+  }
+
+  return inferDefaultDownloadPlatform(request);
+}
 const MANIFEST_SOURCE_FILE = 'file';
 const MANIFEST_SOURCE_JSON = 'json';
 const MANIFEST_SOURCE_URL = 'url';
@@ -250,8 +284,10 @@ export function createUpdateFeedServer() {
         return;
       }
 
-      if (url.pathname === '/download' || url.pathname === '/download/macos' || url.pathname === '/download/macos-arm64') {
-        const download = selectLatestDownload(await loadManifest());
+      if (url.pathname === '/download' || DOWNLOAD_ROUTES.has(url.pathname)) {
+        const platform = getDownloadPlatform(url, request);
+        const quality = url.searchParams.get('quality') ?? DEFAULT_DOWNLOAD_QUALITY;
+        const download = selectLatestDownload(await loadManifest(), platform, quality);
         if (!download) {
           sendDownloadUnavailable(request, response);
           return;

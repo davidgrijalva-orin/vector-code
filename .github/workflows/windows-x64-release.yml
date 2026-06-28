@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'GitHub release tag. Defaults to v<package.json version>.'
+        description: 'GitHub release tag. Defaults to v<windows_version>.'
+        required: false
+        type: string
+      windows_version:
+        description: 'Windows app/release version. Defaults to <package.json version>-win1.'
         required: false
         type: string
       publish_github_release:
@@ -43,6 +47,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      package_version: ${{ steps.meta.outputs.package_version }}
       release_tag: ${{ steps.meta.outputs.release_tag }}
       artifact_dir: ${{ steps.package.outputs.artifact_dir }}
       user_setup: ${{ steps.package.outputs.user_setup }}
@@ -66,14 +71,19 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
-          $version = [string]$package.version
+          $packageVersion = [string]$package.version
+          $windowsVersion = '${{ inputs.windows_version }}'
+          if ([string]::IsNullOrWhiteSpace($windowsVersion)) {
+            $windowsVersion = "$packageVersion-win1"
+          }
           $tag = '${{ inputs.release_tag }}'
           if ([string]::IsNullOrWhiteSpace($tag)) {
-            $tag = "v$version"
+            $tag = "v$windowsVersion"
           }
-          "version=$version" >> $env:GITHUB_OUTPUT
+          "package_version=$packageVersion" >> $env:GITHUB_OUTPUT
+          "version=$windowsVersion" >> $env:GITHUB_OUTPUT
           "release_tag=$tag" >> $env:GITHUB_OUTPUT
-          "asset_prefix=Vector-Code-$version-win32-x64" >> $env:GITHUB_OUTPUT
+          "asset_prefix=Vector-Code-$windowsVersion-win32-x64" >> $env:GITHUB_OUTPUT
 
       - name: Add Windows SDK tools to PATH
         shell: pwsh
@@ -94,6 +104,17 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: npm ci
+
+      - name: Apply Windows build version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $windowsVersion = '${{ steps.meta.outputs.version }}'
+          $packagePath = 'package.json'
+          $package = Get-Content -Raw -Path $packagePath | ConvertFrom-Json
+          $package.version = $windowsVersion
+          $package | ConvertTo-Json -Depth 100 | Set-Content -Path $packagePath
+          Write-Host "Building Windows app version $windowsVersion from package version ${{ steps.meta.outputs.package_version }}"
 
       - name: Compile core
         shell: pwsh
@@ -180,7 +201,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $tag = '${{ steps.meta.outputs.release_tag }}'
           $version = '${{ steps.meta.outputs.version }}'
-          $releaseTitle = "Vector Code $version"
+          $releaseTitle = "Vector Code $version Windows"
           $notes = "Unsigned Windows x64 smoke build. Sign these assets before broad public distribution."
 
           gh release view $tag *> $null
@@ -214,9 +235,9 @@ jobs:
           $systemSetup = '${{ steps.package.outputs.system_setup }}'
           $archive = '${{ steps.package.outputs.archive }}'
 
-          npm run vector-release-update -- --artifact "$artifactDir\$userSetup" --platform win32-x64-user --asset-name $userSetup --url "$releaseBase/$userSetup" --allow-dirty
-          npm run vector-release-update -- --artifact "$artifactDir\$systemSetup" --platform win32-x64 --asset-name $systemSetup --url "$releaseBase/$systemSetup" --allow-dirty
-          npm run vector-release-update -- --artifact "$artifactDir\$archive" --platform win32-x64-archive --asset-name $archive --url "$releaseBase/$archive" --allow-dirty
+          npm run vector-release-update -- --artifact "$artifactDir\$userSetup" --version $version --platform win32-x64-user --asset-name $userSetup --url "$releaseBase/$userSetup" --allow-dirty
+          npm run vector-release-update -- --artifact "$artifactDir\$systemSetup" --version $version --platform win32-x64 --asset-name $systemSetup --url "$releaseBase/$systemSetup" --allow-dirty
+          npm run vector-release-update -- --artifact "$artifactDir\$archive" --version $version --platform win32-x64-archive --asset-name $archive --url "$releaseBase/$archive" --allow-dirty
 
       - name: Push website manifest update
         if: ${{ inputs.publish_github_release && inputs.update_site_manifest }}

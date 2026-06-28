@@ -979,8 +979,10 @@ body,
 }
 
 .vector-code-project-switcher__list {
+	align-content: start;
 	display: grid;
 	gap: 6px;
+	grid-auto-rows: max-content;
 	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;

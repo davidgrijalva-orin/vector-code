@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "releases": [
     {
+      "version": "1.122.5-win2",
+      "commit": "6ae7d352bf9dd95607ed8949ef444461c312e722",
+      "quality": "stable",
+      "timestamp": 1782862460909,
+      "assets": {
+        "win32-x64-user": {
+          "url": "https://github.com/davidgrijalva-orin/vector-code/releases/download/v1.122.5-win2/Vector-Code-1.122.5-win2-win32-x64-user-setup.exe",
+          "sha256hash": "4248ad0909eb40f0c4b6cbad77abed77e72ce1cce8fd8e51df18cf50c4860395",
+          "size": 154493458
+        },
+        "win32-x64": {
+          "url": "https://github.com/davidgrijalva-orin/vector-code/releases/download/v1.122.5-win2/Vector-Code-1.122.5-win2-win32-x64-system-setup.exe",
+          "sha256hash": "2a09dedaf5ce2b10bc021cd3254545298762a1a049872d9b6a49e4829702eb4b",
+          "size": 154493769
+        },
+        "win32-x64-archive": {
+          "url": "https://github.com/davidgrijalva-orin/vector-code/releases/download/v1.122.5-win2/Vector-Code-1.122.5-win2-win32-x64.zip",
+          "sha256hash": "83fe15618c098abfe361e7790d7631557b2587ef33196c18e0f0749ce1f14a9f",
+          "size": 233463253
+        }
+      }
+    },
+    {
       "version": "1.122.5-win1",
       "commit": "c73a239c9bee502009fb6cf768cb1ea8d219afab",
       "quality": "stable",

@@ -46,6 +46,8 @@
     "update-localization-extension": "node build/npm/update-localization-extension.ts",
     "vector-update-feed": "node --experimental-strip-types build/lib/vectorUpdateFeed.ts",
     "vector-release-update": "node scripts/vector-release-update.mjs",
+    "vector-build-smoke": "node scripts/vector-build-smoke.mjs",
+    "vector-device-smoke": "node scripts/vector-device-smoke.mjs",
     "generate-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs",
     "check-vector-mobile-config": "node scripts/generate-vector-code-mobile-config.mjs --check",
     "smoke-vector-relay": "node scripts/smoke-vector-code-relay.mjs",

@@ -12,7 +12,7 @@ import { sanitizeProcessEnvironment } from '../../../base/common/processes.js';
 import * as pfs from '../../../base/node/pfs.js';
 import * as processes from '../../../base/node/processes.js';
 import * as nls from '../../../nls.js';
-import { DEFAULT_TERMINAL_OSX, IExternalTerminalService, IExternalTerminalSettings, ITerminalForPlatform } from '../common/externalTerminal.js';
+import { DEFAULT_TERMINAL_OSX, IExternalTerminalOpenOptions, IExternalTerminalService, IExternalTerminalSettings, ITerminalForPlatform } from '../common/externalTerminal.js';
 import { ITerminalEnvironment } from '../../terminal/common/terminal.js';
 
 const TERMINAL_TITLE = nls.localize('console.title', "VS Code Console");
@@ -31,19 +31,21 @@ abstract class ExternalTerminalService {
 
 export class WindowsExternalTerminalService extends ExternalTerminalService implements IExternalTerminalService {
 	private static readonly CMD = 'cmd.exe';
+	private static readonly POWERSHELL = 'powershell.exe';
 	private static _DEFAULT_TERMINAL_WINDOWS: string;
 
-	public openTerminal(configuration: IExternalTerminalSettings, cwd?: string): Promise<void> {
-		return this.spawnTerminal(cp, configuration, processes.getWindowsShell(), cwd);
+	public openTerminal(configuration: IExternalTerminalSettings, cwd?: string, options?: IExternalTerminalOpenOptions): Promise<void> {
+		return this.spawnTerminal(cp, configuration, processes.getWindowsShell(), cwd, options);
 	}
 
-	public spawnTerminal(spawner: typeof cp, configuration: IExternalTerminalSettings, command: string, cwd?: string): Promise<void> {
+	public spawnTerminal(spawner: typeof cp, configuration: IExternalTerminalSettings, command: string, cwd?: string, options?: IExternalTerminalOpenOptions): Promise<void> {
+		if (options?.elevated) {
+			return this.spawnElevatedTerminal(spawner, configuration, cwd);
+		}
+
 		const exec = configuration.windowsExec || WindowsExternalTerminalService.getDefaultTerminalWindows();
 
-		// Make the drive letter uppercase on Windows (see #9448)
-		if (cwd && cwd[1] === ':') {
-			cwd = cwd[0].toUpperCase() + cwd.substr(1);
-		}
+		cwd = WindowsExternalTerminalService.normalizeCwd(cwd);
 
 		// cmder ignores the environment cwd and instead opts to always open in %USERPROFILE%
 		// unless otherwise specified
@@ -72,6 +74,57 @@ export class WindowsExternalTerminalService extends ExternalTerminalService impl
 			child.on('error', e);
 			child.on('exit', () => c());
 		});
+	}
+
+	private spawnElevatedTerminal(spawner: typeof cp, configuration: IExternalTerminalSettings, cwd?: string): Promise<void> {
+		const exec = configuration.windowsExec || WindowsExternalTerminalService.getDefaultTerminalWindows();
+		cwd = WindowsExternalTerminalService.normalizeCwd(cwd);
+		const command = WindowsExternalTerminalService.createElevatedTerminalPowerShellCommand(exec, cwd);
+		const encodedCommand = Buffer.from(command, 'utf16le').toString('base64');
+
+		return new Promise<void>((c, e) => {
+			const env = getSanitizedEnvironment(process);
+			const child = spawner.spawn(
+				WindowsExternalTerminalService.POWERSHELL,
+				['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand],
+				{ cwd, env, detached: true, windowsHide: true }
+			);
+			child.on('error', e);
+			child.on('exit', code => {
+				if (code === 0) {
+					c();
+					return;
+				}
+				e(new Error(nls.localize('terminal.elevatedLaunch.failed', "Launching an elevated terminal failed with exit code {0}", code)));
+			});
+		});
+	}
+
+	private static normalizeCwd(cwd: string | undefined): string | undefined {
+		if (cwd && cwd[1] === ':') {
+			return cwd[0].toUpperCase() + cwd.substr(1);
+		}
+		return cwd;
+	}
+
+	private static createElevatedTerminalPowerShellCommand(exec: string, cwd: string | undefined): string {
+		const basename = path.basename(exec, '.exe').toLowerCase();
+		const args: string[] = [];
+		if (basename === 'cmder' && cwd) {
+			args.push(cwd);
+		} else if (basename === 'wt' && cwd) {
+			args.push('-d', '.');
+		}
+
+		const commandParts = [`Start-Process -FilePath ${quotePowerShellString(exec)}`];
+		if (args.length) {
+			commandParts.push(`-ArgumentList @(${args.map(quotePowerShellString).join(', ')})`);
+		}
+		if (cwd) {
+			commandParts.push(`-WorkingDirectory ${quotePowerShellString(cwd)}`);
+		}
+		commandParts.push('-Verb RunAs');
+		return commandParts.join(' ');
 	}
 
 	public async runInTerminal(title: string, dir: string, args: string[], envVars: ITerminalEnvironment, settings: IExternalTerminalSettings): Promise<number | undefined> {
@@ -380,6 +433,10 @@ function setupSpawnErrorHandling(
 			}
 		}
 	});
+}
+
+function quotePowerShellString(value: string): string {
+	return `'${value.replace(/'/g, "''")}'`;
 }
 
 /**

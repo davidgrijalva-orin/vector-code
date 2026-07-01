@@ -88,6 +88,40 @@ suite('ExternalTerminalService', () => {
 		);
 	});
 
+	test(`WinTerminalService - elevated terminal uses PowerShell runas`, done => {
+		const testShell = 'cmd';
+		const testCwd = 'c:/foo';
+		let onExit: ((code: number) => void) | undefined;
+		const mockSpawner: any = {
+			spawn: (command: any, args: any, opts: any) => {
+				strictEqual(command, 'powershell.exe');
+				deepStrictEqual(args.slice(0, 3), ['-NoProfile', '-NonInteractive', '-EncodedCommand']);
+				strictEqual(opts.cwd, 'C:/foo');
+				strictEqual(opts.detached, true);
+				strictEqual(opts.windowsHide, true);
+				const decodedCommand = Buffer.from(args[3], 'base64').toString('utf16le');
+				strictEqual(decodedCommand, "Start-Process -FilePath 'wt' -ArgumentList @('-d', '.') -WorkingDirectory 'C:/foo' -Verb RunAs");
+				return {
+					on: (event: string, listener: (code: number) => void) => {
+						if (event === 'exit') {
+							onExit = listener;
+						}
+					}
+				};
+			}
+		};
+		const testService = new WindowsExternalTerminalService();
+		const promise = testService.spawnTerminal(
+			mockSpawner,
+			{ windowsExec: 'wt' },
+			testShell,
+			testCwd,
+			{ elevated: true }
+		);
+		onExit?.(0);
+		promise.then(() => done(), done);
+	});
+
 	test(`WinTerminalService - cmder should be spawned differently`, done => {
 		const testShell = 'cmd';
 		const testCwd = 'c:/foo';

@@ -123,6 +123,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	private readonly terminalState = this._register(new VectorCodeMobileTerminalStateStore(VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES));
 	private projectSwitching = false;
 	private projectSwitchQueue = Promise.resolve();
+	private projectKeys = new Set<string>();
 
 	constructor(
 		@ICommandService private readonly commandService: ICommandService,
@@ -139,7 +140,8 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
 	) {
 		super();
-		this._register(this.terminalService.onDidCreateInstance(instance => this.terminalState.adopt(instance, this.activeProjectUri?.toString())));
+		this.projectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
+		this._register(this.terminalService.onDidCreateInstance(instance => this.adoptTerminalInstance(instance)));
 		this._register(this.terminalService.onDidDisposeInstance(instance => this.terminalState.forget(instance)));
 		this._register(this.terminalService.onDidChangeActiveInstance(instance => {
 			const projectKey = instance ? this.terminalState.getProjectKey(instance) : undefined;
@@ -147,7 +149,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				this.terminalState.setActive(projectKey, instance);
 			}
 		}));
-		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(() => this.pruneProjectState()));
+		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(() => this.handleWorkspaceFoldersChanged()));
 		this._register(this.mobileRelayService.registerRequestHandler({
 			handleVectorCodeMobileRemoteRequest: request => this.handleVectorCodeMobileRemoteRequest(request)
 		}));
@@ -268,7 +270,12 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	}
 
 	async addProjectToWorkspace(): Promise<void> {
+		const previousProjectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
 		await this.commandService.executeCommand(ADD_ROOT_FOLDER_COMMAND_ID);
+		const addedProject = this.getProjectSummaries().find(project => !previousProjectKeys.has(project.uri.toString()));
+		if (addedProject) {
+			await this.switchProject(addedProject.uri);
+		}
 		await this.viewsService.openViewContainer(EXPLORER_VIEWLET_ID, true);
 	}
 
@@ -809,6 +816,27 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		};
 	}
 
+	private adoptTerminalInstance(instance: ITerminalInstance, forceProject = false): void {
+		this.terminalState.adopt(instance, this.getTerminalProjectKey(instance), forceProject);
+	}
+
+	private getTerminalProjectKey(instance: ITerminalInstance): string | undefined {
+		const cwd = this.getTerminalCwdResource(instance);
+		const project = cwd ? this.getProjectForResource(cwd) : undefined;
+		return project?.uri.toString() ?? this.activeProjectUri?.toString();
+	}
+
+	private getTerminalCwdResource(instance: ITerminalInstance): URI | undefined {
+		const cwd = instance.shellLaunchConfig.cwd ?? instance.cwd ?? instance.initialCwd;
+		if (URI.isUri(cwd)) {
+			return cwd;
+		}
+		if (typeof cwd === 'string' && cwd.length) {
+			return URI.file(cwd);
+		}
+		return undefined;
+	}
+
 	private async restoreTerminalLayoutState(state: IVectorCodeTerminalLayoutState): Promise<void> {
 		if (state.panelVisible && state.terminalVisible) {
 			if (!this.layoutService.isVisible(Parts.PANEL_PART)) {
@@ -922,6 +950,19 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	}
 
 	private getEditorProjectResource(resource: URI, projects: readonly IVectorCodeProjectSummary[]): { readonly projectKey: string; readonly relativePath: string } | undefined {
+		const project = this.getProjectForResource(resource, projects);
+		if (!project) {
+			return undefined;
+		}
+
+		const projectRelativePath = relativePath(project.uri, resource);
+		return {
+			projectKey: project.uri.toString(),
+			relativePath: projectRelativePath || this.labelService.getUriLabel(resource, { relative: true })
+		};
+	}
+
+	private getProjectForResource(resource: URI, projects: readonly IVectorCodeProjectSummary[] = this.getProjectSummaries()): IVectorCodeProjectSummary | undefined {
 		let bestProject: IVectorCodeProjectSummary | undefined;
 		for (const project of projects) {
 			if (!isEqualOrParent(resource, project.uri, true)) {
@@ -931,15 +972,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				bestProject = project;
 			}
 		}
-		if (!bestProject) {
-			return undefined;
-		}
-
-		const projectRelativePath = relativePath(bestProject.uri, resource);
-		return {
-			projectKey: bestProject.uri.toString(),
-			relativePath: projectRelativePath || this.labelService.getUriLabel(resource, { relative: true })
-		};
+		return bestProject;
 	}
 
 	private resolveMobileProjectResource(project: IVectorCodeProjectSummary, relativePath: string, allowRoot: boolean): IVectorCodeMobileProjectResource | undefined {
@@ -1047,13 +1080,25 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		await this.commandService.executeCommand(REVEAL_IN_EXPLORER_COMMAND_ID, projectUri);
 	}
 
-	private pruneProjectState(): void {
-		const projectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
+	private handleWorkspaceFoldersChanged(): void {
+		const projects = this.getProjectSummaries();
+		const projectKeys = new Set(projects.map(project => project.uri.toString()));
+		const addedProject = projects.find(project => !this.projectKeys.has(project.uri.toString()));
+		this.projectKeys = projectKeys;
+		this.pruneProjectState(projects, projectKeys, addedProject?.uri);
+	}
+
+	private pruneProjectState(projects: readonly IVectorCodeProjectSummary[], projectKeys: ReadonlySet<string>, preferredProjectUri?: URI): void {
 		this.terminalState.prune(projectKeys);
+
+		if (preferredProjectUri) {
+			void this.switchProject(preferredProjectUri);
+			return;
+		}
 
 		const activeProjectKey = this.activeProjectUri?.toString();
 		if (activeProjectKey && !projectKeys.has(activeProjectKey)) {
-			const nextProject = this.getProjectSummaries()[0]?.uri;
+			const nextProject = projects[0]?.uri;
 			void this.switchProject(nextProject);
 		}
 	}

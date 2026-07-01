@@ -57,6 +57,7 @@ import { isAuxiliaryWindow, mainWindow } from '../../../../base/browser/window.j
 import { GroupIdentifier } from '../../../common/editor.js';
 import { getActiveWindow } from '../../../../base/browser/dom.js';
 import { hasKey, isString } from '../../../../base/common/types.js';
+import { IVectorCodeWorkbenchService } from '../../vectorCode/common/vectorCode.js';
 
 interface IBackgroundTerminal {
 	instance: ITerminalInstance;
@@ -253,6 +254,7 @@ export class TerminalService extends Disposable implements ITerminalService {
 					icon: result.config.options?.icon,
 					color: result.config.options?.color,
 					location: !!(keyMods?.alt && activeInstance) ? { splitActiveTerminal: true } : defaultLocation,
+					cwd: cwd ?? this._getVectorCodeTerminalCwd(),
 					titleTemplate: result.config.titleTemplate,
 				});
 				return;
@@ -1183,6 +1185,17 @@ export class TerminalService extends Disposable implements ITerminalService {
 		}));
 	}
 
+	private _getVectorCodeTerminalCwd(): URI | undefined {
+		try {
+			return this._instantiationService.invokeFunction(accessor => {
+				const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
+				return vectorCodeWorkbenchService.getActiveProjectUri() ?? vectorCodeWorkbenchService.getProjectSummaries()[0]?.uri;
+			});
+		} catch {
+			return undefined;
+		}
+	}
+
 	private async _resolveCwd(shellLaunchConfig: IShellLaunchConfig, splitActiveTerminal: boolean, options?: ICreateTerminalOptions): Promise<void> {
 		const cwd = shellLaunchConfig.cwd;
 		if (!cwd) {
@@ -1197,6 +1210,11 @@ export class TerminalService extends Disposable implements ITerminalService {
 					throw new Error('Cannot split without an active instance');
 				}
 				shellLaunchConfig.cwd = await getCwdForSplit(parent, this._workspaceContextService.getWorkspace().folders, this._commandService, this._terminalConfigurationService);
+			} else if (!shellLaunchConfig.attachPersistentProcess) {
+				const vectorCodeCwd = this._getVectorCodeTerminalCwd();
+				if (vectorCodeCwd) {
+					shellLaunchConfig.cwd = vectorCodeCwd;
+				}
 			}
 		}
 	}

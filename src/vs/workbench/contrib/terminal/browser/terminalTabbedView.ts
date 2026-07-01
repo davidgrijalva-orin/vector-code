@@ -6,7 +6,9 @@
 import { LayoutPriority, Orientation, Sizing, SplitView } from '../../../../base/browser/ui/splitview/splitview.js';
 import { Disposable, DisposableStore, dispose, IDisposable } from '../../../../base/common/lifecycle.js';
 import { Event } from '../../../../base/common/event.js';
+import { isWindows } from '../../../../base/common/platform.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ITerminalConfigurationService, ITerminalGroupService, ITerminalInstance, ITerminalService, TerminalConnectionState, TerminalDataTransfers } from './terminal.js';
 import { TerminalTabList } from './terminalTabsList.js';
@@ -27,7 +29,7 @@ import { IHoverService } from '../../../../platform/hover/browser/hover.js';
 import { containsDragType } from '../../../../platform/dnd/browser/dnd.js';
 import { getTerminalResourcesFromDragEvent, parseTerminalUri } from './terminalUri.js';
 import type { IProcessDetails } from '../../../../platform/terminal/common/terminalProcess.js';
-import { IVectorCodeWorkbenchService } from '../../vectorCode/common/vectorCode.js';
+import { IVectorCodeWorkbenchService, VECTOR_CODE_OPEN_ADMIN_TERMINAL_COMMAND_ID } from '../../vectorCode/common/vectorCode.js';
 
 const $ = dom.$;
 
@@ -89,6 +91,7 @@ export class TerminalTabbedView extends Disposable {
 		@IHoverService private readonly _hoverService: IHoverService,
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 		@IWorkbenchLayoutService private readonly _layoutService: IWorkbenchLayoutService,
+		@ICommandService private readonly _commandService: ICommandService,
 		@IVectorCodeWorkbenchService private readonly _vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 	) {
 		super();
@@ -338,6 +341,20 @@ export class TerminalTabbedView extends Disposable {
 			event.stopPropagation();
 			void this._createPanelTerminal();
 		}));
+
+		if (isWindows) {
+			const adminTerminalButton = document.createElement('button');
+			adminTerminalButton.className = 'vector-terminal-tabs-action codicon codicon-shield';
+			adminTerminalButton.type = 'button';
+			adminTerminalButton.title = localize('vectorTerminalOpenAdminTerminalWindow', 'Open Admin Terminal Window (external UAC)');
+			adminTerminalButton.setAttribute('aria-label', localize('vectorTerminalOpenAdminTerminalWindowAria', 'Open Admin Terminal Window, external UAC'));
+			this._horizontalTabActions.appendChild(adminTerminalButton);
+			this._horizontalTabDisposables.add(dom.addDisposableListener(adminTerminalButton, dom.EventType.CLICK, event => {
+				event.preventDefault();
+				event.stopPropagation();
+				void this._commandService.executeCommand(VECTOR_CODE_OPEN_ADMIN_TERMINAL_COMMAND_ID);
+			}));
+		}
 
 		const panelOnRight = this._layoutService.getPanelPosition() === Position.RIGHT;
 		const positionButton = document.createElement('button');

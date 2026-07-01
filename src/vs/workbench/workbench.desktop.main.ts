@@ -155,6 +155,9 @@ import './contrib/tasks/electron-browser/taskService.js';
 // External terminal
 import './contrib/externalTerminal/electron-browser/externalTerminal.contribution.js';
 
+// Vector Code
+import './contrib/vectorCode/electron-browser/vectorCodeAdminTerminal.contribution.js';
+
 // Webview
 import './contrib/webview/electron-browser/webview.contribution.js';
 

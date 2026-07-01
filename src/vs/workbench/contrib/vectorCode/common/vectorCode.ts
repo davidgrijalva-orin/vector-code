@@ -16,6 +16,7 @@ export const VECTOR_CODE_PROJECTS_VIEW_ID = 'workbench.views.vectorCode.projects
 export const VECTOR_CODE_OPEN_CONTROL_COMMAND_ID = 'vectorCode.openControl';
 export const VECTOR_CODE_ADD_PROJECT_COMMAND_ID = 'vectorCode.addProjectToWorkspace';
 export const VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID = 'vectorCode.connectMobileApp';
+export const VECTOR_CODE_OPEN_ADMIN_TERMINAL_COMMAND_ID = 'vectorCode.openAdminTerminalWindow';
 
 export interface IVectorCodeProjectSummary {
 	readonly name: string;

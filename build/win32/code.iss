@@ -1689,6 +1689,7 @@ end;
 #ifdef AppxPackageName
 var
   AppxPackageFullname: String;
+  BackgroundUpdateSwapComplete: Boolean;
 
 procedure ExecAndGetFirstLineLog(const S: String; const Error, FirstLine: Boolean);
 begin
@@ -1716,6 +1717,11 @@ begin
   Log('Get-AppxPackage result: name=' + name + ', installed=' + BoolToStr(Result) + ', resultCode=' + IntToStr(ResultCode) + ', packageFullName=' + AppxPackageFullname);
 end;
 
+function ShouldDeferAppxPackageRegistration(): Boolean;
+begin
+  Result := IsBackgroundUpdate() and not IsVersionedUpdate() and not BackgroundUpdateSwapComplete;
+end;
+
 procedure AddAppxPackage();
 var
   AddAppxPackageResultCode: Integer;
@@ -1723,6 +1729,11 @@ var
 begin
   if SessionEndFileExists() then begin
     Log('Skipping Add-AppxPackage because session end was detected.');
+    exit;
+  end;
+
+  if ShouldDeferAppxPackageRegistration() then begin
+    Log('Deferring Add-AppxPackage until the background update swap completes.');
     exit;
   end;
 
@@ -1737,6 +1748,18 @@ begin
     Log('Add-AppxPackage complete with result code ' + IntToStr(AddAppxPackageResultCode) + '.');
   end else begin
     Log('Skipping Add-AppxPackage because package is already installed.');
+  end;
+end;
+
+procedure PrepareAppxForBackgroundUpdateSwap();
+begin
+  if IsVersionedUpdate() then
+    exit;
+
+  if DirExists(ExpandConstant('{app}\appx')) then begin
+    Log('Deleting stale appx directory before background update swap.');
+    if not DelTree(ExpandConstant('{app}\appx'), True, True, True) then
+      Log('Failed to delete stale appx directory before background update swap.');
   end;
 end;
 
@@ -1811,8 +1834,22 @@ begin
 
       if not SessionEndFileExists() and not CancelFileExists() then begin
         StopTunnelServiceIfNeeded();
+#ifdef AppxPackageName
+        PrepareAppxForBackgroundUpdateSwap();
+#endif
         Log('Invoking inno_updater for background update');
         Exec(ExpandConstant('{app}\{#VersionedResourcesFolder}\tools\inno_updater.exe'), ExpandConstant('"{app}\{#ExeBasename}.exe" ' + BoolToStr(LockFileExists()) + ' "{cm:UpdatingVisualStudioCode}"'), '', SW_SHOW, ewWaitUntilTerminated, UpdateResultCode);
+        if not FileExists(ExpandConstant('{app}\{#ExeBasename}.exe')) then begin
+          DeleteFile(ExpandConstant('{app}\updating_version'));
+          Log('inno_updater did not restore the application executable; aborting background update.');
+          Abort;
+        end;
+#ifdef AppxPackageName
+        if not IsVersionedUpdate() and ShouldUseWindows11ContextMenu() then begin
+          BackgroundUpdateSwapComplete := True;
+          AddAppxPackage();
+        end;
+#endif
         DeleteFile(ExpandConstant('{app}\updating_version'));
         Log('inno_updater completed successfully');
         #if "system" == InstallTarget

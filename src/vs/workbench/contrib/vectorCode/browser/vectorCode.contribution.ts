@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, addDisposableListener, append, clearNode, EventType } from '../../../../base/browser/dom.js';
+import { $, addDisposableListener, append, clearNode, EventType, setVisibility } from '../../../../base/browser/dom.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
@@ -33,19 +33,25 @@ import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import {
 	IVectorCodeMobileConnectionStatus,
 	IVectorCodeMobileRelayService,
+	IVectorCodeCodexService,
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
 	VECTOR_CODE_CONTROL_VIEW_ID,
+	VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
+	VECTOR_CODE_CODEX_VIEW_ID,
 	VECTOR_CODE_PROJECTS_VIEW_ID,
 	VECTOR_CODE_VIEW_CONTAINER_ID,
+	VectorCodeCodexConnectionState,
 	VectorCodeMobileConnectionState
 } from '../common/vectorCode.js';
 import './vectorCodeActions.js';
+import './vectorCodeCodexService.js';
 import './vectorCodeMobileRelayService.js';
 import './vectorCodeService.js';
 import './media/vectorCode.css';
 
 const vectorCodeIcon = registerIcon('vector-code-view-icon', Codicon.deviceMobile, localize('vectorCodeViewIcon', 'View icon of the phone connection view.'));
+const vectorCodeCodexIcon = registerIcon('vector-code-codex-view-icon', Codicon.sparkle, localize('vectorCodeCodexViewIcon', 'View icon of the Codex view.'));
 
 interface IVectorCodeStatusCard {
 	readonly card: HTMLElement;
@@ -57,6 +63,7 @@ abstract class VectorCodeViewPane extends ViewPane {
 	constructor(
 		options: IViewletViewOptions,
 		@ICommandService protected readonly commandService: ICommandService,
+		@IVectorCodeCodexService protected readonly codexService: IVectorCodeCodexService,
 		@IVectorCodeWorkbenchService protected readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 		@IWorkspaceContextService protected readonly workspaceContextService: IWorkspaceContextService,
 		@IVectorCodeMobileRelayService protected readonly mobileRelayService: IVectorCodeMobileRelayService,
@@ -164,6 +171,265 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 		button.setAttribute('aria-label', title);
 		const iconNode = append(button, $('.vector-code-project-switcher__icon'));
 		iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
+		container.appendChild(button);
+		return button;
+	}
+}
+
+class VectorCodeCodexView extends VectorCodeViewPane {
+
+	protected static override readonly collapsible = false;
+
+	protected override renderBody(container: HTMLElement): void {
+		super.renderBody(container);
+		container.classList.add('vector-code-codex-view');
+
+		const root = append(container, $('.vector-code-codex'));
+		const header = append(root, $('.vector-code-codex__header'));
+		const status = append(header, $('.vector-code-codex__status'));
+		const project = append(header, $('.vector-code-codex__project'));
+		const account = append(header, $('.vector-code-codex__account'));
+
+		const toolbar = append(root, $('.vector-code-codex__toolbar'));
+		const newButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexNew', 'New'), Codicon.add);
+		const refreshButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexRefresh', 'Refresh'), Codicon.refresh);
+		const pluginsButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexPlugins', 'Plugins'), Codicon.extensions);
+		const pluginsButtonLabel = pluginsButton.lastElementChild as HTMLElement;
+		const forkButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexFork', 'Fork'), Codicon.gitPullRequestCreate);
+		const archiveButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexArchive', 'Archive'), Codicon.archive);
+
+		const threadSelect = document.createElement('select');
+		threadSelect.className = 'vector-code-codex__select vector-code-codex__thread-select';
+		threadSelect.setAttribute('aria-label', localize('vectorCodeCodexConversation', 'Codex conversation'));
+		root.appendChild(threadSelect);
+
+		const settings = append(root, $('.vector-code-codex__settings'));
+		const modelSelect = document.createElement('select');
+		modelSelect.className = 'vector-code-codex__select';
+		modelSelect.setAttribute('aria-label', localize('vectorCodeCodexModel', 'Codex model'));
+		settings.appendChild(modelSelect);
+		const effortSelect = document.createElement('select');
+		effortSelect.className = 'vector-code-codex__select';
+		effortSelect.setAttribute('aria-label', localize('vectorCodeCodexReasoningEffort', 'Reasoning effort'));
+		settings.appendChild(effortSelect);
+
+		const messages = append(root, $('.vector-code-codex__messages'));
+		const emptyAction = $('.vector-code-codex__empty-action');
+		const openProjectButton = this.renderCodexButton(emptyAction, localize('vectorCodeCodexOpenProject', 'Open Project'), Codicon.folderOpened);
+		const composer = append(root, $('.vector-code-codex__composer'));
+		const prompt = document.createElement('textarea');
+		prompt.className = 'vector-code-codex__prompt';
+		prompt.rows = 4;
+		prompt.placeholder = localize('vectorCodeCodexPromptPlaceholder', 'Ask Codex to work on this project...');
+		prompt.setAttribute('aria-label', localize('vectorCodeCodexPrompt', 'Message Codex'));
+		composer.appendChild(prompt);
+		const composerActions = append(composer, $('.vector-code-codex__composer-actions'));
+		const terminalButton = this.renderCodexButton(composerActions, localize('vectorCodeCodexFullTerminal', 'Full Terminal'), Codicon.terminal);
+		const stopButton = this.renderCodexButton(composerActions, localize('vectorCodeCodexStop', 'Stop'), Codicon.debugStop);
+		const sendButton = this.renderCodexButton(composerActions, localize('vectorCodeCodexSend', 'Send'), Codicon.send);
+		sendButton.classList.add('vector-code-codex__button--primary');
+
+		const run = (operation: () => Promise<void>): void => {
+			void operation().catch(error => this.notificationService.error(error instanceof Error ? error.message : String(error)));
+		};
+		const sendPrompt = (): void => {
+			const text = prompt.value.trim();
+			if (!text || this.codexService.getState().turnInProgress) {
+				return;
+			}
+			prompt.value = '';
+			updateComposer();
+			run(async () => {
+				try {
+					await this.codexService.sendMessage(text);
+				} catch (error) {
+					if (!prompt.value) {
+						prompt.value = text;
+						updateComposer();
+					}
+					throw error;
+				}
+			});
+		};
+		const updateComposer = (): void => {
+			const state = this.codexService.getState();
+			const ready = state.connectionState === VectorCodeCodexConnectionState.Ready;
+			const projectReady = Boolean(state.activeProjectPath);
+			const canMessage = ready && projectReady && !state.requiresAuthentication;
+			prompt.disabled = !canMessage;
+			prompt.placeholder = state.requiresAuthentication
+				? localize('vectorCodeCodexPromptSignInRequired', 'Sign in from the Codex terminal to send messages')
+				: projectReady
+					? localize('vectorCodeCodexPromptPlaceholder', 'Ask Codex to work on this project...')
+					: localize('vectorCodeCodexPromptProjectRequired', 'Open a local project to message Codex');
+			sendButton.disabled = !canMessage || state.turnInProgress || !prompt.value.trim();
+			terminalButton.disabled = !projectReady || state.turnInProgress;
+			stopButton.disabled = !state.turnInProgress;
+			setVisibility(state.turnInProgress, stopButton);
+		};
+
+		const render = (): void => {
+			const state = this.codexService.getState();
+			status.textContent = state.detail;
+			status.classList.toggle('vector-code-codex__status--error', state.connectionState === VectorCodeCodexConnectionState.Error);
+			project.textContent = state.activeProjectName
+				? localize('vectorCodeCodexActiveProject', 'Project: {0}', state.activeProjectName)
+				: localize('vectorCodeCodexNoActiveProject', 'No project open');
+			project.title = state.activeProjectPath ?? '';
+			account.textContent = state.accountLabel ?? '';
+			setVisibility(Boolean(state.accountLabel), account);
+
+			clearNode(threadSelect);
+			const emptyThreadOption = document.createElement('option');
+			emptyThreadOption.value = '';
+			emptyThreadOption.textContent = !state.activeProjectPath
+				? localize('vectorCodeCodexOpenProjectForConversations', 'Open a project to load conversations')
+				: state.threads.length
+					? localize('vectorCodeCodexSelectConversation', 'Select a conversation')
+					: localize('vectorCodeCodexNoConversations', 'No conversations yet');
+			threadSelect.appendChild(emptyThreadOption);
+			if (state.activeThreadId && !state.threads.some(thread => thread.id === state.activeThreadId)) {
+				const activeThreadOption = document.createElement('option');
+				activeThreadOption.value = state.activeThreadId;
+				activeThreadOption.textContent = localize('vectorCodeCodexNewConversation', 'New conversation');
+				threadSelect.appendChild(activeThreadOption);
+			}
+			for (const thread of state.threads) {
+				const option = document.createElement('option');
+				option.value = thread.id;
+				option.textContent = thread.title;
+				option.title = new Date(thread.updatedAt * 1_000).toLocaleString();
+				threadSelect.appendChild(option);
+			}
+			threadSelect.value = state.activeThreadId ?? '';
+			threadSelect.disabled = state.connectionState !== VectorCodeCodexConnectionState.Ready || !state.activeProjectPath || state.turnInProgress;
+
+			clearNode(modelSelect);
+			for (const model of state.models) {
+				const option = document.createElement('option');
+				option.value = model.id;
+				option.textContent = model.label;
+				option.title = model.description;
+				modelSelect.appendChild(option);
+			}
+			modelSelect.value = state.selectedModel ?? '';
+			modelSelect.disabled = !state.models.length || state.turnInProgress;
+
+			clearNode(effortSelect);
+			const selectedModel = state.models.find(model => model.id === state.selectedModel);
+			for (const effort of selectedModel?.reasoningEfforts ?? []) {
+				const option = document.createElement('option');
+				option.value = effort;
+				option.textContent = effort;
+				effortSelect.appendChild(option);
+			}
+			effortSelect.value = state.selectedReasoningEffort ?? '';
+			effortSelect.disabled = !selectedModel?.reasoningEfforts.length || state.turnInProgress;
+			setVisibility(Boolean(state.models.length), settings);
+
+			const shouldFollow = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 72;
+			clearNode(messages);
+			if (!state.messages.length) {
+				const empty = append(messages, $('.vector-code-codex__empty'));
+				const emptyIcon = append(empty, $('.vector-code-codex__empty-icon'));
+				emptyIcon.classList.add(...ThemeIcon.asClassNameArray(Codicon.sparkle));
+				const emptyTitle = append(empty, $('.vector-code-codex__empty-title'));
+				emptyTitle.textContent = !state.activeProjectPath
+					? state.activeProjectName
+						? localize('vectorCodeCodexLocalProjectNeeded', 'Reopen this project locally')
+						: localize('vectorCodeCodexOpenProjectToStart', 'Open a project to start')
+					: state.requiresAuthentication
+						? localize('vectorCodeCodexSignInTitle', 'Sign in to use Codex')
+						: state.connectionState === VectorCodeCodexConnectionState.Retrying
+							? localize('vectorCodeCodexReconnecting', 'Reconnecting to Codex')
+							: state.connectionState === VectorCodeCodexConnectionState.Error
+								? localize('vectorCodeCodexUnavailable', 'Codex is unavailable')
+								: localize('vectorCodeCodexReadyToBuild', 'What should Codex build?');
+				const emptyDetail = append(empty, $('.vector-code-codex__empty-detail'));
+				emptyDetail.textContent = !state.activeProjectPath
+					? localize('vectorCodeCodexProjectScopeDetail', 'Project selection keeps files, terminals, conversations, and Codex changes in one explicit workspace.')
+					: state.requiresAuthentication
+						? localize('vectorCodeCodexSignInDetail', 'Open the Codex terminal, complete sign-in, then return here. Vector Code will detect the account change.')
+						: state.connectionState === VectorCodeCodexConnectionState.Retrying
+							? localize('vectorCodeCodexReconnectDetail', 'The app-server exited unexpectedly. Vector Code is restarting it with bounded backoff.')
+							: state.connectionState === VectorCodeCodexConnectionState.Error
+								? localize('vectorCodeCodexRetryDetail', 'Use Refresh to retry, or open the full terminal experience for setup and diagnostics.')
+								: localize('vectorCodeCodexReadyToBuildDetail', 'Codex can inspect files, run commands, edit the project, and verify its work.');
+				if (!state.activeProjectPath) {
+					empty.appendChild(emptyAction);
+				}
+			} else {
+				for (const message of state.messages) {
+					const card = append(messages, $(`.vector-code-codex__message.vector-code-codex__message--${message.role}`));
+					const messageHeader = append(card, $('.vector-code-codex__message-header'));
+					const title = append(messageHeader, $('.vector-code-codex__message-title'));
+					title.textContent = message.title;
+					if (message.status) {
+						const messageStatus = append(messageHeader, $('.vector-code-codex__message-status'));
+						messageStatus.textContent = message.status;
+					}
+					const text = document.createElement('pre');
+					text.className = 'vector-code-codex__message-text';
+					text.textContent = message.text;
+					card.appendChild(text);
+				}
+			}
+			if (shouldFollow) {
+				messages.scrollTop = messages.scrollHeight;
+			}
+
+			const ready = state.connectionState === VectorCodeCodexConnectionState.Ready;
+			newButton.disabled = !ready || !state.activeProjectPath || state.requiresAuthentication || state.turnInProgress;
+			refreshButton.disabled = state.connectionState === VectorCodeCodexConnectionState.Starting;
+			pluginsButton.disabled = !ready || state.turnInProgress;
+			pluginsButtonLabel.textContent = localize('vectorCodeCodexPluginsCount', 'Plugins ({0})', state.installedPluginCount);
+			pluginsButton.title = localize('vectorCodeCodexManagePlugins', 'Manage {0} installed Codex plugin(s)', state.installedPluginCount);
+			forkButton.disabled = !ready || !state.activeThreadId || state.turnInProgress;
+			archiveButton.disabled = !ready || !state.activeThreadId || state.turnInProgress;
+			updateComposer();
+		};
+
+		this._register(addDisposableListener(newButton, EventType.CLICK, () => run(() => this.codexService.createThread())));
+		this._register(addDisposableListener(openProjectButton, EventType.CLICK, () => run(() => this.vectorCodeWorkbenchService.addProjectToWorkspace())));
+		this._register(addDisposableListener(refreshButton, EventType.CLICK, () => run(async () => {
+			await this.codexService.ensureReady();
+			await this.codexService.refreshThreads();
+		})));
+		this._register(addDisposableListener(pluginsButton, EventType.CLICK, () => run(() => this.codexService.managePlugins())));
+		this._register(addDisposableListener(forkButton, EventType.CLICK, () => run(() => this.codexService.forkActiveThread())));
+		this._register(addDisposableListener(archiveButton, EventType.CLICK, () => run(() => this.codexService.archiveActiveThread())));
+		this._register(addDisposableListener(threadSelect, EventType.CHANGE, () => {
+			if (threadSelect.value) {
+				run(() => this.codexService.selectThread(threadSelect.value));
+			}
+		}));
+		this._register(addDisposableListener(modelSelect, EventType.CHANGE, () => this.codexService.selectModel(modelSelect.value)));
+		this._register(addDisposableListener(effortSelect, EventType.CHANGE, () => this.codexService.selectModel(modelSelect.value, effortSelect.value)));
+		this._register(addDisposableListener(prompt, EventType.INPUT, updateComposer));
+		this._register(addDisposableListener(prompt, EventType.KEY_DOWN, event => {
+			const keyboardEvent = event as KeyboardEvent;
+			if (keyboardEvent.key === 'Enter' && (keyboardEvent.ctrlKey || keyboardEvent.metaKey)) {
+				keyboardEvent.preventDefault();
+				sendPrompt();
+			}
+		}));
+		this._register(addDisposableListener(sendButton, EventType.CLICK, sendPrompt));
+		this._register(addDisposableListener(stopButton, EventType.CLICK, () => run(() => this.codexService.interruptTurn())));
+		this._register(addDisposableListener(terminalButton, EventType.CLICK, () => run(() => this.vectorCodeWorkbenchService.openCodexTerminal())));
+		this._register(this.codexService.onDidChangeState(render));
+
+		render();
+		run(() => this.codexService.ensureReady());
+	}
+
+	private renderCodexButton(container: HTMLElement, label: string, icon: ThemeIcon): HTMLButtonElement {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'vector-code-codex__button';
+		const iconNode = append(button, $('.vector-code-codex__button-icon'));
+		iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
+		const labelNode = append(button, $('.vector-code-codex__button-label'));
+		labelNode.textContent = label;
 		container.appendChild(button);
 		return button;
 	}
@@ -334,6 +600,20 @@ class VectorCodeControlView extends VectorCodeViewPane {
 	}
 }
 
+const vectorCodeCodexViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
+	id: VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
+	title: localize2('vectorCodeCodex', 'Codex'),
+	icon: vectorCodeCodexIcon,
+	ctorDescriptor: new SyncDescriptor(ViewPaneContainer, [VECTOR_CODE_CODEX_VIEW_CONTAINER_ID, { mergeViewWithContainerWhenSingleView: true }]),
+	storageId: VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
+	order: 0,
+	openCommandActionDescriptor: {
+		id: VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
+		mnemonicTitle: localize({ key: 'miViewVectorCodeCodex', comment: ['&& denotes a mnemonic'] }, '&&Codex'),
+		order: 0,
+	},
+}, ViewContainerLocation.Sidebar);
+
 const vectorCodeViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
 	id: VECTOR_CODE_VIEW_CONTAINER_ID,
 	title: localize2('vectorCode', 'Phone Connection'),
@@ -351,6 +631,16 @@ const vectorCodeViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensi
 const viewContainersRegistry = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry);
 const viewsRegistry = Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry);
 const explorerViewContainer = viewContainersRegistry.get(EXPLORER_VIEWLET_ID);
+
+viewsRegistry.registerViews([{
+	id: VECTOR_CODE_CODEX_VIEW_ID,
+	name: localize2('vectorCodeCodexView', 'Codex'),
+	containerIcon: vectorCodeCodexIcon,
+	canToggleVisibility: false,
+	canMoveView: false,
+	ctorDescriptor: new SyncDescriptor(VectorCodeCodexView),
+	order: 0,
+}], vectorCodeCodexViewContainer);
 
 viewsRegistry.registerViews([{
 	id: VECTOR_CODE_CONTROL_VIEW_ID,

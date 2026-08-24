@@ -5,6 +5,7 @@ Vector Code is OrinTech's native workbench for project-based development. It kee
 ## Current Product Surface
 
 - Project switcher with per-project file, editor, terminal, task, and session state
+- Native Codex view with project-scoped thread history, streaming turns, approvals, model controls, Codex plugin discovery/management, and a full terminal fallback
 - Phone Connection view for QR pairing through the relay-backed mobile bridge
 - Terminal panel with per-project terminal tabs and persistent hidden sessions
 - Rich Markdown editor with editable preview as the default `.md` experience
@@ -17,6 +18,7 @@ Use the repository scripts for local development and validation. Extension work 
 ```bash
 npm run gulp compile-extensions
 npm run compile-check-ts-native
+npm run smoke-vector-codex
 ```
 
 ## Notes

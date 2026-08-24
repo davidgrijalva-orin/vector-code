@@ -2903,6 +2903,7 @@ export class TerminalInstanceColorProvider implements IXtermColorProvider {
 function guessShellTypeFromExecutable(os: OperatingSystem, executable: string): TerminalShellType | undefined {
 	const exeBasename = path.basename(executable);
 	const generalShellTypeMap: Map<TerminalShellType, RegExp> = new Map([
+		[GeneralShellType.Codex, /^codex(?:\.exe|\.cmd)?$/i],
 		[GeneralShellType.Julia, /^julia$/],
 		[GeneralShellType.Node, /^node$/],
 		[GeneralShellType.NuShell, /^nu$/],

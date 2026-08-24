@@ -18,10 +18,11 @@ import { TestDialogService } from '../../../../../../platform/dialogs/test/commo
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { INotificationService } from '../../../../../../platform/notification/common/notification.js';
 import { TestNotificationService } from '../../../../../../platform/notification/test/common/testNotificationService.js';
-import { TerminalSettingId } from '../../../../../../platform/terminal/common/terminal.js';
-import { ITerminalConfigurationService, ITerminalInstance, IXtermTerminal } from '../../../../terminal/browser/terminal.js';
+import { GeneralShellType, TerminalSettingId } from '../../../../../../platform/terminal/common/terminal.js';
+import { ITerminalConfigurationService, ITerminalInstance, ITerminalService, IXtermTerminal } from '../../../../terminal/browser/terminal.js';
+import type { ITerminalServicesCollection } from '../../../../terminal/browser/terminalActions.js';
 import { ITerminalContributionContext } from '../../../../terminal/browser/terminalExtensions.js';
-import { TerminalClipboardContribution } from '../../browser/terminal.clipboard.contribution.js';
+import { findAgentCliTerminal, prepareSelectionForTerminalInput, sendSelectionToTerminalInput, TerminalClipboardContribution } from '../../browser/terminal.clipboard.contribution.js';
 import { shouldPasteTerminalText } from '../../browser/terminalClipboard.js';
 
 suite('TerminalClipboard', function () {
@@ -164,6 +165,155 @@ suite('TerminalClipboard', function () {
 		test('Empty clipboard', async () => {
 			await contribution.paste();
 			strictEqual(pasted, '');
+		});
+	});
+
+	suite('TerminalClipboardContribution.handleMouseEvent', () => {
+		let instantiationService: TestInstantiationService;
+		let clipboardService: TestClipboardService;
+
+		setup(() => {
+			instantiationService = store.add(new TestInstantiationService());
+			instantiationService.stub(IConfigurationService, new TestConfigurationService({
+				[TerminalSettingId.EnableMultiLinePasteWarning]: 'never',
+				[TerminalSettingId.CopyOnSelection]: false
+			}));
+			instantiationService.stub(IDialogService, new TestDialogService());
+			instantiationService.stub(INotificationService, new TestNotificationService());
+			instantiationService.stub(ITerminalConfigurationService, upcastPartial<ITerminalConfigurationService>({
+				config: upcastPartial<ITerminalConfigurationService['config']>({
+					rightClickBehavior: 'copyPaste',
+					middleClickBehavior: 'default'
+				})
+			}));
+			clipboardService = new TestClipboardService();
+			instantiationService.stub(IClipboardService, clipboardService);
+		});
+
+		function createContribution(hasSelection: boolean): { contribution: TerminalClipboardContribution; copied: () => boolean; cleared: () => boolean } {
+			let copied = false;
+			let cleared = false;
+			const ctx = upcastPartial<ITerminalContributionContext>({
+				instance: upcastPartial<ITerminalInstance>({
+					focus: () => { },
+					hasSelection: () => hasSelection,
+					clearSelection: () => { cleared = true; }
+				})
+			});
+			const contribution = store.add(instantiationService.createInstance(TerminalClipboardContribution, ctx));
+			contribution.xtermReady(upcastDeepPartial<IXtermTerminal & { raw: RawXtermTerminal }>({
+				copySelection: async () => { copied = true; },
+				onDidRequestCopyAsHtml: Event.None,
+				raw: {
+					onSelectionChange: Event.None,
+					modes: { bracketedPasteMode: false },
+					paste: () => { }
+				}
+			}));
+			return { contribution, copied: () => copied, cleared: () => cleared };
+		}
+
+		test('Right click with copyPaste and selection lets the context menu open', async () => {
+			const { contribution, copied, cleared } = createContribution(true);
+
+			const result = await contribution.handleMouseEvent(upcastPartial<MouseEvent>({ button: 2, shiftKey: false }));
+
+			strictEqual(result, undefined);
+			strictEqual(copied(), false);
+			strictEqual(cleared(), false);
+		});
+
+		test('Right click with copyPaste and no selection still pastes', async () => {
+			await clipboardService.writeText('hello');
+			const { contribution } = createContribution(false);
+			const didPaste = Event.toPromise(contribution.onDidPaste);
+
+			const result = await contribution.handleMouseEvent(upcastPartial<MouseEvent>({ button: 2, shiftKey: false }));
+
+			strictEqual(result?.handled, true);
+			strictEqual(await didPaste, 'hello');
+		});
+	});
+
+	suite('terminal selection actions', () => {
+		function createInstance(shellType: GeneralShellType, selection?: string): ITerminalInstance {
+			return upcastPartial<ITerminalInstance>({ shellType, selection });
+		}
+
+		function createServices(target: ITerminalInstance, calls: string[]): ITerminalServicesCollection {
+			return upcastPartial<ITerminalServicesCollection>({
+				service: upcastPartial<ITerminalService>({
+					setActiveInstance: instance => {
+						strictEqual(instance, target);
+						calls.push('activate');
+					},
+					revealTerminal: async instance => {
+						strictEqual(instance, target);
+						calls.push('reveal');
+					}
+				})
+			});
+		}
+
+		test('findAgentCliTerminal prefers the active supported agent', () => {
+			const codex = createInstance(GeneralShellType.Codex);
+			const claude = createInstance(GeneralShellType.Claude);
+			const shell = createInstance(GeneralShellType.PowerShell);
+
+			strictEqual(findAgentCliTerminal([codex, claude, shell], claude), claude);
+			strictEqual(findAgentCliTerminal([shell, codex, claude], shell), codex);
+			strictEqual(findAgentCliTerminal([shell], shell), undefined);
+		});
+
+		test('prepareSelectionForTerminalInput preserves safe multiline paste and flattens unsafe newlines', () => {
+			strictEqual(prepareSelectionForTerminalInput('first\r\nsecond\n', true), 'first\r\nsecond');
+			strictEqual(prepareSelectionForTerminalInput('first\r\n\r\nsecond\n', false), 'first second');
+		});
+
+		test('sendSelectionToTerminalInput preserves multiline text with bracketed paste', async () => {
+			const calls: string[] = [];
+			const source = createInstance(GeneralShellType.PowerShell, 'first line\nsecond line\n');
+			const target = upcastPartial<ITerminalInstance>({
+				shellType: GeneralShellType.Codex,
+				xterm: upcastDeepPartial<NonNullable<ITerminalInstance['xterm']>>({ raw: { modes: upcastPartial<RawXtermTerminal['modes']>({ bracketedPasteMode: true }) } }),
+				sendText: async (text, shouldExecute, bracketedPasteMode) => {
+					strictEqual(text, 'first line\nsecond line');
+					strictEqual(shouldExecute, false);
+					strictEqual(bracketedPasteMode, true);
+					calls.push('send');
+				},
+				focusWhenReady: async force => {
+					strictEqual(force, true);
+					calls.push('focus');
+				}
+			});
+
+			await sendSelectionToTerminalInput(source, target, createServices(target, calls), new TestNotificationService());
+
+			strictEqual(JSON.stringify(calls), JSON.stringify(['activate', 'reveal', 'send', 'focus']));
+		});
+
+		test('sendSelectionToTerminalInput flattens newlines when bracketed paste is unavailable', async () => {
+			const calls: string[] = [];
+			const source = createInstance(GeneralShellType.PowerShell, 'first line\r\nsecond line\n');
+			const target = upcastPartial<ITerminalInstance>({
+				shellType: GeneralShellType.PowerShell,
+				xterm: upcastDeepPartial<NonNullable<ITerminalInstance['xterm']>>({ raw: { modes: upcastPartial<RawXtermTerminal['modes']>({ bracketedPasteMode: false }) } }),
+				sendText: async (text, shouldExecute, bracketedPasteMode) => {
+					strictEqual(text, 'first line second line');
+					strictEqual(shouldExecute, false);
+					strictEqual(bracketedPasteMode, false);
+					calls.push('send');
+				},
+				focusWhenReady: async force => {
+					strictEqual(force, true);
+					calls.push('focus');
+				}
+			});
+
+			await sendSelectionToTerminalInput(source, target, createServices(target, calls), new TestNotificationService());
+
+			strictEqual(JSON.stringify(calls), JSON.stringify(['activate', 'reveal', 'send', 'focus']));
 		});
 	});
 });

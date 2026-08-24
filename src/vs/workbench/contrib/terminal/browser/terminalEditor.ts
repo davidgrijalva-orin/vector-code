@@ -136,21 +136,16 @@ export class TerminalEditor extends EditorPane {
 		}));
 		this._register(dom.addDisposableListener(this._editorInstanceElement, 'contextmenu', (event: MouseEvent) => {
 			const rightClickBehavior = this._terminalConfigurationService.config.rightClickBehavior;
-			if (rightClickBehavior === 'nothing' && !event.shiftKey) {
-				event.preventDefault();
-				event.stopImmediatePropagation();
-				this._cancelContextMenu = false;
-				return;
+			const hasSelection = this._editorInput?.terminalInstance?.hasSelection() ?? false;
+			const behaviorAllowsContextMenu = rightClickBehavior !== 'paste'
+				&& (rightClickBehavior !== 'copyPaste' || hasSelection)
+				&& (rightClickBehavior !== 'nothing' || event.shiftKey);
+			if (!this._cancelContextMenu && behaviorAllowsContextMenu) {
+				openContextMenu(this.window, event, this._editorInput?.terminalInstance, this._instanceMenu, this._contextMenuService);
 			}
-			else
-				if (!this._cancelContextMenu && rightClickBehavior !== 'copyPaste' && rightClickBehavior !== 'paste') {
-					if (!this._cancelContextMenu) {
-						openContextMenu(this.window, event, this._editorInput?.terminalInstance, this._instanceMenu, this._contextMenuService);
-					}
-					event.preventDefault();
-					event.stopImmediatePropagation();
-					this._cancelContextMenu = false;
-				}
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			this._cancelContextMenu = false;
 		}));
 	}
 

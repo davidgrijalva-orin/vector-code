@@ -143,6 +143,28 @@ export function setupTerminalMenus(): void {
 				id: MenuId.TerminalInstanceContext,
 				item: {
 					command: {
+						id: TerminalCommandId.SendSelectionToTerminalInput,
+						title: localize('workbench.action.terminal.sendSelectionToTerminalInput.short', "Send to Terminal Input")
+					},
+					group: TerminalContextMenuGroup.Edit,
+					order: 2.5
+				}
+			},
+			{
+				id: MenuId.TerminalInstanceContext,
+				item: {
+					command: {
+						id: TerminalCommandId.SendSelectionToAgentTerminal,
+						title: localize('workbench.action.terminal.sendSelectionToAgentTerminal.short', "Send to Agent Terminal")
+					},
+					group: TerminalContextMenuGroup.Edit,
+					order: 2.6
+				}
+			},
+			{
+				id: MenuId.TerminalInstanceContext,
+				item: {
+					command: {
 						id: TerminalCommandId.Paste,
 						title: localize('workbench.action.terminal.paste.short', "Paste")
 					},
@@ -257,6 +279,28 @@ export function setupTerminalMenus(): void {
 					},
 					group: TerminalContextMenuGroup.Edit,
 					order: 2
+				}
+			},
+			{
+				id: MenuId.TerminalEditorInstanceContext,
+				item: {
+					command: {
+						id: TerminalCommandId.SendSelectionToTerminalInput,
+						title: localize('workbench.action.terminal.sendSelectionToTerminalInput.short', "Send to Terminal Input")
+					},
+					group: TerminalContextMenuGroup.Edit,
+					order: 2.5
+				}
+			},
+			{
+				id: MenuId.TerminalEditorInstanceContext,
+				item: {
+					command: {
+						id: TerminalCommandId.SendSelectionToAgentTerminal,
+						title: localize('workbench.action.terminal.sendSelectionToAgentTerminal.short', "Send to Agent Terminal")
+					},
+					group: TerminalContextMenuGroup.Edit,
+					order: 2.6
 				}
 			},
 			{

@@ -83,16 +83,15 @@ public struct VectorCodePairingPayload: Codable, Equatable, Sendable {
         guard expiry > now else {
             throw VectorCodePairingError.expired
         }
-        if let relayTokenExpiresAt {
-            let tokenExpiry = try VectorCodeISO8601.date(from: relayTokenExpiresAt, field: "relayTokenExpiresAt")
-            guard tokenExpiry > now else {
-                throw VectorCodePairingError.expired
-            }
-        }
+        try validateRelayToken(now: now)
     }
 
     public func validateStoredSession(now: Date = Date()) throws {
         try validateRequiredFields()
+        try validateRelayToken(now: now)
+    }
+
+    private func validateRelayToken(now: Date) throws {
         guard relayToken?.isEmpty == false else {
             throw VectorCodePairingError.missingField("relayToken")
         }

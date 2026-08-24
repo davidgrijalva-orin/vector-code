@@ -18,6 +18,7 @@ export async function encryptVectorCodeMobileFramePayload(input: {
 	const encrypted = new Uint8Array(await globalThis.crypto.subtle.encrypt({
 		name: 'AES-GCM',
 		iv: nonce,
+		additionalData: authenticatedHeaderBytes(input.header),
 		tagLength: VECTOR_CODE_MOBILE_FRAME_TAG_BYTES * 8
 	}, key, plaintext));
 
@@ -42,9 +43,44 @@ export async function decryptVectorCodeMobileFramePayload<TPayload>(input: {
 	const plaintext = await globalThis.crypto.subtle.decrypt({
 		name: 'AES-GCM',
 		iv: decodeVectorCodeBase64Url(input.frame.nonce),
+		additionalData: authenticatedHeaderBytes(input.frame.header),
 		tagLength: VECTOR_CODE_MOBILE_FRAME_TAG_BYTES * 8
 	}, key, encrypted);
 	return JSON.parse(new TextDecoder().decode(plaintext)) as TPayload;
+}
+
+/**
+ * Encodes every routed header field as a length-prefixed UTF-8 value. Keeping
+ * the encoding independent of JSON key ordering makes the authenticated data
+ * byte-for-byte compatible with CryptoKit on iOS.
+ */
+function authenticatedHeaderBytes(header: IVectorCodeMobileRelayFrameHeader): Uint8Array<ArrayBuffer> {
+	const encoder = new TextEncoder();
+	const fields = [
+		String(header.protocolVersion),
+		header.frameId,
+		header.desktopId,
+		header.phoneId,
+		header.sessionId ?? '',
+		header.streamId,
+		header.channel,
+		header.direction,
+		String(header.seq),
+		header.issuedAt,
+		header.action
+	];
+	const encodedFields = fields.map(field => encoder.encode(field));
+	const byteLength = encodedFields.reduce((total, field) => total + encoder.encode(`${field.byteLength}:`).byteLength + field.byteLength, 0);
+	const result = new Uint8Array(new ArrayBuffer(byteLength));
+	let offset = 0;
+	for (const field of encodedFields) {
+		const prefix = encoder.encode(`${field.byteLength}:`);
+		result.set(prefix, offset);
+		offset += prefix.byteLength;
+		result.set(field, offset);
+		offset += field.byteLength;
+	}
+	return result;
 }
 
 function cryptoRandomBytes(byteLength: number): Uint8Array<ArrayBuffer> {

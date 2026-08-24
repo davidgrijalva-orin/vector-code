@@ -8,9 +8,12 @@ public protocol VectorCodeRelayClientProtocol: Sendable {
 }
 
 public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
+    private static let maxSeenInboundFrames = 2_048
     private var task: URLSessionWebSocketTask?
     private var configuration: VectorCodeRelayConfiguration?
     private var sequence = 0
+    private var seenInboundFrames = Set<String>()
+    private var seenInboundFrameOrder: [String] = []
     private let session: URLSession
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -24,6 +27,8 @@ public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
         task = nil
         self.configuration = nil
         sequence = 0
+        seenInboundFrames.removeAll(keepingCapacity: true)
+        seenInboundFrameOrder.removeAll(keepingCapacity: true)
 
         var request = URLRequest(url: configuration.webSocketURL)
         if let authorizationHeader = configuration.authorizationHeader {
@@ -41,6 +46,8 @@ public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
         task = nil
         configuration = nil
         sequence = 0
+        seenInboundFrames.removeAll(keepingCapacity: true)
+        seenInboundFrameOrder.removeAll(keepingCapacity: true)
     }
 
     public func send<Payload: Codable & Sendable>(_ envelope: VectorCodeRemoteEnvelope<Payload>) async throws {
@@ -53,6 +60,7 @@ public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
             header: VectorCodeRelayFrameHeader(
                 desktopId: configuration.desktopId,
                 phoneId: configuration.phoneId,
+                sessionId: configuration.pairingId,
                 streamId: envelope.action.streamId,
                 channel: envelope.action.channel,
                 direction: .phoneToDesktop,
@@ -87,16 +95,35 @@ public actor VectorCodeRelayClient: VectorCodeRelayClientProtocol {
 
             switch try decoder.decode(VectorCodeRelayInboundMessage.self, from: data) {
             case .frame(let frame):
-                guard frame.header.direction == .desktopToPhone else {
+                guard VectorCodeRelayFrameValidation.acceptsDesktopFrame(frame.header, configuration: configuration) else {
                     continue
                 }
-                return try VectorCodeRelayFrameCrypto.decrypt(frame, pairingToken: configuration.pairingToken, as: VectorCodeRemoteEnvelope<VectorCodeJSONValue>.self)
+                let envelope = try VectorCodeRelayFrameCrypto.decrypt(frame, pairingToken: configuration.pairingToken, as: VectorCodeRemoteEnvelope<VectorCodeJSONValue>.self)
+                guard envelope.kind == .response,
+                      envelope.protocolVersion == vectorCodeMobileProtocolVersion,
+                      envelope.action == frame.header.action,
+                      recordInboundFrame(frame) else {
+                    continue
+                }
+                return envelope
             case .error(let code, let message):
                 throw VectorCodeRelayClientError.relayError(code: code, message: message)
             case .ready, .peerOnline, .peerOffline, .pong:
                 continue
             }
         }
+    }
+
+    private func recordInboundFrame(_ frame: VectorCodeRelayEncryptedFrame) -> Bool {
+        let key = "\(frame.nonce).\(frame.tag)"
+        guard seenInboundFrames.insert(key).inserted else {
+            return false
+        }
+        seenInboundFrameOrder.append(key)
+        if seenInboundFrameOrder.count > Self.maxSeenInboundFrames {
+            seenInboundFrames.remove(seenInboundFrameOrder.removeFirst())
+        }
+        return true
     }
 }
 

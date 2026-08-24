@@ -28,7 +28,9 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
 
     private let remoteWorkspaceClient: VectorCodeRemoteWorkspaceClient
     private let pairingStore: VectorCodePairingStore
+    private let remoteReconnectDelays: [TimeInterval]
     private var remoteSyncTask: Task<Void, Never>?
+    private var remoteSyncGeneration = 0
     private var editorSelections = VectorCodeProjectScopedSelectionStore()
     private var terminalSelections = VectorCodeProjectScopedSelectionStore()
     private var pendingRemoteFileOpenByProject: [String: String] = [:]
@@ -36,7 +38,8 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     public init(
         snapshot: VectorCodeRemoteWorkspaceSnapshot = .empty,
         viewport: Viewport = .projects,
-        remoteWorkspaceClient: VectorCodeRemoteWorkspaceClient = VectorCodeRemoteWorkspaceClient()
+        remoteWorkspaceClient: VectorCodeRemoteWorkspaceClient = VectorCodeRemoteWorkspaceClient(),
+        remoteReconnectDelays: [TimeInterval] = [1, 2.5, 5]
     ) {
         let pairingStore = VectorCodePairingStore()
         let storedPairing = snapshot.projects.isEmpty ? pairingStore.load() : nil
@@ -44,6 +47,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         let initialProjectId = snapshot.activeProjectId ?? snapshot.projects.first?.id
         self.remoteWorkspaceClient = remoteWorkspaceClient
         self.pairingStore = pairingStore
+        self.remoteReconnectDelays = remoteReconnectDelays
         self.snapshot = snapshot
         self.viewport = viewport
         self.selectedProjectId = initialProjectId
@@ -126,7 +130,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func connectToDesktopIfPaired() {
-        guard relayConfiguration != nil, !isRemoteConnected else {
+        guard relayConfiguration != nil, !isRemoteConnected, remoteSyncTask == nil else {
             return
         }
         connectToDesktop()
@@ -138,9 +142,19 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
             return
         }
 
-        remoteSyncTask?.cancel()
+        let previousTask = remoteSyncTask
+        previousTask?.cancel()
+        remoteSyncGeneration += 1
+        let generation = remoteSyncGeneration
         remoteSyncTask = Task { [weak self] in
-            await self?.loadRemoteWorkspace(configuration: relayConfiguration)
+            await previousTask?.value
+            guard let self, !Task.isCancelled else {
+                return
+            }
+            await self.loadRemoteWorkspace(configuration: relayConfiguration, generation: generation)
+            if self.remoteSyncGeneration == generation {
+                self.remoteSyncTask = nil
+            }
         }
     }
 
@@ -157,6 +171,7 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
     }
 
     public func clearPairing() {
+        remoteSyncGeneration += 1
         remoteSyncTask?.cancel()
         remoteSyncTask = nil
         Task { [remoteWorkspaceClient] in
@@ -744,22 +759,61 @@ public final class VectorCodeMobileWorkspaceModel: ObservableObject {
         }
     }
 
-    private func loadRemoteWorkspace(configuration: VectorCodeRelayConfiguration) async {
+    private func loadRemoteWorkspace(configuration: VectorCodeRelayConfiguration, generation: Int) async {
+        var reconnectPolicy = VectorCodeBoundedReconnectPolicy(delays: remoteReconnectDelays)
         statusText = "Connecting to desktop"
-        do {
-            try await remoteWorkspaceClient.connect(configuration: configuration)
-            statusText = "Syncing workspace"
-            let nextSnapshot = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
-                try await remoteWorkspaceClient.readState()
+        while generation == remoteSyncGeneration {
+            do {
+                try Task.checkCancellation()
+                try await remoteWorkspaceClient.connect(configuration: configuration)
+                guard generation == remoteSyncGeneration else {
+                    return
+                }
+                statusText = "Syncing workspace"
+                let nextSnapshot = try await runTimedRemoteOperation { [remoteWorkspaceClient] in
+                    try await remoteWorkspaceClient.readState()
+                }
+                try Task.checkCancellation()
+                guard generation == remoteSyncGeneration else {
+                    return
+                }
+                applySnapshot(nextSnapshot)
+                isRemoteConnected = true
+                statusText = "Connected"
+                return
+            } catch is CancellationError {
+                await remoteWorkspaceClient.disconnect()
+                if generation == remoteSyncGeneration {
+                    isRemoteConnected = false
+                    statusText = "Ready to connect"
+                }
+                return
+            } catch {
+                await remoteWorkspaceClient.disconnect()
+                guard generation == remoteSyncGeneration, !Task.isCancelled else {
+                    return
+                }
+                isRemoteConnected = false
+                guard let retry = reconnectPolicy.nextRetry() else {
+                    statusText = "Paired. Desktop not ready."
+                    return
+                }
+                statusText = "Reconnecting in \(Self.reconnectDelayLabel(retry.delay))s (\(retry.attempt)/\(retry.totalAttempts))"
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(retry.delay * 1_000_000_000))
+                } catch {
+                    if generation == remoteSyncGeneration {
+                        statusText = "Ready to connect"
+                    }
+                    return
+                }
+                statusText = "Connecting to desktop"
             }
-            applySnapshot(nextSnapshot)
-            isRemoteConnected = true
-            statusText = "Connected"
-        } catch is CancellationError {
-            await disconnectRemoteWorkspace(statusText: "Ready to connect")
-        } catch {
-            await disconnectRemoteWorkspace(statusText: "Paired. Desktop not ready.")
         }
+    }
+
+    private static func reconnectDelayLabel(_ delay: TimeInterval) -> String {
+        delay.rounded() == delay ? String(Int(delay)) : String(format: "%.1f", delay)
     }
 
     private func applySnapshot(_ nextSnapshot: VectorCodeRemoteWorkspaceSnapshot) {

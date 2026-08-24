@@ -19,6 +19,7 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
+import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
@@ -68,6 +69,7 @@ abstract class VectorCodeViewPane extends ViewPane {
 		@IWorkspaceContextService protected readonly workspaceContextService: IWorkspaceContextService,
 		@IVectorCodeMobileRelayService protected readonly mobileRelayService: IVectorCodeMobileRelayService,
 		@INotificationService protected readonly notificationService: INotificationService,
+		@IQuickInputService protected readonly quickInputService: IQuickInputService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService configurationService: IConfigurationService,
@@ -477,17 +479,24 @@ class VectorCodeControlView extends VectorCodeViewPane {
 		mobile.card.classList.add('vector-code-control__mobile');
 		const detail = append(mobile.card, $('.vector-code-control__mobile-detail'));
 		const actions = append(mobile.card, $('.vector-code-control__card-actions'));
-		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Refresh QR'), Codicon.refresh);
+		const configureButton = this.renderButton(actions, localize('vectorCodeMobileConfigureRelay', 'Configure Secure Relay'), Codicon.key);
+		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Create / Refresh QR'), Codicon.refresh);
 		const pairingContainer = append(mobile.card, $('.vector-code-control__pairing'));
 		const pairingDisposables = this._register(new DisposableStore());
 		let currentStatus = mobileStatus;
 
 		const canRefreshPairing = (status: IVectorCodeMobileConnectionStatus): boolean => {
-			return status.state === VectorCodeMobileConnectionState.Disconnected
-				|| (status.state === VectorCodeMobileConnectionState.Pairing && Boolean(status.pairing));
+			return (status.state === VectorCodeMobileConnectionState.Disconnected
+				|| status.state === VectorCodeMobileConnectionState.Pairing
+				|| status.state === VectorCodeMobileConnectionState.Expired
+				|| status.state === VectorCodeMobileConnectionState.Failed)
+				&& !status.requiresRelayIssuerToken;
 		};
 
 		const updateStartButton = (status: IVectorCodeMobileConnectionStatus, busy = false): void => {
+			setVisibility(Boolean(status.requiresRelayIssuerToken), configureButton);
+			configureButton.disabled = busy;
+			setVisibility(!status.requiresRelayIssuerToken, startButton);
 			startButton.disabled = busy || !canRefreshPairing(status);
 			startButton.title = startButton.disabled && !busy
 				? localize('vectorCodeMobileRefreshQrDisabled', 'Refresh QR is unavailable while the current phone bridge is active.')
@@ -544,13 +553,13 @@ class VectorCodeControlView extends VectorCodeViewPane {
 			pending.textContent = localize('vectorCodeMobilePairingQrPending', 'QR');
 		};
 
-		const refreshPairing = async (notifyOnError: boolean): Promise<void> => {
-			if (!canRefreshPairing(currentStatus)) {
+		const createPairing = async (notifyOnError: boolean, relayIssuerToken?: string): Promise<void> => {
+			if (!relayIssuerToken && !canRefreshPairing(currentStatus)) {
 				return;
 			}
 			renderBusy();
 			try {
-				renderStatus(await this.mobileRelayService.startPairing());
+				renderStatus(await this.mobileRelayService.startPairing(undefined, relayIssuerToken));
 			} catch (error) {
 				const message = error instanceof Error ? error.message : localize('vectorCodeMobilePairingFailed', 'Unable to create a QR pairing session.');
 				mobile.status.textContent = localize('vectorCodeMobilePairingFailedShort', 'QR creation failed');
@@ -563,12 +572,31 @@ class VectorCodeControlView extends VectorCodeViewPane {
 			}
 		};
 
+		const configureRelay = async (): Promise<void> => {
+			const relayIssuerToken = await this.quickInputService.input({
+				title: localize('vectorCodeMobileConfigureRelayTitle', 'Configure Secure Phone Connection'),
+				prompt: localize('vectorCodeMobileConfigureRelayPrompt', 'Enter the relay issuer token. It will be stored securely on this desktop.'),
+				placeHolder: localize('vectorCodeMobileConfigureRelayPlaceholder', 'Relay issuer token'),
+				password: true,
+				ignoreFocusLost: true,
+				validateInput: async value => value.trim() ? undefined : localize('vectorCodeMobileConfigureRelayRequired', 'Enter a relay issuer token.')
+			});
+			if (relayIssuerToken === undefined) {
+				return;
+			}
+			await createPairing(true, relayIssuerToken);
+		};
+
 		renderStatus(mobileStatus);
+		this._register(this.mobileRelayService.onDidChangeStatus(renderStatus));
 		if (mobileStatus.state === VectorCodeMobileConnectionState.Disconnected && !mobileStatus.pairing) {
-			void refreshPairing(false);
+			void createPairing(false);
 		}
 		this._register(addDisposableListener(startButton, EventType.CLICK, () => {
-			void refreshPairing(true);
+			void createPairing(true);
+		}));
+		this._register(addDisposableListener(configureButton, EventType.CLICK, () => {
+			void configureRelay();
 		}));
 	}
 

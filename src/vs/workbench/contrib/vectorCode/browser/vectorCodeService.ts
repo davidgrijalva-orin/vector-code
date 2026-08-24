@@ -296,7 +296,9 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	async connectMobileApp(): Promise<void> {
 		await this.viewsService.openViewContainer(VECTOR_CODE_VIEW_CONTAINER_ID, true);
 		const currentStatus = this.mobileRelayService.getStatus();
-		if (currentStatus.state === VectorCodeMobileConnectionState.Connected || currentStatus.state === VectorCodeMobileConnectionState.Pairing) {
+		if (currentStatus.state === VectorCodeMobileConnectionState.Connected
+			|| currentStatus.state === VectorCodeMobileConnectionState.Pairing
+			|| currentStatus.state === VectorCodeMobileConnectionState.Reconnecting) {
 			this.notificationService.info(currentStatus.detail);
 			return;
 		}

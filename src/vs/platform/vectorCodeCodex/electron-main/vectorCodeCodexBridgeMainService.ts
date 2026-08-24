@@ -199,7 +199,7 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 
 		if (isRequestId(message.id) && message.method === undefined) {
 			const settled = message.error !== undefined
-				? connection.pending.reject(message.id, new Error(formatProtocolError(message.error)))
+				? connection.pending.reject(message.id, createCodexProtocolError(message.error, message.id))
 				: connection.pending.resolve(message.id, message.result);
 			if (!settled) {
 				this.logService.debug(`[VectorCode][Codex][${message.id}] response ignored for a settled or unknown request.`);
@@ -300,17 +300,24 @@ function normalizeExitCode(code: number): number {
 	return process.platform === 'win32' && code > 0x7fff_ffff ? code - 0x1_0000_0000 : code;
 }
 
-function formatProtocolError(value: unknown): string {
-	if (typeof value === 'string') {
-		return value;
-	}
-	if (value && typeof value === 'object') {
-		const message = (value as { message?: unknown }).message;
-		if (typeof message === 'string') {
-			return message;
-		}
-	}
-	return JSON.stringify(value);
+function createCodexProtocolError(value: unknown, requestId: VectorCodeCodexRequestId): VectorCodeRuntimeError {
+	const record = value && typeof value === 'object' ? value as { code?: unknown; message?: unknown } : undefined;
+	const message = typeof value === 'string' ? value : typeof record?.message === 'string' ? record.message : '';
+	const authenticationRequired = /auth|credential|sign[ -]?in|unauthorized/i.test(message);
+	const protocolCode = typeof record?.code === 'number' && Number.isFinite(record.code)
+		? String(record.code)
+		: typeof record?.code === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(record.code)
+			? record.code
+			: 'unknown';
+	return new VectorCodeRuntimeError(
+		authenticationRequired ? VectorCodeRuntimeErrorCode.AuthenticationRequired : VectorCodeRuntimeErrorCode.Unknown,
+		authenticationRequired
+			? 'Codex authentication is required. Sign in from the full terminal, then retry.'
+			: 'Codex could not complete the request. Try again or open Diagnostics.',
+		`Codex App Server returned protocol error code ${protocolCode}. Response content was suppressed.`,
+		!authenticationRequired,
+		String(requestId),
+	);
 }
 
 function resolveCodexLaunch(executable: string): { executable: string; args: string[]; env: NodeJS.ProcessEnv; shell: boolean } {

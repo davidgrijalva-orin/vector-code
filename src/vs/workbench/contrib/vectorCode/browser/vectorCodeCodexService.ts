@@ -780,12 +780,14 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			await Promise.all([
 				this.refreshThreads().catch(error => {
 					if (!isCancellationError(error)) {
-						this.logService.warn(`Unable to refresh Codex conversations after startup: ${errorMessage(error)}`);
+						const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+						this.logService.warn(`[VectorCode][Codex][${runtimeError.correlationId}] conversation refresh failed after startup (${runtimeError.code}).`);
 					}
 				}),
 				this.refreshPluginCount().catch(error => {
 					if (!isCancellationError(error)) {
-						this.logService.warn(`Unable to refresh Codex plugins after startup: ${errorMessage(error)}`);
+						const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+						this.logService.warn(`[VectorCode][Codex][${runtimeError.correlationId}] plugin refresh failed after startup (${runtimeError.code}).`);
 					}
 				}),
 			]);

@@ -21,6 +21,7 @@ interface IVectorCodeMobileRelayBridgeConnection {
 }
 
 const WEB_SOCKET_OPEN_STATE = 1;
+const VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS = 10_000;
 const VECTOR_CODE_MOBILE_RELAY_CA_CERTIFICATES = [...new Set([
 	...getCACertificates('default'),
 	...getCACertificates('system')
@@ -97,6 +98,8 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 	async createRelayToken(options: IVectorCodeMobileRelayBridgeTokenOptions): Promise<IVectorCodeMobileRelayBridgeTokenResponse | undefined> {
 		this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.token.started`);
 		let response: Response;
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS);
 		try {
 			response = await net.fetch(options.url, {
 				method: 'POST',
@@ -104,18 +107,24 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 					Authorization: options.authorizationHeader,
 					'content-type': 'application/json'
 				},
-				body: JSON.stringify(options.payload)
+				body: JSON.stringify(options.payload),
+				signal: controller.signal,
 			});
 		} catch (error) {
+			const timedOut = controller.signal.aborted;
 			const errorName = error instanceof Error ? error.name : typeof error;
-			this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.failed (${errorName})`);
+			this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.failed (${timedOut ? VectorCodeRuntimeErrorCode.RequestTimeout : errorName})`);
 			throw new VectorCodeRuntimeError(
-				VectorCodeRuntimeErrorCode.NetworkUnavailable,
-				'The phone relay token service is unavailable. Check the network and try again.',
-				errorName,
+				timedOut ? VectorCodeRuntimeErrorCode.RequestTimeout : VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				timedOut
+					? 'The phone relay token service took too long to respond. Try again.'
+					: 'The phone relay token service is unavailable. Check the network and try again.',
+				timedOut ? `Relay token request timed out after ${VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS}ms.` : errorName,
 				true,
 				options.correlationId,
 			);
+		} finally {
+			clearTimeout(timeout);
 		}
 		if (!response.ok) {
 			this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.rejected (${response.status})`);

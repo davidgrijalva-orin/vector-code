@@ -20,7 +20,8 @@ export function normalizeVectorCodeRelayTokenResponse(value: unknown, now = Date
 }
 
 export function isMalformedVectorCodeRelayTokenJson(error: unknown): boolean {
-	return error instanceof SyntaxError || (error instanceof Error && error.name === 'SyntaxError');
+	return error instanceof SyntaxError
+		|| (typeof error === 'object' && error !== null && (error as { readonly name?: unknown }).name === 'SyntaxError');
 }
 
 function stringField(value: Record<string, unknown>, key: string): string | undefined {

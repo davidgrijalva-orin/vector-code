@@ -34,7 +34,7 @@ suite('VectorCodeMobileRelayToken', () => {
 
 	test('distinguishes malformed JSON from response-body transport failures', () => {
 		strictEqual(isMalformedVectorCodeRelayTokenJson(new SyntaxError('Unexpected end of JSON input')), true);
-		strictEqual(isMalformedVectorCodeRelayTokenJson(Object.assign(new Error('Cross-realm syntax failure'), { name: 'SyntaxError' })), true);
+		strictEqual(isMalformedVectorCodeRelayTokenJson(Object.create(null, { name: { value: 'SyntaxError' } })), true);
 		strictEqual(isMalformedVectorCodeRelayTokenJson(new TypeError('Body stream failed')), false);
 	});
 });

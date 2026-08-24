@@ -107,5 +107,6 @@ suite('VectorCodeRuntime', () => {
 
 		strictEqual(status.error?.cause.includes('must-not-survive'), false);
 		strictEqual(status.error?.correlationId, 'relay-storage-1');
+		strictEqual(runtime.getDiagnosticSummary([]).recentEvents.at(-1)?.correlationId, 'relay-storage-1');
 	});
 });

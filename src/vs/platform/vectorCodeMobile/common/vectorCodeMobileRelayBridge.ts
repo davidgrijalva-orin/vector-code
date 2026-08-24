@@ -32,6 +32,12 @@ export interface IVectorCodeMobileRelayBridgeTokenResponse {
 	readonly relayTokenExpiresAt: string;
 }
 
+export interface IVectorCodeMobileRelayBridgeSendOptions {
+	readonly correlationId: string;
+	readonly connectionId: string;
+	readonly message: string;
+}
+
 export interface IVectorCodeMobileRelayBridgeMessage {
 	readonly connectionId: string;
 	readonly message: string;
@@ -53,6 +59,6 @@ export interface IVectorCodeMobileRelayBridgeService {
 
 	connect(options: IVectorCodeMobileRelayBridgeConnectOptions): Promise<string>;
 	createRelayToken(options: IVectorCodeMobileRelayBridgeTokenOptions): Promise<IVectorCodeMobileRelayBridgeTokenResponse | undefined>;
-	send(connectionId: string, message: string): Promise<void>;
+	send(options: IVectorCodeMobileRelayBridgeSendOptions): Promise<void>;
 	disconnect(connectionId: string): Promise<void>;
 }

@@ -13,7 +13,7 @@ import { findExecutable } from '../../../base/node/processes.js';
 import { generateUuid } from '../../../base/common/uuid.js';
 import { ILogService } from '../../log/common/log.js';
 import { VectorCodeRuntimeError, VectorCodeRuntimeErrorCode } from '../../vectorCode/common/vectorCodeRuntime.js';
-import { IVectorCodeCodexBridgeConnectionChange, IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeRequest, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService, IVectorCodeCodexBridgeStartOptions, VectorCodeCodexRequestId } from '../common/vectorCodeCodexBridge.js';
+import { isVectorCodeCodexAuthenticationError, IVectorCodeCodexBridgeConnectionChange, IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeRequest, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService, IVectorCodeCodexBridgeStartOptions, VectorCodeCodexRequestId } from '../common/vectorCodeCodexBridge.js';
 import { VectorCodeCodexPendingRequests } from '../common/vectorCodeCodexPendingRequests.js';
 
 interface IVectorCodeCodexBridgeConnection {
@@ -303,12 +303,12 @@ function normalizeExitCode(code: number): number {
 function createCodexProtocolError(value: unknown, requestId: VectorCodeCodexRequestId): VectorCodeRuntimeError {
 	const record = value && typeof value === 'object' ? value as { code?: unknown; message?: unknown } : undefined;
 	const message = typeof value === 'string' ? value : typeof record?.message === 'string' ? record.message : '';
-	const authenticationRequired = /auth|credential|sign[ -]?in|unauthorized/i.test(message);
 	const protocolCode = typeof record?.code === 'number' && Number.isFinite(record.code)
 		? String(record.code)
 		: typeof record?.code === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(record.code)
 			? record.code
 			: 'unknown';
+	const authenticationRequired = isVectorCodeCodexAuthenticationError(message, protocolCode);
 	return new VectorCodeRuntimeError(
 		authenticationRequired ? VectorCodeRuntimeErrorCode.AuthenticationRequired : VectorCodeRuntimeErrorCode.Unknown,
 		authenticationRequired

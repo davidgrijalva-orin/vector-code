@@ -5,7 +5,7 @@
 
 import { deepStrictEqual, strictEqual } from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { normalizeVectorCodeRelayTokenResponse } from '../../common/vectorCodeMobileRelayToken.js';
+import { isMalformedVectorCodeRelayTokenJson, normalizeVectorCodeRelayTokenResponse } from '../../common/vectorCodeMobileRelayToken.js';
 
 suite('VectorCodeMobileRelayToken', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
@@ -30,5 +30,11 @@ suite('VectorCodeMobileRelayToken', () => {
 		strictEqual(normalizeVectorCodeRelayTokenResponse({ token: 'token', expiresAt: 'invalid' }, now), undefined);
 		strictEqual(normalizeVectorCodeRelayTokenResponse({ token: 'token', expiresAt: '2026-08-24T05:00:00.000Z' }, now), undefined);
 		strictEqual(normalizeVectorCodeRelayTokenResponse({ token: 'token', expiresAt: '2026-08-24T05:01:00.000Z' }, now), undefined);
+	});
+
+	test('distinguishes malformed JSON from response-body transport failures', () => {
+		strictEqual(isMalformedVectorCodeRelayTokenJson(new SyntaxError('Unexpected end of JSON input')), true);
+		strictEqual(isMalformedVectorCodeRelayTokenJson(Object.assign(new Error('Cross-realm syntax failure'), { name: 'SyntaxError' })), true);
+		strictEqual(isMalformedVectorCodeRelayTokenJson(new TypeError('Body stream failed')), false);
 	});
 });

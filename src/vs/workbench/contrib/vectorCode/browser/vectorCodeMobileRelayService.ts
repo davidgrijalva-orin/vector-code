@@ -68,7 +68,7 @@ interface IVectorCodeMobileQuarantinedRelaySession {
 	readonly quarantinedAt: string;
 	readonly reason: 'invalid_active_session' | 'invalid_known_good_session';
 	readonly byteLength: number;
-	readonly sha256: string;
+	readonly sha256?: string;
 }
 
 type VectorCodeMobileConnectionStatusInput = Omit<IVectorCodeMobileConnectionStatus, 'runtime'>;
@@ -752,7 +752,24 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			type: 'relay.frame',
 			frame
 		};
-		await this.relayBridgeService.send(connection.connectionId, JSON.stringify(message));
+		const correlationId = this.runtime.createCorrelationId('relay-send');
+		try {
+			await this.relayBridgeService.send({
+				correlationId,
+				connectionId: connection.connectionId,
+				message: JSON.stringify(message),
+			});
+			this.runtime.record('relay.send.completed', correlationId);
+		} catch (error) {
+			throw this.recordRuntimeFailure(
+				'relay.send.failed',
+				error,
+				VectorCodeRuntimeErrorCode.ConnectionLost,
+				localize('vectorCodeMobileRelaySendFailed', 'The phone relay connection was lost. Reconnect and try again.'),
+				true,
+				correlationId,
+			);
+		}
 	}
 
 	private setStatus(status: VectorCodeMobileConnectionStatusInput): IVectorCodeMobileConnectionStatus {
@@ -1007,11 +1024,23 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		);
 		if (recovery.quarantinedValue) {
 			const quarantinedBytes = new TextEncoder().encode(recovery.quarantinedValue);
+			let sha256: string | undefined;
+			try {
+				sha256 = await sha256Base64Url(quarantinedBytes);
+			} catch (error) {
+				const runtimeError = new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.StorageUnavailable,
+					localize('vectorCodeMobileFingerprintUnavailable', 'Vector Code could not fingerprint the damaged phone session, but recovery continued.'),
+					error instanceof Error ? error.name : typeof error,
+					true,
+				);
+				this.runtime.record('storage.relay_session.fingerprint_failed', runtimeError.correlationId, runtimeError);
+			}
 			const quarantine: IVectorCodeMobileQuarantinedRelaySession = {
 				quarantinedAt: new Date().toISOString(),
 				reason: restoringMissingActiveSession ? 'invalid_known_good_session' : 'invalid_active_session',
 				byteLength: quarantinedBytes.byteLength,
-				sha256: await sha256Base64Url(quarantinedBytes),
+				...(sha256 ? { sha256 } : {}),
 			};
 			try {
 				await this.secretStorageService.set(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY, JSON.stringify(quarantine));

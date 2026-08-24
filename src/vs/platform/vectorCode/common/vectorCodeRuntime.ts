@@ -131,6 +131,7 @@ export class VectorCodeRuntimeController {
 				correlationId: options.error.correlationId,
 			})
 			: (keepsRuntimeError(state) ? this.status.error : undefined);
+		const correlationId = options.correlationId ?? error?.correlationId;
 		this.status = {
 			state,
 			capabilities,
@@ -139,7 +140,7 @@ export class VectorCodeRuntimeController {
 			nextRetryAt: options.nextRetryAt,
 			error,
 		};
-		this.record(options.event ?? `lifecycle.${state}`, options.correlationId, error);
+		this.record(options.event ?? `lifecycle.${state}`, correlationId, error);
 		return this.status;
 	}
 

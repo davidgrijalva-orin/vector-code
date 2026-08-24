@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { net } from 'electron';
+import { getCACertificates } from 'tls';
 import type { WebSocket as WebSocketType } from 'ws';
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable, DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
 import { generateUuid } from '../../../base/common/uuid.js';
 import { ILogService } from '../../log/common/log.js';
 import { IVectorCodeMobileRelayBridgeConnectOptions, IVectorCodeMobileRelayBridgeConnectionChange, IVectorCodeMobileRelayBridgeMessage, IVectorCodeMobileRelayBridgeService, IVectorCodeMobileRelayBridgeTokenOptions, IVectorCodeMobileRelayBridgeTokenResponse } from '../common/vectorCodeMobileRelayBridge.js';
+import { normalizeVectorCodeRelayTokenResponse } from '../common/vectorCodeMobileRelayToken.js';
 
 interface IVectorCodeMobileRelayBridgeConnection {
 	readonly socket: WebSocketType;
@@ -16,6 +19,10 @@ interface IVectorCodeMobileRelayBridgeConnection {
 }
 
 const WEB_SOCKET_OPEN_STATE = 1;
+const VECTOR_CODE_MOBILE_RELAY_CA_CERTIFICATES = [...new Set([
+	...getCACertificates('default'),
+	...getCACertificates('system')
+])];
 
 export class VectorCodeMobileRelayBridgeMainService extends Disposable implements IVectorCodeMobileRelayBridgeService {
 	declare readonly _serviceBrand: undefined;
@@ -38,7 +45,8 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 		const socket = new WebSocket(options.url, {
 			headers: {
 				Authorization: options.authorizationHeader
-			}
+			},
+			ca: VECTOR_CODE_MOBILE_RELAY_CA_CERTIFICATES
 		});
 		const disposables = new DisposableStore();
 
@@ -73,8 +81,9 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 	}
 
 	async createRelayToken(options: IVectorCodeMobileRelayBridgeTokenOptions): Promise<IVectorCodeMobileRelayBridgeTokenResponse | undefined> {
+		let response: Response;
 		try {
-			const response = await fetch(options.url, {
+			response = await net.fetch(options.url, {
 				method: 'POST',
 				headers: {
 					Authorization: options.authorizationHeader,
@@ -82,22 +91,31 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 				},
 				body: JSON.stringify(options.payload)
 			});
-			if (!response.ok) {
-				this.logService.warn(`VectorCode mobile relay token request failed with status ${response.status}.`);
-				return undefined;
-			}
-
-			const relayToken = normalizeVectorCodeRelayTokenResponse(await response.json());
-			if (!relayToken) {
-				this.logService.warn('VectorCode mobile relay token response did not include a token and expiry.');
-				return undefined;
-			}
-			return relayToken;
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
 			this.logService.warn(`VectorCode mobile relay token request failed: ${detail}`);
-			return undefined;
+			throw new Error('The VectorCode mobile relay token service is unavailable.');
 		}
+		if (!response.ok) {
+			this.logService.warn(`VectorCode mobile relay token request failed with status ${response.status}.`);
+			if (response.status === 400 || response.status === 401 || response.status === 403) {
+				return undefined;
+			}
+			throw new Error(`The VectorCode mobile relay token service returned status ${response.status}.`);
+		}
+
+		let relayToken: IVectorCodeMobileRelayBridgeTokenResponse | undefined;
+		try {
+			relayToken = normalizeVectorCodeRelayTokenResponse(await response.json());
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			this.logService.warn(`VectorCode mobile relay token response was not valid JSON: ${detail}`);
+		}
+		if (!relayToken) {
+			this.logService.warn('VectorCode mobile relay token response did not include a token and expiry.');
+			throw new Error('The VectorCode mobile relay token service returned an invalid response.');
+		}
+		return relayToken;
 	}
 
 	async send(connectionId: string, message: string): Promise<void> {
@@ -118,28 +136,6 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 		this.connections.delete(connectionId);
 		connection.disposables.dispose();
 	}
-}
-
-export function normalizeVectorCodeRelayTokenResponse(value: unknown): IVectorCodeMobileRelayBridgeTokenResponse | undefined {
-	if (!isRecord(value)) {
-		return undefined;
-	}
-	const relayToken = stringField(value, 'relayToken') ?? stringField(value, 'token');
-	const relayTokenExpiresAt = stringField(value, 'relayTokenExpiresAt') ?? stringField(value, 'expiresAt');
-	return relayToken && relayTokenExpiresAt ? { relayToken, relayTokenExpiresAt } : undefined;
-}
-
-function stringField(value: Record<string, unknown>, key: string): string | undefined {
-	const field = value[key];
-	if (typeof field !== 'string') {
-		return undefined;
-	}
-	const trimmed = field.trim();
-	return trimmed || undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
 }
 
 function waitForOpen(socket: WebSocketType): Promise<void> {

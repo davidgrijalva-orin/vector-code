@@ -1,5 +1,5 @@
 {
-	"protocolVersion": 1,
+	"protocolVersion": 2,
 	"actions": [
 		"state.read",
 		"file.tree.read",
@@ -86,7 +86,33 @@
 				],
 				"encoded": "SGVsbG8"
 			}
-		]
+		],
+		"authenticationCase": {
+			"pairingToken": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+			"header": {
+				"protocolVersion": 2,
+				"frameId": "frame-auth-1",
+				"desktopId": "desktop-auth-1",
+				"phoneId": "phone-auth-1",
+				"sessionId": "pairing-auth-1",
+				"streamId": "state",
+				"channel": "control",
+				"direction": "phone_to_desktop",
+				"seq": 7,
+				"issuedAt": "2026-08-24T05:00:00.000Z",
+				"action": "state.read"
+			},
+			"payload": {
+				"kind": "request",
+				"protocolVersion": 2,
+				"requestId": "request-auth-1",
+				"action": "state.read",
+				"payload": {}
+			},
+			"nonce": "AAECAwQFBgcICQoL",
+			"ciphertext": "8-lYO26ZrcPgCjeUiGateHZAiurN8vuZrKSIXehHfAaDmZ6ffksTjl2huO_dyQdmFs61iIL8-LvfjXAiZ_7bi7EWxvHyI27FKbWLr9MryFYLkMlyy2SwYhvw3wxVsu53xSKBWqnO",
+			"tag": "FlqEVeLzsPJs5UfaFLMdDg"
+		}
 	},
 	"languageByExtension": {
 		"md": "markdown",

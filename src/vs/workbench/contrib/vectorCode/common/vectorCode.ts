@@ -100,8 +100,11 @@ export interface IVectorCodeProjectSummary {
 export const enum VectorCodeMobileConnectionState {
 	Unconfigured = 'unconfigured',
 	Disconnected = 'disconnected',
+	Reconnecting = 'reconnecting',
 	Pairing = 'pairing',
-	Connected = 'connected'
+	Connected = 'connected',
+	Expired = 'expired',
+	Failed = 'failed'
 }
 
 export interface IVectorCodeMobilePairingPayload {
@@ -131,12 +134,14 @@ export interface IVectorCodeMobileConnectionStatus {
 	readonly detail: string;
 	readonly relayHost?: string;
 	readonly pairing?: IVectorCodeMobilePairingSession;
+	readonly requiresRelayIssuerToken?: boolean;
 }
 
 export const IVectorCodeMobileRelayService = createDecorator<IVectorCodeMobileRelayService>('vectorCodeMobileRelayService');
 
 export interface IVectorCodeMobileRelayService {
 	readonly _serviceBrand: undefined;
+	readonly onDidChangeStatus: Event<IVectorCodeMobileConnectionStatus>;
 
 	getStatus(): IVectorCodeMobileConnectionStatus;
 	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus>;

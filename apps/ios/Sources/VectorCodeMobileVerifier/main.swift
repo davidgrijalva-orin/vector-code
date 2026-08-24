@@ -22,6 +22,41 @@ func verifyVectorCodeMobile() async throws {
     )
     try payload.validate()
 
+    let incompletePayload = VectorCodePairingPayload(
+        desktopId: "desktop-1",
+        pairingId: "pairing-incomplete",
+        desktopPublicKey: "public-key",
+        desktopPublicKeyFingerprint: "fingerprint",
+        pairingToken: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        relayHost: relayHost,
+        expiresAt: expiresAt
+    )
+    do {
+        try incompletePayload.validate()
+        preconditionFailure("Pairing without a relay token must be rejected")
+    } catch let error as VectorCodePairingError {
+        precondition(error == .missingField("relayToken"))
+    }
+
+    let expiredQRPayload = VectorCodePairingPayload(
+        desktopId: "desktop-1",
+        pairingId: "pairing-stored",
+        desktopPublicKey: "public-key",
+        desktopPublicKeyFingerprint: "fingerprint",
+        pairingToken: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+        relayHost: relayHost,
+        relayToken: "relay-token",
+        relayTokenExpiresAt: relayTokenExpiresAt,
+        expiresAt: VectorCodeISO8601.string(from: Date().addingTimeInterval(-1))
+    )
+    do {
+        try expiredQRPayload.validate()
+        preconditionFailure("An expired QR must not create a new pairing")
+    } catch let error as VectorCodePairingError {
+        precondition(error == .expired)
+    }
+    try expiredQRPayload.validateStoredSession()
+
     let payloadData = try JSONEncoder().encode(payload)
     let payloadJSON = String(data: payloadData, encoding: .utf8)!
     let decodedPayload = try VectorCodePairingPayload.decode(from: payloadJSON)
@@ -67,7 +102,10 @@ func verifyVectorCodeMobile() async throws {
 
     let failingRelayClient = VectorCodeFailingRelayClient()
     let failingWorkspaceClient = VectorCodeRemoteWorkspaceClient(relayClient: failingRelayClient)
-    let failingModel = VectorCodeMobileWorkspaceModel(remoteWorkspaceClient: failingWorkspaceClient)
+    let failingModel = VectorCodeMobileWorkspaceModel(
+        remoteWorkspaceClient: failingWorkspaceClient,
+        remoteReconnectDelays: [0.01, 0.02, 0.03]
+    )
     try failingModel.pair(from: payloadJSON, phoneId: "phone-fail")
     failingModel.connectToDesktop()
     try await waitUntil("failing model reports desktop not ready") {
@@ -75,7 +113,12 @@ func verifyVectorCodeMobile() async throws {
     }
     precondition(failingModel.statusText == "Paired. Desktop not ready.")
     let failingDisconnectCount = await failingRelayClient.currentDisconnectCount()
-    precondition(failingDisconnectCount == 1)
+    precondition(failingDisconnectCount == 4)
+
+    var reconnectPolicy = VectorCodeBoundedReconnectPolicy(delays: [1, 2.5])
+    precondition(reconnectPolicy.nextRetry() == VectorCodeReconnectAttempt(attempt: 1, totalAttempts: 2, delay: 1))
+    precondition(reconnectPolicy.nextRetry() == VectorCodeReconnectAttempt(attempt: 2, totalAttempts: 2, delay: 2.5))
+    precondition(reconnectPolicy.nextRetry() == nil)
 
     let model = VectorCodeMobileWorkspaceModel(snapshot: .sample)
     precondition(model.snapshot.projects.count == 2)
@@ -265,6 +308,7 @@ func verifyVectorCodeMobile() async throws {
     let frameHeader = VectorCodeRelayFrameHeader(
         desktopId: relayConfiguration.desktopId,
         phoneId: relayConfiguration.phoneId,
+        sessionId: relayConfiguration.pairingId,
         streamId: "terminal",
         channel: .terminal,
         direction: .phoneToDesktop,
@@ -279,6 +323,57 @@ func verifyVectorCodeMobile() async throws {
     let decodedEnvelope = try VectorCodeRelayFrameCrypto.decrypt(frame, pairingToken: payload.pairingToken, as: VectorCodeRemoteEnvelope<VectorCodeTerminalInputRequest>.self)
     precondition(decodedEnvelope.requestId == envelope.requestId)
     precondition(decodedEnvelope.payload?.submit == false)
+    let tamperedHeader = VectorCodeRelayFrameHeader(
+        protocolVersion: frame.header.protocolVersion,
+        frameId: frame.header.frameId,
+        desktopId: frame.header.desktopId,
+        phoneId: frame.header.phoneId,
+        sessionId: frame.header.sessionId,
+        streamId: frame.header.streamId,
+        channel: frame.header.channel,
+        direction: frame.header.direction,
+        seq: frame.header.seq,
+        issuedAt: VectorCodeISO8601.string(from: Date().addingTimeInterval(30)),
+        action: frame.header.action
+    )
+    let tamperedFrame = VectorCodeRelayEncryptedFrame(
+        header: tamperedHeader,
+        nonce: frame.nonce,
+        ciphertext: frame.ciphertext,
+        tag: frame.tag
+    )
+    do {
+        _ = try VectorCodeRelayFrameCrypto.decrypt(tamperedFrame, pairingToken: payload.pairingToken, as: VectorCodeRemoteEnvelope<VectorCodeTerminalInputRequest>.self)
+        preconditionFailure("A modified relay header must fail authentication")
+    } catch {
+        // Header authentication rejected the modified routing metadata.
+    }
+
+    let validationNow = Date()
+    let desktopHeader = VectorCodeRelayFrameHeader(
+        desktopId: relayConfiguration.desktopId,
+        phoneId: relayConfiguration.phoneId,
+        sessionId: relayConfiguration.pairingId,
+        streamId: "state",
+        channel: .control,
+        direction: .desktopToPhone,
+        seq: 1,
+        issuedAt: VectorCodeISO8601.string(from: validationNow),
+        action: .stateRead
+    )
+    precondition(VectorCodeRelayFrameValidation.acceptsDesktopFrame(desktopHeader, configuration: relayConfiguration, now: validationNow))
+    let staleDesktopHeader = VectorCodeRelayFrameHeader(
+        desktopId: desktopHeader.desktopId,
+        phoneId: desktopHeader.phoneId,
+        sessionId: desktopHeader.sessionId,
+        streamId: desktopHeader.streamId,
+        channel: desktopHeader.channel,
+        direction: desktopHeader.direction,
+        seq: desktopHeader.seq,
+        issuedAt: VectorCodeISO8601.string(from: validationNow.addingTimeInterval(-VectorCodeRelayFrameValidation.maxFrameAge - 1)),
+        action: desktopHeader.action
+    )
+    precondition(!VectorCodeRelayFrameValidation.acceptsDesktopFrame(staleDesktopHeader, configuration: relayConfiguration, now: validationNow))
 
     let relayMessage = try JSONEncoder().encode(VectorCodeRelayOutboundMessage.frame(frame))
     let relayMessageJSON = String(data: relayMessage, encoding: .utf8)!
@@ -952,6 +1047,22 @@ private func verifySharedProtocolFixtures() throws {
         precondition(fixtureCase.bytes == generatedCase.bytes)
         precondition(fixtureCase.encoded == generatedCase.encoded)
     }
+    let authenticationCase = fixture.frameCrypto.authenticationCase
+    let authenticatedFrame = VectorCodeRelayEncryptedFrame(
+        header: authenticationCase.header,
+        nonce: authenticationCase.nonce,
+        ciphertext: authenticationCase.ciphertext,
+        tag: authenticationCase.tag
+    )
+    let authenticatedEnvelope = try VectorCodeRelayFrameCrypto.decrypt(
+        authenticatedFrame,
+        pairingToken: authenticationCase.pairingToken,
+        as: VectorCodeRemoteEnvelope<VectorCodeJSONValue>.self
+    )
+    precondition(authenticatedEnvelope.kind == .request)
+    precondition(authenticatedEnvelope.protocolVersion == fixture.protocolVersion)
+    precondition(authenticatedEnvelope.requestId == authenticationCase.payload.requestId)
+    precondition(authenticatedEnvelope.action == authenticationCase.payload.action)
     for (fileExtension, language) in fixture.languageByExtension {
         precondition(VectorCodeLanguageInference.language(for: "example.\(fileExtension)") == language)
     }
@@ -1021,6 +1132,16 @@ private struct VectorCodeMobileFrameCryptoFixture: Decodable {
     let tagBytes: Int
     let keyBytes: Int
     let base64UrlCases: [VectorCodeMobileBase64URLFixture]
+    let authenticationCase: VectorCodeMobileFrameAuthenticationFixture
+}
+
+private struct VectorCodeMobileFrameAuthenticationFixture: Decodable {
+    let pairingToken: String
+    let header: VectorCodeRelayFrameHeader
+    let payload: VectorCodeRemoteEnvelope<VectorCodeJSONValue>
+    let nonce: String
+    let ciphertext: String
+    let tag: String
 }
 
 private struct VectorCodeMobileBase64URLFixture: Decodable {

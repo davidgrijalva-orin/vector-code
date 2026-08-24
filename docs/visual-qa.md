@@ -29,7 +29,7 @@ Run this after desktop or iOS chrome changes. Treat visual drift from this check
 
 ## iOS App
 
-0. Run `npm run smoke-vector-relay -- --dry-run`, then run the live relay smoke from [mobile-relay-smoke.md](./mobile-relay-smoke.md) when the relay issuer token is available.
+0. Run `npm run smoke-vector-relay:dry-run`, then run the live relay smoke from [mobile-relay-smoke.md](./mobile-relay-smoke.md) when the relay issuer token is available.
 1. Pair with the desktop QR code and confirm the app moves past the pairing screen after connection.
 2. Confirm all open projects appear and switching projects swaps files, editor tabs, and terminal tabs without losing per-project state.
 3. Open a file. The editor should show a monospaced Monaco-like gutter, status strip, save state, language, and version when available.

@@ -160,7 +160,7 @@ public struct VectorCodeRelayFrameHeader: Codable, Equatable, Sendable {
     public let frameId: String
     public let desktopId: String
     public let phoneId: String
-    public let sessionId: String?
+    public let sessionId: String
     public let streamId: String
     public let channel: VectorCodeRelayFrameChannel
     public let direction: VectorCodeRelayFrameDirection
@@ -173,7 +173,7 @@ public struct VectorCodeRelayFrameHeader: Codable, Equatable, Sendable {
         frameId: String = UUID().uuidString,
         desktopId: String,
         phoneId: String,
-        sessionId: String? = nil,
+        sessionId: String,
         streamId: String,
         channel: VectorCodeRelayFrameChannel,
         direction: VectorCodeRelayFrameDirection,
@@ -352,7 +352,12 @@ public enum VectorCodeRelayFrameCrypto {
         let key = try frameKey(pairingToken)
         let nonce = try AES.GCM.Nonce(data: randomData(count: nonceBytes))
         let plaintext = try JSONEncoder().encode(payload)
-        let sealedBox = try AES.GCM.seal(plaintext, using: key, nonce: nonce)
+        let sealedBox = try AES.GCM.seal(
+            plaintext,
+            using: key,
+            nonce: nonce,
+            authenticating: authenticatedHeaderData(header)
+        )
         guard let ciphertext = sealedBox.ciphertext.dataValue, let tag = sealedBox.tag.dataValue else {
             throw VectorCodeRelayFrameCryptoError.encodingFailed
         }
@@ -372,8 +377,33 @@ public enum VectorCodeRelayFrameCrypto {
             ciphertext: Data(base64URLString: frame.ciphertext),
             tag: Data(base64URLString: frame.tag)
         )
-        let plaintext = try AES.GCM.open(sealedBox, using: key)
+        let plaintext = try AES.GCM.open(
+            sealedBox,
+            using: key,
+            authenticating: authenticatedHeaderData(frame.header)
+        )
         return try JSONDecoder().decode(payloadType, from: plaintext)
+    }
+
+    private static func authenticatedHeaderData(_ header: VectorCodeRelayFrameHeader) -> Data {
+        let fields = [
+            String(header.protocolVersion),
+            header.frameId,
+            header.desktopId,
+            header.phoneId,
+            header.sessionId,
+            header.streamId,
+            header.channel.rawValue,
+            header.direction.rawValue,
+            String(header.seq),
+            header.issuedAt,
+            header.action.rawValue,
+        ]
+        return fields.reduce(into: Data()) { result, field in
+            let bytes = Data(field.utf8)
+            result.append(Data("\(bytes.count):".utf8))
+            result.append(bytes)
+        }
     }
 
     private static func frameKey(_ pairingToken: String) throws -> SymmetricKey {

@@ -91,7 +91,7 @@ export interface IVectorCodeMobileRelayFrameHeader {
 	readonly frameId: string;
 	readonly desktopId: string;
 	readonly phoneId: string;
-	readonly sessionId?: string;
+	readonly sessionId: string;
 	readonly streamId: string;
 	readonly channel: VectorCodeMobileRelayFrameChannel;
 	readonly direction: VectorCodeMobileRelayFrameDirection;

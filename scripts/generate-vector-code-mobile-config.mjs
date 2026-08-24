@@ -69,6 +69,10 @@ if (!Array.isArray(frameCrypto.base64UrlCases) || !frameCrypto.base64UrlCases.ev
 	throw new Error(`frameCrypto.base64UrlCases must be an array of { bytes, encoded } cases in ${fixturePath}`);
 }
 
+if (!isFrameAuthenticationCase(frameCrypto.authenticationCase, protocolVersion)) {
+	throw new Error(`frameCrypto.authenticationCase must contain a complete protocol ${protocolVersion} encrypted frame fixture in ${fixturePath}`);
+}
+
 const tsOutput = `/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -106,6 +110,7 @@ export const VECTOR_CODE_MOBILE_FRAME_NONCE_BYTES = ${String(frameCrypto.nonceBy
 export const VECTOR_CODE_MOBILE_FRAME_TAG_BYTES = ${String(frameCrypto.tagBytes)};
 export const VECTOR_CODE_MOBILE_FRAME_KEY_BYTES = ${String(frameCrypto.keyBytes)};
 export const VECTOR_CODE_MOBILE_BASE64_URL_CASES = ${formatTsObjectArray(frameCrypto.base64UrlCases)} as const;
+export const VECTOR_CODE_MOBILE_FRAME_AUTHENTICATION_CASE = ${formatTsJsonValue(frameCrypto.authenticationCase)} as const;
 
 export const VECTOR_CODE_LANGUAGE_BY_EXTENSION_VALUES = ${formatTsTuples(Object.entries(languageByExtension))} as const;
 export const VECTOR_CODE_LANGUAGE_BY_EXTENSION = new Map<string, string>(VECTOR_CODE_LANGUAGE_BY_EXTENSION_VALUES);
@@ -170,7 +175,10 @@ async function writeGeneratedFile(filePath, expectedContent) {
 		// Missing generated outputs are handled below.
 	}
 
-	if (currentContent === expectedContent) {
+	// Git may materialize generated sources with CRLF on Windows even though the
+	// generator builds its output with LF. Line endings are not protocol data, so
+	// compare normalized content to keep the cross-platform parity check stable.
+	if (currentContent !== undefined && normalizeLineEndings(currentContent) === normalizeLineEndings(expectedContent)) {
 		return;
 	}
 
@@ -183,6 +191,10 @@ async function writeGeneratedFile(filePath, expectedContent) {
 	await mkdir(path.dirname(filePath), { recursive: true });
 	await writeFile(filePath, expectedContent);
 	console.log(`Generated ${path.relative(root, filePath)}`);
+}
+
+function normalizeLineEndings(value) {
+	return value.replace(/\r\n/g, '\n');
 }
 
 function formatTsArray(values) {
@@ -281,6 +293,39 @@ function isBase64UrlCase(value) {
 		&& Array.isArray(value.bytes)
 		&& value.bytes.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255)
 		&& typeof value.encoded === 'string';
+}
+
+function formatTsJsonValue(value, depth = 0) {
+	if (typeof value === 'string') {
+		return formatTsString(value);
+	}
+	if (typeof value === 'number' || typeof value === 'boolean') {
+		return String(value);
+	}
+	if (value === null) {
+		return 'null';
+	}
+	if (Array.isArray(value)) {
+		return `[${value.map(item => formatTsJsonValue(item, depth + 1)).join(', ')}]`;
+	}
+	const indent = '\t'.repeat(depth);
+	const childIndent = '\t'.repeat(depth + 1);
+	const entries = Object.entries(value).map(([key, item]) => `${childIndent}${key}: ${formatTsJsonValue(item, depth + 1)},`);
+	return `{\n${entries.join('\n')}\n${indent}}`;
+}
+
+function isFrameAuthenticationCase(value, protocolVersion) {
+	return value
+		&& typeof value === 'object'
+		&& !Array.isArray(value)
+		&& ['pairingToken', 'nonce', 'ciphertext', 'tag'].every(key => typeof value[key] === 'string' && value[key].length > 0)
+		&& value.header
+		&& typeof value.header === 'object'
+		&& value.header.protocolVersion === protocolVersion
+		&& typeof value.header.sessionId === 'string'
+		&& value.payload
+		&& typeof value.payload === 'object'
+		&& value.payload.protocolVersion === protocolVersion;
 }
 
 function isPositiveInteger(value) {

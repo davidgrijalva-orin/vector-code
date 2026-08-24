@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Emitter } from '../../../../base/common/event.js';
 import { Disposable, IDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import { localize } from '../../../../nls.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
@@ -13,7 +14,10 @@ import { IVectorCodeMobileConnectionStatus, IVectorCodeMobilePairingPayload, IVe
 import { normalizeVectorCodeRelayHost, VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST, VECTOR_CODE_MOBILE_DEFAULT_USER_ID } from '../common/vectorCodeHosts.js';
 import { cryptoRandomVectorCodeBase64Url, encodeVectorCodeBase64Url } from '../common/vectorCodeMobileEncoding.js';
 import { decryptVectorCodeMobileFramePayload, encryptVectorCodeMobileFramePayload } from '../common/vectorCodeMobileFrameCrypto.js';
-import { createVectorCodeMobileRemoteErrorResponse, IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRelayEncryptedFrame, VectorCodeMobileRelayFrameDirection, VectorCodeMobileRelayInboundMessage, VectorCodeMobileRelayOutboundMessage, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
+import { createVectorCodeMobileRemoteErrorResponse, IVectorCodeMobileRemoteEnvelope, IVectorCodeMobileRelayEncryptedFrame, VectorCodeMobileRelayFrameDirection, VectorCodeMobileRelayOutboundMessage, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from '../common/vectorCodeMobileProtocol.js';
+import { isValidVectorCodePhoneRelayFrame, isValidVectorCodeRemoteRequest, VectorCodeMobileRelayReplayGuard } from '../common/vectorCodeMobileRelayValidation.js';
+import { VectorCodeReconnectPolicy } from '../common/vectorCodeReconnectPolicy.js';
+import { matchVectorCodeRelayIssuerCredential } from '../common/vectorCodeRelayIssuerCredential.js';
 import { toString as qrToString } from './vectorCodeQrBundle.js';
 
 const VECTOR_CODE_MOBILE_DESKTOP_ID_STORAGE_KEY = 'vectorCode.mobile.desktopId';
@@ -24,10 +28,14 @@ const VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.ac
 const VECTOR_CODE_MOBILE_PAIRING_TTL_MS = 5 * 60_000;
 const VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS = 60_000;
+const VECTOR_CODE_MOBILE_RECONNECT_DELAYS_MS = [1_000, 2_500, 5_000, 10_000, 30_000] as const;
+const VECTOR_CODE_MOBILE_RECONNECT_STABLE_AFTER_MS = 30_000;
 
 interface IVectorCodeMobileDesktopRelayConnection {
 	readonly connectionId: string;
 	readonly payload: IVectorCodeMobilePairingPayload;
+	readonly replayGuard: VectorCodeMobileRelayReplayGuard;
+	phonePairedAt?: string;
 	sequence: number;
 }
 
@@ -35,6 +43,7 @@ interface IVectorCodeMobileStoredRelaySession {
 	readonly payload: IVectorCodeMobilePairingPayload;
 	readonly desktopRelayToken: string;
 	readonly desktopRelayTokenExpiresAt: string;
+	readonly phonePairedAt?: string;
 }
 
 interface IVectorCodeMobileRelayToken {
@@ -47,11 +56,23 @@ interface IVectorCodeMobilePairingRelayTokens {
 	readonly desktopRelayToken: IVectorCodeMobileRelayToken;
 }
 
-class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobileRelayService {
+interface IVectorCodeMobileStoredRelayIssuerCredential {
+	readonly relayHost: string;
+	readonly token: string;
+}
+
+export class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobileRelayService {
 	readonly _serviceBrand: undefined;
+	private readonly _onDidChangeStatus = this._register(new Emitter<IVectorCodeMobileConnectionStatus>());
+	readonly onDidChangeStatus = this._onDidChangeStatus.event;
 	private _lastStatus: IVectorCodeMobileConnectionStatus | undefined;
 	private requestHandler: IVectorCodeMobileRemoteRequestHandler | undefined;
 	private desktopRelayConnection: IVectorCodeMobileDesktopRelayConnection | undefined;
+	private pairingOperation: Promise<IVectorCodeMobileConnectionStatus> | undefined;
+	private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+	private pendingReconnect: { relayHost: string | undefined } | undefined;
+	private pairingExpiryTimer: ReturnType<typeof setTimeout> | undefined;
+	private readonly reconnectPolicy = new VectorCodeReconnectPolicy(VECTOR_CODE_MOBILE_RECONNECT_DELAYS_MS, VECTOR_CODE_MOBILE_RECONNECT_STABLE_AFTER_MS);
 
 	constructor(
 		@ISecretStorageService private readonly secretStorageService: ISecretStorageService,
@@ -60,23 +81,43 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 	) {
 		super();
 		this._register(this.relayBridgeService.onDidReceiveMessage(message => {
-			void this.handleDesktopRelayMessage(message.connectionId, message.message);
+			void this.handleDesktopRelayMessage(message.connectionId, message.message).catch(() => {
+				this.handleDesktopRelayConnectionChange(message.connectionId, 'error');
+				void this.relayBridgeService.disconnect(message.connectionId);
+			});
 		}));
 		this._register(this.relayBridgeService.onDidChangeConnection(event => {
 			this.handleDesktopRelayConnectionChange(event.connectionId, event.state, event.detail);
 		}));
-		void this.restoreDesktopRelayConnection();
+		this._register(toDisposable(() => {
+			this.cancelReconnect(false);
+			this.cancelPairingExpiry();
+			const connection = this.desktopRelayConnection;
+			this.desktopRelayConnection = undefined;
+			if (connection) {
+				void this.relayBridgeService.disconnect(connection.connectionId);
+			}
+		}));
+		this.setStatus({
+			state: VectorCodeMobileConnectionState.Reconnecting,
+			label: localize('vectorCodeMobileRestoringBridge', 'Restoring phone bridge'),
+			detail: localize('vectorCodeMobileRestoringBridgeDetail', 'Checking for a secure saved phone session.'),
+			relayHost: this.getStoredRelayHost()
+		});
+		this.queueDesktopRelayRestore();
 	}
 
 	getStatus(): IVectorCodeMobileConnectionStatus {
 		if (this._lastStatus) {
-			if (this._lastStatus.state !== VectorCodeMobileConnectionState.Connected && this._lastStatus.pairing && Date.parse(this._lastStatus.pairing.payload.expiresAt) <= Date.now()) {
-				this._lastStatus = {
-					state: VectorCodeMobileConnectionState.Disconnected,
+			if (this._lastStatus.state === VectorCodeMobileConnectionState.Pairing && this._lastStatus.pairing && Date.parse(this._lastStatus.pairing.payload.expiresAt) <= Date.now()) {
+				const pairingId = this._lastStatus.pairing.payload.pairingId;
+				this.setStatus({
+					state: VectorCodeMobileConnectionState.Expired,
 					label: localize('vectorCodeMobilePairingExpired', 'QR expired'),
 					detail: localize('vectorCodeMobilePairingExpiredDetail', 'Create a new QR pairing session to connect the mobile app.'),
 					relayHost: this._lastStatus.relayHost
-				};
+				});
+				void this.expireUnclaimedPairing(pairingId);
 			}
 			return this._lastStatus;
 		}
@@ -94,18 +135,48 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		};
 	}
 
-	async startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus> {
+	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus> {
+		if (this.pairingOperation) {
+			return this.pairingOperation;
+		}
+		const operation = this.doStartPairing(relayHost, relayIssuerToken).finally(() => {
+			if (this.pairingOperation === operation) {
+				this.pairingOperation = undefined;
+				const pendingReconnect = this.pendingReconnect;
+				this.pendingReconnect = undefined;
+				if (pendingReconnect) {
+					this.scheduleDesktopRelayReconnect(pendingReconnect.relayHost);
+				}
+			}
+		});
+		this.pairingOperation = operation;
+		return operation;
+	}
+
+	private async doStartPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus> {
+		this.cancelReconnect(true);
 		const normalizedRelayHost = normalizeVectorCodeRelayHost(relayHost ?? this.getStoredRelayHost());
 		if (!normalizedRelayHost) {
-			this._lastStatus = {
+			return this.setStatus({
 				state: VectorCodeMobileConnectionState.Unconfigured,
 				label: localize('vectorCodeMobileRelayHostRequired', 'Phone connection unavailable'),
 				detail: localize('vectorCodeMobileRelayHostRequiredDetail', 'Mobile pairing is not configured for this desktop.')
-			};
-			return this._lastStatus;
+			});
 		}
 
+		const previouslyStoredRelayHost = this.getExplicitStoredRelayHost();
 		this.storageService.store(VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY, normalizedRelayHost, StorageScope.APPLICATION, StorageTarget.MACHINE);
+		const issuerToken = await this.resolveRelayIssuerToken(relayIssuerToken, normalizedRelayHost, previouslyStoredRelayHost);
+		if (!issuerToken) {
+			return this.setStatus({
+				state: VectorCodeMobileConnectionState.Unconfigured,
+				label: localize('vectorCodeMobileRelayIssuerTokenRequired', 'Connection setup required'),
+				detail: localize('vectorCodeMobileRelayIssuerTokenRequiredDetail', 'Enter the relay issuer token to create a secure phone pairing QR.'),
+				relayHost: normalizedRelayHost,
+				requiresRelayIssuerToken: true
+			});
+		}
+
 		const identity = await this.getOrCreateIdentity();
 		const expiresAt = new Date(Date.now() + VECTOR_CODE_MOBILE_PAIRING_TTL_MS).toISOString();
 		const desktopId = this.getOrCreateDesktopId();
@@ -122,67 +193,74 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
 			expiresAt
 		};
-		const issuerToken = await this.resolveRelayIssuerToken(relayIssuerToken);
-		if (!issuerToken) {
-			const pairing = await createPairingSession(basePairingPayload);
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Unconfigured,
-				label: localize('vectorCodeMobileRelayIssuerTokenRequired', 'Connection setup required'),
-				detail: localize('vectorCodeMobileRelayIssuerTokenRequiredDetail', 'Secure phone pairing is not fully configured on this desktop.'),
+		let relayTokens: IVectorCodeMobilePairingRelayTokens | undefined;
+		try {
+			relayTokens = await this.createPairingRelayTokens({
 				relayHost: normalizedRelayHost,
-				pairing
-			};
-			return this._lastStatus;
+				issuerToken,
+				userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
+				desktopId,
+				pairingId,
+				ttlSeconds: VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS
+			});
+		} catch {
+			return this.setStatus({
+				state: VectorCodeMobileConnectionState.Failed,
+				label: localize('vectorCodeMobileRelayUnavailable', 'Relay unavailable'),
+				detail: localize('vectorCodeMobileRelayUnavailableDetail', 'The secure relay could not be reached. Check the network and try again.'),
+				relayHost: normalizedRelayHost
+			});
 		}
-
-		const relayTokens = await this.createPairingRelayTokens({
-			relayHost: normalizedRelayHost,
-			issuerToken,
-			userId: VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-			desktopId,
-			pairingId,
-			ttlSeconds: VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS
-		});
 		if (!relayTokens) {
-			const pairing = await createPairingSession(basePairingPayload);
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Disconnected,
-				label: localize('vectorCodeMobileRelayTokenRejected', 'Secure pairing failed'),
-				detail: localize('vectorCodeMobileRelayTokenRejectedDetail', 'The QR could not be prepared for the phone. Check the desktop mobile connection configuration and try again.'),
+			return this.setStatus({
+				state: VectorCodeMobileConnectionState.Unconfigured,
+				label: localize('vectorCodeMobileRelayTokenRejected', 'Relay authorization failed'),
+				detail: localize('vectorCodeMobileRelayTokenRejectedDetail', 'Enter a valid relay issuer token, then try the secure phone pairing again.'),
 				relayHost: normalizedRelayHost,
-				pairing
-			};
-			return this._lastStatus;
+				requiresRelayIssuerToken: true
+			});
 		}
-
 		const payload: IVectorCodeMobilePairingPayload = {
 			...basePairingPayload,
 			relayToken: relayTokens.phoneRelayToken.relayToken,
 			relayTokenExpiresAt: relayTokens.phoneRelayToken.relayTokenExpiresAt
 		};
 
-		const pairing = await createPairingSession(payload);
+		const previousStatus = this._lastStatus;
+		const hadPreviousConnection = Boolean(this.desktopRelayConnection);
 		try {
-			await this.connectDesktopRelay(payload, relayTokens.desktopRelayToken.relayToken);
-			await this.storeActiveRelaySession(payload, relayTokens.desktopRelayToken);
+			await this.replaceDesktopRelayConnection(payload, relayTokens.desktopRelayToken, undefined, connection => this.storeActiveRelaySession(payload, relayTokens.desktopRelayToken, connection.phonePairedAt));
 		} catch {
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Disconnected,
+			if (hadPreviousConnection && this.desktopRelayConnection && previousStatus) {
+				return this.setStatus({
+					...previousStatus,
+					label: localize('vectorCodeMobileNewPairingFailed', 'New pairing failed'),
+					detail: localize('vectorCodeMobileNewPairingFailedExistingDetail', 'The existing phone bridge remains active. Check the relay connection before replacing it.')
+				});
+			}
+			return this.setStatus({
+				state: VectorCodeMobileConnectionState.Failed,
 				label: localize('vectorCodeMobileDesktopRelayFailed', 'Desktop connection failed'),
-				detail: localize('vectorCodeMobileDesktopRelayFailedDetail', 'The QR is ready, but this desktop could not start the phone bridge. Refresh the QR and try again.'),
-				relayHost: normalizedRelayHost,
-				pairing
-			};
-			return this._lastStatus;
+				detail: localize('vectorCodeMobileDesktopRelayFailedDetail', 'This desktop could not start the secure phone bridge. Check the network and try again.'),
+				relayHost: normalizedRelayHost
+			});
 		}
-		this._lastStatus = {
+		let issuerCredentialSaved = true;
+		try {
+			await this.storeRelayIssuerCredential(normalizedRelayHost, issuerToken);
+		} catch {
+			issuerCredentialSaved = false;
+		}
+		const pairing = await createPairingSession(payload);
+		return this.setStatus({
 			state: VectorCodeMobileConnectionState.Pairing,
 			label: localize('vectorCodeMobilePairingReady', 'QR ready to scan'),
-			detail: localize('vectorCodeMobilePairingReadyDetail', 'Secure phone bridge ready. Scan this QR by {0}.', new Date(expiresAt).toLocaleTimeString()),
+			detail: issuerCredentialSaved
+				? localize('vectorCodeMobilePairingReadyDetail', 'Secure phone bridge ready. Scan this QR by {0}.', new Date(expiresAt).toLocaleTimeString())
+				: localize('vectorCodeMobilePairingReadyCredentialUnsavedDetail', 'Secure phone bridge ready. Scan this QR by {0}. The issuer token could not be saved and may be required again after restart.', new Date(expiresAt).toLocaleTimeString()),
 			relayHost: normalizedRelayHost,
 			pairing
-		};
-		return this._lastStatus;
+		});
 	}
 
 	registerRequestHandler(handler: IVectorCodeMobileRemoteRequestHandler): IDisposable {
@@ -194,12 +272,12 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		});
 	}
 
-	private async connectDesktopRelay(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: string): Promise<void> {
-		if (this.desktopRelayConnection) {
-			await this.relayBridgeService.disconnect(this.desktopRelayConnection.connectionId);
-			this.desktopRelayConnection = undefined;
-		}
-
+	private async replaceDesktopRelayConnection(
+		payload: IVectorCodeMobilePairingPayload,
+		desktopRelayToken: IVectorCodeMobileRelayToken,
+		phonePairedAt?: string,
+		activate?: (connection: IVectorCodeMobileDesktopRelayConnection) => Promise<void>
+	): Promise<IVectorCodeMobileDesktopRelayConnection> {
 		const connectionId = await this.relayBridgeService.connect({
 			url: relayWebSocketUrl(payload.relayHost, {
 				role: 'desktop',
@@ -208,63 +286,133 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 				deviceId: payload.desktopId,
 				pairingId: payload.pairingId
 			}),
-			authorizationHeader: `Bearer ${desktopRelayToken}`
+			authorizationHeader: `Bearer ${desktopRelayToken.relayToken}`
 		});
-		this.desktopRelayConnection = { connectionId, payload, sequence: 0 };
+		const previousConnection = this.desktopRelayConnection;
+		const connection: IVectorCodeMobileDesktopRelayConnection = {
+			connectionId,
+			payload,
+			replayGuard: new VectorCodeMobileRelayReplayGuard(),
+			phonePairedAt,
+			sequence: 0
+		};
+		this.desktopRelayConnection = connection;
+		try {
+			await activate?.(connection);
+		} catch (error) {
+			if (this.desktopRelayConnection === connection) {
+				this.desktopRelayConnection = previousConnection;
+			}
+			await this.relayBridgeService.disconnect(connectionId);
+			throw error;
+		}
+		if (previousConnection) {
+			await this.relayBridgeService.disconnect(previousConnection.connectionId);
+		}
+		this.cancelReconnect(false);
+		this.reconnectPolicy.markReady();
+		this.schedulePairingExpiry(connection);
+		return connection;
 	}
 
 	private async restoreDesktopRelayConnection(): Promise<void> {
-		const session = await this.readActiveRelaySession();
+		let session: IVectorCodeMobileStoredRelaySession | undefined;
+		try {
+			session = await this.readActiveRelaySession();
+		} catch {
+			this.scheduleDesktopRelayReconnect();
+			return;
+		}
 		if (!session) {
+			this.cancelReconnect(true);
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Disconnected,
+				label: localize('vectorCodeMobileRelayHostConfigured', 'Phone connection ready'),
+				detail: localize('vectorCodeMobileRelayHostConfiguredDetail', 'Create a QR pairing session for the mobile app.'),
+				relayHost: this.getStoredRelayHost()
+			});
+			return;
+		}
+
+		if (!session.phonePairedAt && Date.parse(session.payload.expiresAt) <= Date.now()) {
+			await this.clearActiveRelaySession();
+			this.cancelReconnect(true);
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Expired,
+				label: localize('vectorCodeMobilePairingExpired', 'QR expired'),
+				detail: localize('vectorCodeMobilePairingExpiredDetail', 'Create a new QR pairing session to connect the mobile app.'),
+				relayHost: session.payload.relayHost
+			});
 			return;
 		}
 
 		if (!session.payload.relayToken || isExpiredIsoDate(session.payload.relayTokenExpiresAt, VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS)) {
 			await this.clearActiveRelaySession();
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Disconnected,
+			this.cancelReconnect(true);
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Expired,
 				label: localize('vectorCodeMobileStoredPairingExpired', 'Phone pairing expired'),
 				detail: localize('vectorCodeMobileStoredPairingExpiredDetail', 'Create a fresh QR pairing session to reconnect the mobile app.'),
 				relayHost: session.payload.relayHost
-			};
+			});
 			return;
 		}
 
-		const desktopRelayToken = await this.resolveDesktopRelayToken(session);
+		let desktopRelayToken: IVectorCodeMobileRelayToken | undefined;
+		try {
+			desktopRelayToken = await this.resolveDesktopRelayToken(session);
+		} catch {
+			this.scheduleDesktopRelayReconnect(session.payload.relayHost);
+			return;
+		}
 		if (!desktopRelayToken) {
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Disconnected,
+			this.cancelReconnect(true);
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Unconfigured,
 				label: localize('vectorCodeMobileDesktopRestoreTokenMissing', 'Phone bridge expired'),
-				detail: localize('vectorCodeMobileDesktopRestoreTokenMissingDetail', 'Refresh the QR pairing once so the desktop can reconnect.'),
-				relayHost: session.payload.relayHost
-			};
+				detail: localize('vectorCodeMobileDesktopRestoreTokenMissingDetail', 'Enter the relay issuer token so this desktop can reconnect securely.'),
+				relayHost: session.payload.relayHost,
+				requiresRelayIssuerToken: true
+			});
 			return;
 		}
 
 		try {
-			await this.connectDesktopRelay(session.payload, desktopRelayToken);
-			this._lastStatus = {
+			const connection = await this.replaceDesktopRelayConnection(session.payload, desktopRelayToken, session.phonePairedAt);
+			if (this.desktopRelayConnection !== connection || this._lastStatus?.state === VectorCodeMobileConnectionState.Connected) {
+				return;
+			}
+			const pairing = !session.phonePairedAt ? await createPairingSession(session.payload) : undefined;
+			this.setStatus(pairing ? {
+				state: VectorCodeMobileConnectionState.Pairing,
+				label: localize('vectorCodeMobilePairingReady', 'QR ready to scan'),
+				detail: localize('vectorCodeMobilePairingReadyDetail', 'Secure phone bridge ready. Scan this QR by {0}.', new Date(session.payload.expiresAt).toLocaleTimeString()),
+				relayHost: session.payload.relayHost,
+				pairing
+			} : {
 				state: VectorCodeMobileConnectionState.Pairing,
 				label: localize('vectorCodeMobileDesktopBridgeReady', 'Desktop bridge ready'),
 				detail: localize('vectorCodeMobileDesktopBridgeReadyDetail', 'Waiting for the paired phone.'),
 				relayHost: session.payload.relayHost
-			};
+			});
 		} catch {
-			this._lastStatus = {
-				state: VectorCodeMobileConnectionState.Disconnected,
-				label: localize('vectorCodeMobileDesktopRestoreFailed', 'Desktop connection failed'),
-				detail: localize('vectorCodeMobileDesktopRestoreFailedDetail', 'The desktop could not reconnect to the stored mobile pairing. Refresh the QR pairing and try again.'),
-				relayHost: session.payload.relayHost
-			};
+			this.scheduleDesktopRelayReconnect(session.payload.relayHost);
 		}
 	}
 
-	private async resolveDesktopRelayToken(session: IVectorCodeMobileStoredRelaySession): Promise<string | undefined> {
+	private queueDesktopRelayRestore(relayHost = this.getStoredRelayHost()): void {
+		void this.restoreDesktopRelayConnection().catch(() => this.scheduleDesktopRelayReconnect(relayHost));
+	}
+
+	private async resolveDesktopRelayToken(session: IVectorCodeMobileStoredRelaySession): Promise<IVectorCodeMobileRelayToken | undefined> {
 		if (!isExpiredIsoDate(session.desktopRelayTokenExpiresAt, VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS)) {
-			return session.desktopRelayToken;
+			return {
+				relayToken: session.desktopRelayToken,
+				relayTokenExpiresAt: session.desktopRelayTokenExpiresAt
+			};
 		}
 
-		const issuerToken = await this.resolveRelayIssuerToken();
+		const issuerToken = await this.resolveRelayIssuerToken(undefined, session.payload.relayHost, this.getExplicitStoredRelayHost());
 		if (!issuerToken) {
 			return undefined;
 		}
@@ -282,8 +430,8 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 			return undefined;
 		}
 
-		await this.storeActiveRelaySession(session.payload, mintedToken);
-		return mintedToken.relayToken;
+		await this.storeActiveRelaySession(session.payload, mintedToken, session.phonePairedAt);
+		return mintedToken;
 	}
 
 	private handleDesktopRelayConnectionChange(connectionId: string, state: 'open' | 'closed' | 'error', detail?: string): void {
@@ -291,14 +439,109 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 			return;
 		}
 		this.desktopRelayConnection = undefined;
-		const previousStatus = this._lastStatus;
-		this._lastStatus = {
-			state: VectorCodeMobileConnectionState.Disconnected,
-			label: localize('vectorCodeMobileDesktopRelayDisconnected', 'Phone bridge disconnected'),
-			detail: detail ?? localize('vectorCodeMobileDesktopRelayDisconnectedDetail', 'Create a new QR pairing session to reconnect the desktop bridge.'),
-			relayHost: previousStatus?.relayHost,
-			pairing: previousStatus?.pairing
-		};
+		this.scheduleDesktopRelayReconnect(this._lastStatus?.relayHost, detail);
+	}
+
+	private scheduleDesktopRelayReconnect(relayHost = this.getStoredRelayHost(), _detail?: string): void {
+		if (this.reconnectTimer) {
+			return;
+		}
+		if (this.pairingOperation) {
+			this.pendingReconnect = { relayHost };
+			return;
+		}
+		const retry = this.reconnectPolicy.nextRetry();
+		this.setStatus({
+			state: VectorCodeMobileConnectionState.Reconnecting,
+			label: localize('vectorCodeMobileReconnecting', 'Reconnecting phone bridge'),
+			detail: localize('vectorCodeMobileReconnectingDetail', 'Retrying the secure relay in {0} seconds (attempt {1}).', Math.ceil(retry.delayMs / 1_000), retry.attempt),
+			relayHost
+		});
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = undefined;
+			this.queueDesktopRelayRestore(relayHost);
+		}, retry.delayMs);
+	}
+
+	private cancelReconnect(resetPolicy: boolean): void {
+		this.pendingReconnect = undefined;
+		if (this.reconnectTimer) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = undefined;
+		}
+		if (resetPolicy) {
+			this.reconnectPolicy.reset();
+		}
+	}
+
+	private schedulePairingExpiry(connection: IVectorCodeMobileDesktopRelayConnection): void {
+		this.cancelPairingExpiry();
+		if (connection.phonePairedAt) {
+			return;
+		}
+		const expiresIn = Date.parse(connection.payload.expiresAt) - Date.now();
+		if (expiresIn <= 0) {
+			void this.expireUnclaimedPairing(connection.payload.pairingId);
+			return;
+		}
+		this.pairingExpiryTimer = setTimeout(() => {
+			this.pairingExpiryTimer = undefined;
+			void this.expireUnclaimedPairing(connection.payload.pairingId);
+		}, expiresIn + 50);
+	}
+
+	private cancelPairingExpiry(): void {
+		if (this.pairingExpiryTimer) {
+			clearTimeout(this.pairingExpiryTimer);
+			this.pairingExpiryTimer = undefined;
+		}
+	}
+
+	private async expireUnclaimedPairing(pairingId: string): Promise<void> {
+		const connection = this.desktopRelayConnection;
+		let session: IVectorCodeMobileStoredRelaySession | undefined;
+		try {
+			session = await this.readActiveRelaySession();
+		} catch {
+			this.setPairingCleanupFailed(connection);
+			return;
+		}
+		const matchesConnection = connection?.payload.pairingId === pairingId && !connection.phonePairedAt;
+		const matchesSession = session?.payload.pairingId === pairingId && !session.phonePairedAt;
+		if (!matchesConnection && !matchesSession) {
+			return;
+		}
+		try {
+			if (matchesConnection && connection) {
+				this.desktopRelayConnection = undefined;
+				await this.relayBridgeService.disconnect(connection.connectionId);
+			}
+			if (matchesSession) {
+				await this.clearActiveRelaySession();
+			}
+		} catch {
+			this.setPairingCleanupFailed(connection, session);
+			return;
+		}
+		this.cancelPairingExpiry();
+		this.cancelReconnect(true);
+		if (this._lastStatus?.state !== VectorCodeMobileConnectionState.Connected) {
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Expired,
+				label: localize('vectorCodeMobilePairingExpired', 'QR expired'),
+				detail: localize('vectorCodeMobilePairingExpiredDetail', 'Create a new QR pairing session to connect the mobile app.'),
+				relayHost: connection?.payload.relayHost ?? session?.payload.relayHost ?? this.getStoredRelayHost()
+			});
+		}
+	}
+
+	private setPairingCleanupFailed(connection?: IVectorCodeMobileDesktopRelayConnection, session?: IVectorCodeMobileStoredRelaySession): void {
+		this.setStatus({
+			state: VectorCodeMobileConnectionState.Failed,
+			label: localize('vectorCodeMobilePairingExpiryFailed', 'Pairing cleanup failed'),
+			detail: localize('vectorCodeMobilePairingExpiryFailedDetail', 'Secure session storage is unavailable. Restart VectorCode, then create a fresh pairing QR.'),
+			relayHost: connection?.payload.relayHost ?? session?.payload.relayHost ?? this.getStoredRelayHost()
+		});
 	}
 
 	private async handleDesktopRelayMessage(connectionId: string, rawMessage: string): Promise<void> {
@@ -307,36 +550,84 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 			return;
 		}
 
-		let message: VectorCodeMobileRelayInboundMessage;
+		let message: unknown;
 		try {
-			message = JSON.parse(rawMessage) as VectorCodeMobileRelayInboundMessage;
+			message = JSON.parse(rawMessage) as unknown;
 		} catch {
 			return;
 		}
-		if (message.type === 'relay.peer_online' && message.role === 'phone') {
-			this._lastStatus = {
+		if (!isRecord(message) || typeof message.type !== 'string') {
+			return;
+		}
+		if (message.type === 'relay.peer_online' && message.role === 'phone' && message.desktopId === connection.payload.desktopId) {
+			if (!await this.acceptPhoneConnection(connection)) {
+				return;
+			}
+			this.setStatus({
 				state: VectorCodeMobileConnectionState.Connected,
 				label: localize('vectorCodeMobilePhoneConnected', 'Phone connected'),
 				detail: localize('vectorCodeMobilePhoneConnectedDetail', 'Mobile app is connected.'),
 				relayHost: connection.payload.relayHost
-			};
+			});
 			return;
 		}
-		if (message.type !== 'relay.frame' || message.frame.header.direction !== VectorCodeMobileRelayFrameDirection.PhoneToDesktop) {
+		if (message.type === 'relay.peer_offline' && message.role === 'phone' && message.desktopId === connection.payload.desktopId && connection.phonePairedAt) {
+			this.setStatus({
+				state: VectorCodeMobileConnectionState.Pairing,
+				label: localize('vectorCodeMobilePhoneDisconnected', 'Phone disconnected'),
+				detail: localize('vectorCodeMobilePhoneDisconnectedDetail', 'Waiting for the paired phone to reconnect.'),
+				relayHost: connection.payload.relayHost
+			});
 			return;
 		}
+		if (message.type !== 'relay.frame' || !isValidVectorCodePhoneRelayFrame(message.frame, connection.payload)) {
+			return;
+		}
+		const frame = message.frame;
 
-		let request: IVectorCodeMobileRemoteEnvelope;
+		let request: unknown;
 		try {
-			request = await decryptVectorCodeMobileFramePayload<IVectorCodeMobileRemoteEnvelope>({
+			request = await decryptVectorCodeMobileFramePayload<unknown>({
 				pairingToken: connection.payload.pairingToken,
-				frame: message.frame
+				frame
 			});
 		} catch {
 			return;
 		}
+		if (!isValidVectorCodeRemoteRequest(request)
+			|| request.action !== frame.header.action
+			|| !await this.acceptPhoneConnection(connection)
+			|| !connection.replayGuard.record(frame)) {
+			return;
+		}
 		const response = await this.createRemoteResponse(request);
-		await this.sendDesktopRelayResponse(connection, message.frame, response);
+		await this.sendDesktopRelayResponse(connection, frame, response);
+	}
+
+	private async acceptPhoneConnection(connection: IVectorCodeMobileDesktopRelayConnection): Promise<boolean> {
+		if (connection.phonePairedAt) {
+			return true;
+		}
+		if (Date.parse(connection.payload.expiresAt) <= Date.now()) {
+			await this.expireUnclaimedPairing(connection.payload.pairingId);
+			return false;
+		}
+
+		connection.phonePairedAt = new Date().toISOString();
+		this.cancelPairingExpiry();
+		try {
+			const session = await this.readActiveRelaySession();
+			if (session?.payload.pairingId === connection.payload.pairingId) {
+				await this.storeActiveRelaySession(connection.payload, {
+					relayToken: session.desktopRelayToken,
+					relayTokenExpiresAt: session.desktopRelayTokenExpiresAt
+				}, connection.phonePairedAt);
+			}
+		} catch {
+			// The authenticated connection remains usable for this process. A later
+			// reconnect will surface secure-storage recovery if persistence failed.
+		}
+		return true;
 	}
 
 	private async createRemoteResponse(request: IVectorCodeMobileRemoteEnvelope): Promise<IVectorCodeMobileRemoteEnvelope> {
@@ -375,8 +666,18 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		await this.relayBridgeService.send(connection.connectionId, JSON.stringify(message));
 	}
 
+	private setStatus(status: IVectorCodeMobileConnectionStatus): IVectorCodeMobileConnectionStatus {
+		this._lastStatus = status;
+		this._onDidChangeStatus.fire(status);
+		return status;
+	}
+
 	private getStoredRelayHost(): string | undefined {
-		return normalizeVectorCodeRelayHost(this.storageService.get(VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY, StorageScope.APPLICATION)) ?? VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
+		return this.getExplicitStoredRelayHost() ?? VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST;
+	}
+
+	private getExplicitStoredRelayHost(): string | undefined {
+		return normalizeVectorCodeRelayHost(this.storageService.get(VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY, StorageScope.APPLICATION));
 	}
 
 	private getOrCreateDesktopId(): string {
@@ -432,15 +733,29 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		};
 	}
 
-	private async resolveRelayIssuerToken(input?: string): Promise<string | undefined> {
+	private async resolveRelayIssuerToken(input: string | undefined, relayHost: string, legacyRelayHost: string | undefined): Promise<string | undefined> {
 		const token = input?.trim();
 		if (token) {
-			await this.secretStorageService.set(VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY, token);
 			return token;
 		}
 
-		const storedToken = (await this.secretStorageService.get(VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY))?.trim();
-		return storedToken || undefined;
+		const storedCredential = (await this.secretStorageService.get(VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY))?.trim();
+		if (!storedCredential) {
+			return undefined;
+		}
+		const match = matchVectorCodeRelayIssuerCredential(storedCredential, relayHost, legacyRelayHost);
+		if (!match) {
+			return undefined;
+		}
+		if (match.requiresMigration) {
+			await this.storeRelayIssuerCredential(relayHost, match.token);
+		}
+		return match.token;
+	}
+
+	private async storeRelayIssuerCredential(relayHost: string, token: string): Promise<void> {
+		const credential: IVectorCodeMobileStoredRelayIssuerCredential = { relayHost, token };
+		await this.secretStorageService.set(VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY, JSON.stringify(credential));
 	}
 
 	private async createPairingRelayTokens(input: {
@@ -470,28 +785,25 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 		pairingId?: string;
 		ttlSeconds: number;
 	}): Promise<IVectorCodeMobileRelayToken | undefined> {
-		try {
-			return await this.relayBridgeService.createRelayToken({
-				url: relayHttpUrl(input.relayHost, '/relay/token'),
-				authorizationHeader: `Bearer ${input.issuerToken}`,
-				payload: {
-					role: input.role,
-					userId: input.userId,
-					desktopId: input.desktopId,
-					...(input.role === 'phone' && input.pairingId ? { pairingId: input.pairingId } : {}),
-					ttlSeconds: input.ttlSeconds
-				}
-			});
-		} catch {
-			return undefined;
-		}
+		return this.relayBridgeService.createRelayToken({
+			url: relayHttpUrl(input.relayHost, '/relay/token'),
+			authorizationHeader: `Bearer ${input.issuerToken}`,
+			payload: {
+				role: input.role,
+				userId: input.userId,
+				desktopId: input.desktopId,
+				...(input.role === 'phone' && input.pairingId ? { pairingId: input.pairingId } : {}),
+				ttlSeconds: input.ttlSeconds
+			}
+		});
 	}
 
-	private async storeActiveRelaySession(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: IVectorCodeMobileRelayToken): Promise<void> {
+	private async storeActiveRelaySession(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: IVectorCodeMobileRelayToken, phonePairedAt?: string): Promise<void> {
 		const session: IVectorCodeMobileStoredRelaySession = {
 			payload,
 			desktopRelayToken: desktopRelayToken.relayToken,
-			desktopRelayTokenExpiresAt: desktopRelayToken.relayTokenExpiresAt
+			desktopRelayTokenExpiresAt: desktopRelayToken.relayTokenExpiresAt,
+			phonePairedAt
 		};
 		await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, JSON.stringify(session));
 	}
@@ -521,7 +833,7 @@ class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobi
 					await this.storeActiveRelaySession(migratedSession.payload, {
 						relayToken: migratedSession.desktopRelayToken,
 						relayTokenExpiresAt: migratedSession.desktopRelayTokenExpiresAt
-					});
+					}, migratedSession.phonePairedAt);
 					return migratedSession;
 				}
 				return candidate;
@@ -574,11 +886,13 @@ function isStoredRelaySession(value: unknown): value is IVectorCodeMobileStoredR
 	if (!isRecord(value)) {
 		return false;
 	}
+	const phonePairedAt = value.phonePairedAt;
 	return isPairingPayload(value.payload)
 		&& typeof value.desktopRelayToken === 'string'
 		&& value.desktopRelayToken.length > 0
 		&& typeof value.desktopRelayTokenExpiresAt === 'string'
-		&& value.desktopRelayTokenExpiresAt.length > 0;
+		&& value.desktopRelayTokenExpiresAt.length > 0
+		&& (phonePairedAt === undefined || (typeof phonePairedAt === 'string' && isValidIsoDate(phonePairedAt)));
 }
 
 function isPairingPayload(value: unknown): value is IVectorCodeMobilePairingPayload {
@@ -600,6 +914,10 @@ function isPairingPayload(value: unknown): value is IVectorCodeMobilePairingPayl
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
+}
+
+function isValidIsoDate(value: string): boolean {
+	return Number.isFinite(Date.parse(value));
 }
 
 function isExpiredIsoDate(value: string | undefined, skewMs: number): boolean {

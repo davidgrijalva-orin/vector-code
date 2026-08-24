@@ -123,6 +123,22 @@ if (args.dryRun) {
 	process.exit(0);
 }
 
+if (args.pairedDesktop) {
+	try {
+		const payload = JSON.parse(await readStandardInput());
+		const result = await runPairedDesktopSmoke({
+			fixture,
+			payload,
+			timeoutMs,
+			holdMs: Number.parseInt(args.holdMs ?? '0', 10)
+		});
+		console.log(JSON.stringify(result, null, 2));
+		process.exit(0);
+	} catch (error) {
+		fail(error instanceof Error ? error.message : String(error));
+	}
+}
+
 if (!issuerToken) {
 	fail('Missing VECTOR_CODE_RELAY_ISSUER_TOKEN. Use --dry-run to validate URLs without contacting the relay.');
 }
@@ -234,6 +250,10 @@ function parseArgs(values) {
 			parsed.selfTest = true;
 			continue;
 		}
+		if (value === '--paired-desktop') {
+			parsed.pairedDesktop = true;
+			continue;
+		}
 		if (!value.startsWith('--')) {
 			fail(`Unexpected argument: ${value}`);
 		}
@@ -246,6 +266,130 @@ function parseArgs(values) {
 		index++;
 	}
 	return parsed;
+}
+
+async function readStandardInput() {
+	let input = '';
+	for await (const chunk of process.stdin) {
+		input += chunk;
+	}
+	return input;
+}
+
+async function runPairedDesktopSmoke({ fixture, payload, timeoutMs, holdMs }) {
+	assert.equal(payload?.protocolVersion, fixture.protocolVersion, 'Pairing payload protocol version is invalid');
+	for (const field of ['desktopId', 'pairingId', 'pairingToken', 'relayHost', 'relayToken', 'relayTokenExpiresAt']) {
+		assert.equal(typeof payload[field], 'string', `Pairing payload ${field} is missing`);
+		assert.ok(payload[field].length > 0, `Pairing payload ${field} is empty`);
+	}
+	assert.ok(Date.parse(payload.relayTokenExpiresAt) > Date.now(), 'Pairing relay token is expired');
+	const pairedRelayHost = normalizeRelayHost(payload.relayHost, fixture);
+	assert.ok(pairedRelayHost, 'Pairing relay host is invalid');
+	assert.ok(Number.isSafeInteger(holdMs) && holdMs >= 0, 'Hold duration must be a non-negative integer');
+
+	const abortController = new AbortController();
+	const timeout = setTimeout(() => abortController.abort(new Error(`Paired desktop smoke timed out after ${timeoutMs}ms`)), timeoutMs);
+	const phoneId = `phone-paired-smoke-${randomUUID()}`;
+	let phoneSocket;
+	let phoneInbox;
+	try {
+		const phoneRelay = await openRelaySocket({
+			url: relayWebSocketUrl(pairedRelayHost, {
+				role: 'phone',
+				userId: payload.userId ?? fixture.hosts.defaultUserId,
+				desktopId: payload.desktopId,
+				deviceId: phoneId,
+				pairingId: payload.pairingId
+			}),
+			token: payload.relayToken,
+			signal: abortController.signal
+		});
+		phoneSocket = phoneRelay.socket;
+		phoneInbox = phoneRelay.inbox;
+		await phoneInbox.waitFor(message => message.type === 'relay.ready', 'paired phone ready', abortController.signal);
+
+		const requestId = `paired-desktop-smoke-${randomUUID()}`;
+		const requestEnvelope = {
+			kind: 'request',
+			protocolVersion: fixture.protocolVersion,
+			requestId,
+			action: 'state.read',
+			payload: {}
+		};
+		const phoneFrame = encryptRelayFrame({
+			fixture,
+			pairingToken: payload.pairingToken,
+			header: relayFrameHeader({
+				fixture,
+				desktopId: payload.desktopId,
+				phoneId,
+				pairingId: payload.pairingId,
+				direction: 'phone_to_desktop',
+				seq: 1,
+				action: requestEnvelope.action
+			}),
+			payload: requestEnvelope
+		});
+		phoneSocket.send(JSON.stringify({ type: 'relay.frame', frame: phoneFrame }));
+
+		const responseMessage = await phoneInbox.waitFor(
+			message => message.type === 'relay.frame' && message.frame?.header?.direction === 'desktop_to_phone',
+			'paired desktop response',
+			abortController.signal
+		);
+		assert.equal(responseMessage.frame.header.protocolVersion, fixture.protocolVersion);
+		assert.equal(responseMessage.frame.header.desktopId, payload.desktopId);
+		assert.equal(responseMessage.frame.header.phoneId, phoneId);
+		assert.equal(responseMessage.frame.header.sessionId, payload.pairingId);
+		assert.equal(responseMessage.frame.header.action, requestEnvelope.action);
+		const responseEnvelope = decryptRelayFrame({ fixture, pairingToken: payload.pairingToken, frame: responseMessage.frame });
+		assert.equal(responseEnvelope.kind, 'response');
+		assert.equal(responseEnvelope.protocolVersion, fixture.protocolVersion);
+		assert.equal(responseEnvelope.requestId, requestId);
+		assert.equal(responseEnvelope.action, requestEnvelope.action);
+		assert.ok(Array.isArray(responseEnvelope.payload?.projects), 'Desktop response did not include workspace projects');
+
+		phoneSocket.send(JSON.stringify({ type: 'relay.frame', frame: phoneFrame }));
+		const replayController = new AbortController();
+		const replayTimeout = setTimeout(() => replayController.abort(new Error('Replay correctly ignored')), 1_500);
+		try {
+			await assert.rejects(
+				phoneInbox.waitFor(
+					message => message.type === 'relay.frame' && message.frame?.header?.direction === 'desktop_to_phone',
+					'replayed desktop response',
+					replayController.signal
+				),
+				/Replay correctly ignored/
+			);
+		} finally {
+			clearTimeout(replayTimeout);
+		}
+
+		if (holdMs > 0) {
+			await new Promise((resolve, reject) => {
+				const holdTimeout = setTimeout(resolve, holdMs);
+				abortController.signal.addEventListener('abort', () => {
+					clearTimeout(holdTimeout);
+					reject(abortController.signal.reason);
+				}, { once: true });
+			});
+		}
+
+		return {
+			ok: true,
+			pairedDesktop: true,
+			relayHost: pairedRelayHost,
+			desktopId: payload.desktopId,
+			phoneId,
+			pairingId: payload.pairingId,
+			protocolVersion: fixture.protocolVersion,
+			replayRejected: true
+		};
+	} finally {
+		clearTimeout(timeout);
+		phoneInbox?.dispose();
+		phoneSocket?.close();
+	}
 }
 
 async function createRelayToken({ relayHost, issuerToken, role, userId, desktopId, pairingId, ttlSeconds, signal }) {
@@ -345,6 +489,17 @@ async function runSelfTest(fixture) {
 		assert.equal(encodeBase64Url(Buffer.from(testCase.bytes)), testCase.encoded);
 		assert.deepEqual([...decodeBase64Url(testCase.encoded)], testCase.bytes);
 	}
+	const authenticationCase = fixture.frameCrypto.authenticationCase;
+	assert.deepEqual(decryptRelayFrame({
+		fixture,
+		pairingToken: authenticationCase.pairingToken,
+		frame: {
+			header: authenticationCase.header,
+			nonce: authenticationCase.nonce,
+			ciphertext: authenticationCase.ciphertext,
+			tag: authenticationCase.tag
+		}
+	}), authenticationCase.payload);
 
 	assert.deepEqual(
 		normalizeRelayTokenResponse({ token: 'relay-token', expiresAt: '2026-05-27T17:13:04.000Z' }),
@@ -379,6 +534,14 @@ async function runSelfTest(fixture) {
 	});
 	const decoded = decryptRelayFrame({ fixture, pairingToken: token, frame });
 	assert.deepEqual(decoded, envelope);
+	assert.throws(() => decryptRelayFrame({
+		fixture,
+		pairingToken: token,
+		frame: {
+			...frame,
+			header: { ...frame.header, issuedAt: new Date(Date.now() + 1_000).toISOString() }
+		}
+	}), /authenticate|Unsupported state/i);
 
 	const inbox = new RelaySocketInbox(new EventEmitter());
 	const matchedController = new AbortController();
@@ -399,6 +562,7 @@ async function runSelfTest(fixture) {
 function encryptRelayFrame({ fixture, pairingToken, header, payload }) {
 	const nonce = randomBytes(fixture.frameCrypto.nonceBytes);
 	const cipher = cryptoCipher('encrypt', pairingToken, nonce);
+	cipher.setAAD(authenticatedHeaderBytes(header));
 	const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
 	const tag = cipher.getAuthTag();
 	return {
@@ -411,6 +575,7 @@ function encryptRelayFrame({ fixture, pairingToken, header, payload }) {
 
 function decryptRelayFrame({ fixture, pairingToken, frame }) {
 	const decipher = cryptoCipher('decrypt', pairingToken, decodeBase64Url(frame.nonce));
+	decipher.setAAD(authenticatedHeaderBytes(frame.header));
 	decipher.setAuthTag(decodeBase64Url(frame.tag));
 	const plaintext = Buffer.concat([
 		decipher.update(decodeBase64Url(frame.ciphertext)),
@@ -418,6 +583,27 @@ function decryptRelayFrame({ fixture, pairingToken, frame }) {
 	]);
 	assert.equal(decodeBase64Url(frame.tag).byteLength, fixture.frameCrypto.tagBytes);
 	return JSON.parse(plaintext.toString('utf8'));
+}
+
+function authenticatedHeaderBytes(header) {
+	const fields = [
+		String(header.protocolVersion),
+		header.frameId,
+		header.desktopId,
+		header.phoneId,
+		header.sessionId,
+		header.streamId,
+		header.channel,
+		header.direction,
+		String(header.seq),
+		header.issuedAt,
+		header.action
+	];
+	return Buffer.concat(fields.map(field => {
+		assert.equal(typeof field, 'string', 'Authenticated relay header fields must be strings');
+		const bytes = Buffer.from(field, 'utf8');
+		return Buffer.concat([Buffer.from(`${bytes.byteLength}:`, 'utf8'), bytes]);
+	}));
 }
 
 function cryptoCipher(mode, pairingToken, nonce) {

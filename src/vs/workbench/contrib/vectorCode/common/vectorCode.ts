@@ -7,6 +7,7 @@ import { URI } from '../../../../base/common/uri.js';
 import { Event } from '../../../../base/common/event.js';
 import { IDisposable } from '../../../../base/common/lifecycle.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { IVectorCodeRuntimeDiagnosticSummary, IVectorCodeRuntimeStatus } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
 import { type IVectorCodeMobileRemoteEnvelope, type IVectorCodeMobileRemoteWorkspaceSnapshot, VECTOR_CODE_MOBILE_REMOTE_PROTOCOL_VERSION } from './vectorCodeMobileProtocol.js';
 
 export const VECTOR_CODE_VIEW_CONTAINER_ID = 'workbench.view.vectorCode';
@@ -21,6 +22,13 @@ export const VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID = 'vectorCode.connectMobileAp
 export const VECTOR_CODE_OPEN_CODEX_COMMAND_ID = 'vectorCode.openCodex';
 export const VECTOR_CODE_OPEN_CODEX_TERMINAL_COMMAND_ID = 'vectorCode.openCodexTerminal';
 export const VECTOR_CODE_OPEN_ADMIN_TERMINAL_COMMAND_ID = 'vectorCode.openAdminTerminalWindow';
+
+export const VECTOR_CODE_CODEX_CAPABILITY_THREADS = 'codex.threads';
+export const VECTOR_CODE_CODEX_CAPABILITY_MESSAGE = 'codex.message';
+export const VECTOR_CODE_CODEX_CAPABILITY_PLUGINS = 'codex.plugins';
+export const VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE = 'mobile.configure';
+export const VECTOR_CODE_MOBILE_CAPABILITY_PAIR = 'mobile.pair';
+export const VECTOR_CODE_MOBILE_CAPABILITY_REMOTE = 'mobile.remote';
 
 export const enum VectorCodeCodexConnectionState {
 	Idle = 'idle',
@@ -57,6 +65,7 @@ export interface IVectorCodeCodexModel {
 
 export interface IVectorCodeCodexState {
 	readonly connectionState: VectorCodeCodexConnectionState;
+	readonly runtime: IVectorCodeRuntimeStatus;
 	readonly detail: string;
 	readonly accountLabel?: string;
 	readonly requiresAuthentication: boolean;
@@ -79,6 +88,7 @@ export interface IVectorCodeCodexService {
 	readonly onDidChangeState: Event<IVectorCodeCodexState>;
 
 	getState(): IVectorCodeCodexState;
+	getDiagnosticSummary(): IVectorCodeRuntimeDiagnosticSummary;
 	ensureReady(): Promise<void>;
 	refreshThreads(): Promise<void>;
 	createThread(): Promise<void>;
@@ -130,6 +140,7 @@ export interface IVectorCodeMobilePairingSession {
 
 export interface IVectorCodeMobileConnectionStatus {
 	readonly state: VectorCodeMobileConnectionState;
+	readonly runtime: IVectorCodeRuntimeStatus;
 	readonly label: string;
 	readonly detail: string;
 	readonly relayHost?: string;
@@ -144,6 +155,7 @@ export interface IVectorCodeMobileRelayService {
 	readonly onDidChangeStatus: Event<IVectorCodeMobileConnectionStatus>;
 
 	getStatus(): IVectorCodeMobileConnectionStatus;
+	getDiagnosticSummary(): IVectorCodeRuntimeDiagnosticSummary;
 	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus>;
 	registerRequestHandler(handler: IVectorCodeMobileRemoteRequestHandler): IDisposable;
 }

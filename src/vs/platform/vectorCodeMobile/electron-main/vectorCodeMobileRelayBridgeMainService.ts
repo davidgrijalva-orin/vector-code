@@ -10,15 +10,18 @@ import { Emitter } from '../../../base/common/event.js';
 import { Disposable, DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
 import { generateUuid } from '../../../base/common/uuid.js';
 import { ILogService } from '../../log/common/log.js';
-import { IVectorCodeMobileRelayBridgeConnectOptions, IVectorCodeMobileRelayBridgeConnectionChange, IVectorCodeMobileRelayBridgeMessage, IVectorCodeMobileRelayBridgeService, IVectorCodeMobileRelayBridgeTokenOptions, IVectorCodeMobileRelayBridgeTokenResponse } from '../common/vectorCodeMobileRelayBridge.js';
-import { normalizeVectorCodeRelayTokenResponse } from '../common/vectorCodeMobileRelayToken.js';
+import { isVectorCodeRuntimeError, VectorCodeRuntimeError, VectorCodeRuntimeErrorCode } from '../../vectorCode/common/vectorCodeRuntime.js';
+import { IVectorCodeMobileRelayBridgeConnectOptions, IVectorCodeMobileRelayBridgeConnectionChange, IVectorCodeMobileRelayBridgeMessage, IVectorCodeMobileRelayBridgeSendOptions, IVectorCodeMobileRelayBridgeService, IVectorCodeMobileRelayBridgeTokenOptions, IVectorCodeMobileRelayBridgeTokenResponse } from '../common/vectorCodeMobileRelayBridge.js';
+import { isMalformedVectorCodeRelayTokenJson, normalizeVectorCodeRelayTokenResponse } from '../common/vectorCodeMobileRelayToken.js';
 
 interface IVectorCodeMobileRelayBridgeConnection {
 	readonly socket: WebSocketType;
 	readonly disposables: DisposableStore;
+	readonly correlationId: string;
 }
 
 const WEB_SOCKET_OPEN_STATE = 1;
+const VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS = 10_000;
 const VECTOR_CODE_MOBILE_RELAY_CA_CERTIFICATES = [...new Set([
 	...getCACertificates('default'),
 	...getCACertificates('system')
@@ -40,6 +43,7 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 	}
 
 	async connect(options: IVectorCodeMobileRelayBridgeConnectOptions): Promise<string> {
+		this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.connect.started`);
 		const { WebSocket } = await import('ws');
 		const connectionId = `vector-mobile-${generateUuid()}`;
 		const socket = new WebSocket(options.url, {
@@ -50,7 +54,7 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 		});
 		const disposables = new DisposableStore();
 
-		this.connections.set(connectionId, { socket, disposables });
+		this.connections.set(connectionId, { socket, disposables, correlationId: options.correlationId });
 		disposables.add(toDisposable(() => socket.close()));
 		socket.on('message', data => {
 			this._onDidReceiveMessage.fire({
@@ -60,72 +64,122 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 		});
 		socket.on('close', () => {
 			this.connections.delete(connectionId);
+			this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.connect.closed`);
 			this._onDidChangeConnection.fire({ connectionId, state: 'closed' });
 			disposables.dispose();
 		});
 		socket.on('error', error => {
-			const detail = error instanceof Error ? error.message : String(error);
-			this.logService.warn(`VectorCode mobile relay bridge socket error: ${detail}`);
-			this._onDidChangeConnection.fire({ connectionId, state: 'error', detail });
+			const errorName = error instanceof Error ? error.name : typeof error;
+			this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.connect.error (${errorName})`);
+			this._onDidChangeConnection.fire({ connectionId, state: 'error', detail: 'Relay socket transport error.' });
 		});
 
 		try {
-			await waitForOpen(socket);
+			await waitForOpen(socket, options.correlationId);
+			this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.connect.open`);
 			this._onDidChangeConnection.fire({ connectionId, state: 'open' });
 			return connectionId;
 		} catch (error) {
 			this.connections.delete(connectionId);
 			disposables.dispose();
-			throw error;
+			if (isVectorCodeRuntimeError(error)) {
+				throw error;
+			}
+			throw new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				'The phone relay could not be reached. Check the network and try again.',
+				error instanceof Error ? error.name : typeof error,
+				true,
+				options.correlationId,
+			);
 		}
 	}
 
 	async createRelayToken(options: IVectorCodeMobileRelayBridgeTokenOptions): Promise<IVectorCodeMobileRelayBridgeTokenResponse | undefined> {
-		let response: Response;
+		this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.token.started`);
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS);
 		try {
-			response = await net.fetch(options.url, {
-				method: 'POST',
-				headers: {
-					Authorization: options.authorizationHeader,
-					'content-type': 'application/json'
-				},
-				body: JSON.stringify(options.payload)
-			});
-		} catch (error) {
-			const detail = error instanceof Error ? error.message : String(error);
-			this.logService.warn(`VectorCode mobile relay token request failed: ${detail}`);
-			throw new Error('The VectorCode mobile relay token service is unavailable.');
-		}
-		if (!response.ok) {
-			this.logService.warn(`VectorCode mobile relay token request failed with status ${response.status}.`);
-			if (response.status === 400 || response.status === 401 || response.status === 403) {
-				return undefined;
+			let response: Response;
+			try {
+				response = await net.fetch(options.url, {
+					method: 'POST',
+					headers: {
+						Authorization: options.authorizationHeader,
+						'content-type': 'application/json'
+					},
+					body: JSON.stringify(options.payload),
+					signal: controller.signal,
+				});
+			} catch (error) {
+				const runtimeError = createRelayTokenTransportError(error, controller.signal.aborted, options.correlationId);
+				this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.failed (${runtimeError.code})`);
+				throw runtimeError;
 			}
-			throw new Error(`The VectorCode mobile relay token service returned status ${response.status}.`);
-		}
+			if (!response.ok) {
+				this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.rejected (${response.status})`);
+				if (response.status === 400 || response.status === 401 || response.status === 403) {
+					return undefined;
+				}
+				throw new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.NetworkUnavailable,
+					'The phone relay token service returned an unexpected response. Try again.',
+					`HTTP status ${response.status}`,
+					true,
+					options.correlationId,
+				);
+			}
 
-		let relayToken: IVectorCodeMobileRelayBridgeTokenResponse | undefined;
-		try {
-			relayToken = normalizeVectorCodeRelayTokenResponse(await response.json());
-		} catch (error) {
-			const detail = error instanceof Error ? error.message : String(error);
-			this.logService.warn(`VectorCode mobile relay token response was not valid JSON: ${detail}`);
+			let responseValue: unknown;
+			try {
+				responseValue = await response.json();
+			} catch (error) {
+				if (controller.signal.aborted) {
+					const runtimeError = createRelayTokenTransportError(error, true, options.correlationId);
+					this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.failed (${runtimeError.code})`);
+					throw runtimeError;
+				}
+				if (!isMalformedVectorCodeRelayTokenJson(error)) {
+					const runtimeError = createRelayTokenTransportError(error, false, options.correlationId);
+					this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.failed (${runtimeError.code})`);
+					throw runtimeError;
+				}
+				const errorName = error instanceof Error ? error.name : typeof error;
+				this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.invalid_json (${errorName})`);
+			}
+			const relayToken = normalizeVectorCodeRelayTokenResponse(responseValue);
+			if (!relayToken) {
+				this.logService.warn(`[VectorCode][Mobile][${options.correlationId}] relay.token.invalid_response`);
+				throw new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.InvalidState,
+					'The phone relay token service returned an invalid response. Try again.',
+					'Token response validation failed.',
+					true,
+					options.correlationId,
+				);
+			}
+			this.logService.info(`[VectorCode][Mobile][${options.correlationId}] relay.token.completed`);
+			return relayToken;
+		} finally {
+			clearTimeout(timeout);
 		}
-		if (!relayToken) {
-			this.logService.warn('VectorCode mobile relay token response did not include a token and expiry.');
-			throw new Error('The VectorCode mobile relay token service returned an invalid response.');
-		}
-		return relayToken;
 	}
 
-	async send(connectionId: string, message: string): Promise<void> {
-		const connection = this.connections.get(connectionId);
+	async send(options: IVectorCodeMobileRelayBridgeSendOptions): Promise<void> {
+		const connection = this.connections.get(options.connectionId);
 		if (!connection || connection.socket.readyState !== WEB_SOCKET_OPEN_STATE) {
-			throw new Error('VectorCode mobile relay bridge is not connected.');
+			throw createRelaySendError('Relay socket is not open.', options.correlationId);
 		}
-		await new Promise<void>((resolve, reject) => {
-			connection.socket.send(message, error => error ? reject(error) : resolve());
-		});
+		try {
+			await new Promise<void>((resolve, reject) => {
+				connection.socket.send(options.message, error => error ? reject(createRelaySendError(error.name, options.correlationId)) : resolve());
+			});
+		} catch (error) {
+			if (isVectorCodeRuntimeError(error)) {
+				throw error;
+			}
+			throw createRelaySendError(error instanceof Error ? error.name : typeof error, options.correlationId);
+		}
 	}
 
 	async disconnect(connectionId: string): Promise<void> {
@@ -138,11 +192,41 @@ export class VectorCodeMobileRelayBridgeMainService extends Disposable implement
 	}
 }
 
-function waitForOpen(socket: WebSocketType): Promise<void> {
+function createRelayTokenTransportError(error: unknown, timedOut: boolean, correlationId: string): VectorCodeRuntimeError {
+	return new VectorCodeRuntimeError(
+		timedOut ? VectorCodeRuntimeErrorCode.RequestTimeout : VectorCodeRuntimeErrorCode.NetworkUnavailable,
+		timedOut
+			? 'The phone relay token service took too long to respond. Try again.'
+			: 'The phone relay token service is unavailable. Check the network and try again.',
+		timedOut
+			? `Relay token request timed out after ${VECTOR_CODE_MOBILE_RELAY_REQUEST_TIMEOUT_MS}ms.`
+			: error instanceof Error ? error.name : typeof error,
+		true,
+		correlationId,
+	);
+}
+
+function createRelaySendError(cause: string, correlationId: string): VectorCodeRuntimeError {
+	return new VectorCodeRuntimeError(
+		VectorCodeRuntimeErrorCode.ConnectionLost,
+		'The phone relay connection was lost. Reconnect and try again.',
+		cause,
+		true,
+		correlationId,
+	);
+}
+
+function waitForOpen(socket: WebSocketType, correlationId: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const timeout = setTimeout(() => {
 			cleanup();
-			reject(new Error('Timed out connecting to the VectorCode mobile relay.'));
+			reject(new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.RequestTimeout,
+				'The phone relay took too long to connect. Try again.',
+				'Relay socket open timed out after 10000ms.',
+				true,
+				correlationId,
+			));
 		}, 10_000);
 		const cleanup = () => {
 			clearTimeout(timeout);
@@ -155,7 +239,13 @@ function waitForOpen(socket: WebSocketType): Promise<void> {
 		};
 		const onError = (error: Error) => {
 			cleanup();
-			reject(error);
+			reject(new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				'The phone relay could not be reached. Check the network and try again.',
+				error.name,
+				true,
+				correlationId,
+			));
 		};
 		socket.once('open', onOpen);
 		socket.once('error', onError);

@@ -10,7 +10,8 @@ import { InstantiationType, registerSingleton } from '../../../../platform/insta
 import { IVectorCodeMobileRelayBridgeService } from '../../../../platform/vectorCodeMobile/common/vectorCodeMobileRelayBridge.js';
 import { ISecretStorageService } from '../../../../platform/secrets/common/secrets.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IVectorCodeMobileConnectionStatus, IVectorCodeMobilePairingPayload, IVectorCodeMobilePairingSession, IVectorCodeMobileRelayService, IVectorCodeMobileRemoteRequestHandler, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
+import { IVectorCodeRuntimeDiagnosticSummary, recoverVectorCodeJsonState, toVectorCodeRuntimeError, VectorCodeRuntimeController, VectorCodeRuntimeError, VectorCodeRuntimeErrorCode, VectorCodeRuntimeState } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
+import { IVectorCodeMobileConnectionStatus, IVectorCodeMobilePairingPayload, IVectorCodeMobilePairingSession, IVectorCodeMobileRelayService, IVectorCodeMobileRemoteRequestHandler, VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE, VECTOR_CODE_MOBILE_CAPABILITY_PAIR, VECTOR_CODE_MOBILE_CAPABILITY_REMOTE, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
 import { normalizeVectorCodeRelayHost, VECTOR_CODE_MOBILE_DEFAULT_RELAY_HOST, VECTOR_CODE_MOBILE_DEFAULT_USER_ID } from '../common/vectorCodeHosts.js';
 import { cryptoRandomVectorCodeBase64Url, encodeVectorCodeBase64Url } from '../common/vectorCodeMobileEncoding.js';
 import { decryptVectorCodeMobileFramePayload, encryptVectorCodeMobileFramePayload } from '../common/vectorCodeMobileFrameCrypto.js';
@@ -25,6 +26,8 @@ const VECTOR_CODE_MOBILE_PRIVATE_KEY_STORAGE_KEY = 'vectorCode.mobile.privateKey
 const VECTOR_CODE_MOBILE_RELAY_HOST_STORAGE_KEY = 'vectorCode.mobile.relayHost';
 const VECTOR_CODE_MOBILE_RELAY_ISSUER_TOKEN_SECRET_KEY = 'vectorCode.mobile.relayIssuerToken';
 const VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.activeRelaySession';
+const VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.knownGoodRelaySession';
+const VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY = 'vectorCode.mobile.quarantinedRelaySession';
 const VECTOR_CODE_MOBILE_PAIRING_TTL_MS = 5 * 60_000;
 const VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 const VECTOR_CODE_MOBILE_TOKEN_EXPIRY_SKEW_MS = 60_000;
@@ -61,6 +64,15 @@ interface IVectorCodeMobileStoredRelayIssuerCredential {
 	readonly token: string;
 }
 
+interface IVectorCodeMobileQuarantinedRelaySession {
+	readonly quarantinedAt: string;
+	readonly reason: 'invalid_active_session' | 'invalid_known_good_session';
+	readonly byteLength: number;
+	readonly sha256?: string;
+}
+
+type VectorCodeMobileConnectionStatusInput = Omit<IVectorCodeMobileConnectionStatus, 'runtime'>;
+
 export class VectorCodeMobileRelayService extends Disposable implements IVectorCodeMobileRelayService {
 	readonly _serviceBrand: undefined;
 	private readonly _onDidChangeStatus = this._register(new Emitter<IVectorCodeMobileConnectionStatus>());
@@ -73,6 +85,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 	private pendingReconnect: { relayHost: string | undefined } | undefined;
 	private pairingExpiryTimer: ReturnType<typeof setTimeout> | undefined;
 	private readonly reconnectPolicy = new VectorCodeReconnectPolicy(VECTOR_CODE_MOBILE_RECONNECT_DELAYS_MS, VECTOR_CODE_MOBILE_RECONNECT_STABLE_AFTER_MS);
+	private readonly runtime = new VectorCodeRuntimeController('phone-relay');
 
 	constructor(
 		@ISecretStorageService private readonly secretStorageService: ISecretStorageService,
@@ -123,7 +136,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		}
 
 		const relayHost = this.getStoredRelayHost();
-		return relayHost ? {
+		const status: VectorCodeMobileConnectionStatusInput = relayHost ? {
 			state: VectorCodeMobileConnectionState.Disconnected,
 			label: localize('vectorCodeMobileRelayHostConfigured', 'Phone connection ready'),
 			detail: localize('vectorCodeMobileRelayHostConfiguredDetail', 'Create a QR pairing session for the mobile app.'),
@@ -133,13 +146,39 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			label: localize('vectorCodeMobileRelayHostRequired', 'Phone connection unavailable'),
 			detail: localize('vectorCodeMobileRelayHostRequiredDetail', 'Mobile pairing is not configured for this desktop.')
 		};
+		return { ...status, runtime: this.runtime.getStatus() };
+	}
+
+	getDiagnosticSummary(): IVectorCodeRuntimeDiagnosticSummary {
+		return this.runtime.getDiagnosticSummary([
+			localize('vectorCodeMobileDiagnosticRetry', 'Create or refresh the QR to retry relay setup.'),
+			localize('vectorCodeMobileDiagnosticConfigure', 'Configure the secure relay again if authorization is required.'),
+			localize('vectorCodeMobileDiagnosticRestart', 'Restart Vector Code if secure storage remains unavailable.'),
+		]);
 	}
 
 	startPairing(relayHost?: string, relayIssuerToken?: string): Promise<IVectorCodeMobileConnectionStatus> {
 		if (this.pairingOperation) {
 			return this.pairingOperation;
 		}
-		const operation = this.doStartPairing(relayHost, relayIssuerToken).finally(() => {
+		const correlationId = this.runtime.createCorrelationId('pairing');
+		const operation = this.doStartPairing(relayHost, relayIssuerToken).then(status => {
+			this.runtime.record(
+				status.state === VectorCodeMobileConnectionState.Failed ? 'pairing.failed' : 'pairing.completed',
+				correlationId,
+				status.runtime.error,
+			);
+			return status;
+		}, error => {
+			const runtimeError = toVectorCodeRuntimeError(error, {
+				code: VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				userMessage: localize('vectorCodeMobilePairingRuntimeFailed', 'The phone bridge could not complete pairing. Check the connection and try again.'),
+				retryable: true,
+				correlationId,
+			});
+			this.runtime.record('pairing.failed', correlationId, runtimeError);
+			throw runtimeError;
+		}).finally(() => {
 			if (this.pairingOperation === operation) {
 				this.pairingOperation = undefined;
 				const pendingReconnect = this.pendingReconnect;
@@ -203,7 +242,14 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 				pairingId,
 				ttlSeconds: VECTOR_CODE_MOBILE_PHONE_RELAY_TOKEN_TTL_SECONDS
 			});
-		} catch {
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'pairing.token.failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayTokenRuntimeUnavailable', 'The secure relay token service is unavailable.'),
+				true,
+			);
 			return this.setStatus({
 				state: VectorCodeMobileConnectionState.Failed,
 				label: localize('vectorCodeMobileRelayUnavailable', 'Relay unavailable'),
@@ -230,7 +276,14 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		const hadPreviousConnection = Boolean(this.desktopRelayConnection);
 		try {
 			await this.replaceDesktopRelayConnection(payload, relayTokens.desktopRelayToken, undefined, connection => this.storeActiveRelaySession(payload, relayTokens.desktopRelayToken, connection.phonePairedAt));
-		} catch {
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'pairing.connect.failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayConnectRuntimeUnavailable', 'The secure phone relay could not connect.'),
+				true,
+			);
 			if (hadPreviousConnection && this.desktopRelayConnection && previousStatus) {
 				return this.setStatus({
 					...previousStatus,
@@ -278,16 +331,31 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		phonePairedAt?: string,
 		activate?: (connection: IVectorCodeMobileDesktopRelayConnection) => Promise<void>
 	): Promise<IVectorCodeMobileDesktopRelayConnection> {
-		const connectionId = await this.relayBridgeService.connect({
-			url: relayWebSocketUrl(payload.relayHost, {
-				role: 'desktop',
-				userId: payload.userId ?? VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
-				desktopId: payload.desktopId,
-				deviceId: payload.desktopId,
-				pairingId: payload.pairingId
-			}),
-			authorizationHeader: `Bearer ${desktopRelayToken.relayToken}`
-		});
+		const correlationId = this.runtime.createCorrelationId('relay-connect');
+		let connectionId: string;
+		try {
+			connectionId = await this.relayBridgeService.connect({
+				correlationId,
+				url: relayWebSocketUrl(payload.relayHost, {
+					role: 'desktop',
+					userId: payload.userId ?? VECTOR_CODE_MOBILE_DEFAULT_USER_ID,
+					desktopId: payload.desktopId,
+					deviceId: payload.desktopId,
+					pairingId: payload.pairingId
+				}),
+				authorizationHeader: `Bearer ${desktopRelayToken.relayToken}`
+			});
+			this.runtime.record('relay.connect.completed', correlationId);
+		} catch (error) {
+			throw this.recordRuntimeFailure(
+				'relay.connect.failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayConnectFailed', 'The phone relay could not be reached. Check the network and try again.'),
+				true,
+				correlationId,
+			);
+		}
 		const previousConnection = this.desktopRelayConnection;
 		const connection: IVectorCodeMobileDesktopRelayConnection = {
 			connectionId,
@@ -319,7 +387,14 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		let session: IVectorCodeMobileStoredRelaySession | undefined;
 		try {
 			session = await this.readActiveRelaySession();
-		} catch {
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'storage.relay_session.read_failed',
+				error,
+				VectorCodeRuntimeErrorCode.StorageUnavailable,
+				localize('vectorCodeMobileSessionReadUnavailable', 'Secure phone session storage is unavailable.'),
+				true,
+			);
 			this.scheduleDesktopRelayReconnect();
 			return;
 		}
@@ -361,7 +436,14 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		let desktopRelayToken: IVectorCodeMobileRelayToken | undefined;
 		try {
 			desktopRelayToken = await this.resolveDesktopRelayToken(session);
-		} catch {
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'relay.token.refresh_failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayRefreshUnavailable', 'The secure relay token could not be refreshed.'),
+				true,
+			);
 			this.scheduleDesktopRelayReconnect(session.payload.relayHost);
 			return;
 		}
@@ -395,7 +477,14 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 				detail: localize('vectorCodeMobileDesktopBridgeReadyDetail', 'Waiting for the paired phone.'),
 				relayHost: session.payload.relayHost
 			});
-		} catch {
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'relay.restore.failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayRestoreUnavailable', 'The saved phone bridge could not reconnect.'),
+				true,
+			);
 			this.scheduleDesktopRelayReconnect(session.payload.relayHost);
 		}
 	}
@@ -663,13 +752,92 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			type: 'relay.frame',
 			frame
 		};
-		await this.relayBridgeService.send(connection.connectionId, JSON.stringify(message));
+		const correlationId = this.runtime.createCorrelationId('relay-send');
+		try {
+			await this.relayBridgeService.send({
+				correlationId,
+				connectionId: connection.connectionId,
+				message: JSON.stringify(message),
+			});
+			this.runtime.record('relay.send.completed', correlationId);
+		} catch (error) {
+			throw this.recordRuntimeFailure(
+				'relay.send.failed',
+				error,
+				VectorCodeRuntimeErrorCode.ConnectionLost,
+				localize('vectorCodeMobileRelaySendFailed', 'The phone relay connection was lost. Reconnect and try again.'),
+				true,
+				correlationId,
+			);
+		}
 	}
 
-	private setStatus(status: IVectorCodeMobileConnectionStatus): IVectorCodeMobileConnectionStatus {
-		this._lastStatus = status;
-		this._onDidChangeStatus.fire(status);
-		return status;
+	private setStatus(status: VectorCodeMobileConnectionStatusInput): IVectorCodeMobileConnectionStatus {
+		const nextStatus = this.withRuntimeStatus(status);
+		this._lastStatus = nextStatus;
+		this._onDidChangeStatus.fire(nextStatus);
+		return nextStatus;
+	}
+
+	private withRuntimeStatus(status: VectorCodeMobileConnectionStatusInput): IVectorCodeMobileConnectionStatus {
+		const capabilities = mobileCapabilities(status.state);
+		let runtimeState = VectorCodeRuntimeState.Unavailable;
+		let error: VectorCodeRuntimeError | undefined;
+		switch (status.state) {
+			case VectorCodeMobileConnectionState.Connected:
+			case VectorCodeMobileConnectionState.Disconnected:
+			case VectorCodeMobileConnectionState.Pairing:
+				runtimeState = VectorCodeRuntimeState.Ready;
+				break;
+			case VectorCodeMobileConnectionState.Reconnecting:
+				runtimeState = VectorCodeRuntimeState.Retrying;
+				error = new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.ConnectionLost,
+					localize('vectorCodeMobileRuntimeReconnecting', 'The phone relay connection was interrupted. Vector Code is retrying.'),
+					'Relay transport closed before the session completed.',
+					true,
+				);
+				break;
+			case VectorCodeMobileConnectionState.Unconfigured:
+				runtimeState = VectorCodeRuntimeState.Degraded;
+				if (status.requiresRelayIssuerToken) {
+					error = new VectorCodeRuntimeError(
+						VectorCodeRuntimeErrorCode.AuthenticationRequired,
+						localize('vectorCodeMobileRuntimeAuthorizationRequired', 'Secure relay authorization is required.'),
+						'Relay issuer credential is unavailable or does not match this relay.',
+						false,
+					);
+				}
+				break;
+			case VectorCodeMobileConnectionState.Expired:
+				runtimeState = VectorCodeRuntimeState.Degraded;
+				error = new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.InvalidState,
+					localize('vectorCodeMobileRuntimeExpired', 'The phone pairing expired. Create a fresh QR.'),
+					'Persisted relay session is no longer valid.',
+					true,
+				);
+				break;
+			case VectorCodeMobileConnectionState.Failed:
+				runtimeState = VectorCodeRuntimeState.Degraded;
+				error = new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.NetworkUnavailable,
+					localize('vectorCodeMobileRuntimeUnavailable', 'The phone relay is unavailable. Check the network and try again.'),
+					'Relay setup or transport failed.',
+					true,
+				);
+				break;
+		}
+		return {
+			...status,
+			runtime: this.runtime.transition(runtimeState, { capabilities, error }),
+		};
+	}
+
+	private recordRuntimeFailure(event: string, error: unknown, code: VectorCodeRuntimeErrorCode, userMessage: string, retryable: boolean, correlationId?: string): VectorCodeRuntimeError {
+		const runtimeError = toVectorCodeRuntimeError(error, { code, userMessage, retryable, correlationId });
+		this.runtime.record(event, runtimeError.correlationId, runtimeError);
+		return runtimeError;
 	}
 
 	private getStoredRelayHost(): string | undefined {
@@ -708,7 +876,13 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 					true,
 					['sign']
 				);
-			} catch {
+			} catch (error) {
+				const runtimeError = toVectorCodeRuntimeError(error, {
+					code: VectorCodeRuntimeErrorCode.StorageCorrupt,
+					userMessage: localize('vectorCodeMobileIdentityReset', 'Vector Code replaced damaged phone-pairing identity state.'),
+					retryable: false,
+				});
+				this.runtime.record('storage.identity.reset', runtimeError.correlationId, runtimeError);
 				await this.secretStorageService.delete(VECTOR_CODE_MOBILE_PRIVATE_KEY_STORAGE_KEY);
 				return this.getOrCreateIdentity();
 			}
@@ -785,17 +959,32 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		pairingId?: string;
 		ttlSeconds: number;
 	}): Promise<IVectorCodeMobileRelayToken | undefined> {
-		return this.relayBridgeService.createRelayToken({
-			url: relayHttpUrl(input.relayHost, '/relay/token'),
-			authorizationHeader: `Bearer ${input.issuerToken}`,
-			payload: {
-				role: input.role,
-				userId: input.userId,
-				desktopId: input.desktopId,
-				...(input.role === 'phone' && input.pairingId ? { pairingId: input.pairingId } : {}),
-				ttlSeconds: input.ttlSeconds
-			}
-		});
+		const correlationId = this.runtime.createCorrelationId(`relay-token-${input.role}`);
+		try {
+			const token = await this.relayBridgeService.createRelayToken({
+				correlationId,
+				url: relayHttpUrl(input.relayHost, '/relay/token'),
+				authorizationHeader: `Bearer ${input.issuerToken}`,
+				payload: {
+					role: input.role,
+					userId: input.userId,
+					desktopId: input.desktopId,
+					...(input.role === 'phone' && input.pairingId ? { pairingId: input.pairingId } : {}),
+					ttlSeconds: input.ttlSeconds
+				}
+			});
+			this.runtime.record(token ? 'relay.token.completed' : 'relay.token.rejected', correlationId);
+			return token;
+		} catch (error) {
+			throw this.recordRuntimeFailure(
+				'relay.token.failed',
+				error,
+				VectorCodeRuntimeErrorCode.NetworkUnavailable,
+				localize('vectorCodeMobileRelayTokenFailed', 'The phone relay token service is unavailable. Check the network and try again.'),
+				true,
+				correlationId,
+			);
+		}
 	}
 
 	private async storeActiveRelaySession(payload: IVectorCodeMobilePairingPayload, desktopRelayToken: IVectorCodeMobileRelayToken, phonePairedAt?: string): Promise<void> {
@@ -805,53 +994,161 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			desktopRelayTokenExpiresAt: desktopRelayToken.relayTokenExpiresAt,
 			phonePairedAt
 		};
-		await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, JSON.stringify(session));
+		const serializedSession = JSON.stringify(session);
+		await this.secretStorageService.set(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY, serializedSession);
+		await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, serializedSession);
+		try {
+			await this.secretStorageService.delete(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY);
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'storage.relay_session.quarantine_cleanup_failed',
+				error,
+				VectorCodeRuntimeErrorCode.StorageUnavailable,
+				localize('vectorCodeMobileQuarantineCleanupUnavailable', 'Secure storage could not clear old phone-session recovery metadata.'),
+				true,
+			);
+		}
 	}
 
 	private async readActiveRelaySession(): Promise<IVectorCodeMobileStoredRelaySession | undefined> {
 		const rawSession = await this.secretStorageService.get(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY);
-		if (!rawSession) {
+		const knownGoodSession = await this.secretStorageService.get(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY);
+		if (rawSession === undefined && knownGoodSession === undefined) {
+			return undefined;
+		}
+		const restoringMissingActiveSession = rawSession === undefined;
+		const recovery = recoverVectorCodeJsonState(
+			rawSession ?? knownGoodSession,
+			restoringMissingActiveSession ? undefined : knownGoodSession,
+			isRecoverableStoredRelaySession,
+		);
+		if (recovery.quarantinedValue) {
+			const quarantinedBytes = new TextEncoder().encode(recovery.quarantinedValue);
+			let sha256: string | undefined;
+			try {
+				sha256 = await sha256Base64Url(quarantinedBytes);
+			} catch (error) {
+				const runtimeError = new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.StorageUnavailable,
+					localize('vectorCodeMobileFingerprintUnavailable', 'Vector Code could not fingerprint the damaged phone session, but recovery continued.'),
+					error instanceof Error ? error.name : typeof error,
+					true,
+				);
+				this.runtime.record('storage.relay_session.fingerprint_failed', runtimeError.correlationId, runtimeError);
+			}
+			const quarantine: IVectorCodeMobileQuarantinedRelaySession = {
+				quarantinedAt: new Date().toISOString(),
+				reason: restoringMissingActiveSession ? 'invalid_known_good_session' : 'invalid_active_session',
+				byteLength: quarantinedBytes.byteLength,
+				...(sha256 ? { sha256 } : {}),
+			};
+			try {
+				await this.secretStorageService.set(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY, JSON.stringify(quarantine));
+			} catch (error) {
+				const runtimeError = toVectorCodeRuntimeError(error, {
+					code: VectorCodeRuntimeErrorCode.StorageUnavailable,
+					userMessage: localize('vectorCodeMobileQuarantineUnavailable', 'Secure storage could not quarantine the damaged phone session.'),
+					retryable: true,
+				});
+				this.runtime.record('storage.relay_session.quarantine_failed', runtimeError.correlationId, runtimeError);
+			}
+		}
+		if (restoringMissingActiveSession && recovery.action === 'current' && recovery.serializedValue) {
+			await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, recovery.serializedValue);
+			const runtimeError = new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.StorageCorrupt,
+				localize('vectorCodeMobileSessionRestored', 'Vector Code restored a partially saved phone session from its secure snapshot.'),
+				'Active relay session was missing; a validated secure snapshot was restored.',
+				false,
+			);
+			this.runtime.transition(VectorCodeRuntimeState.Degraded, {
+				capabilities: this.runtime.getStatus().capabilities,
+				error: runtimeError,
+				correlationId: runtimeError.correlationId,
+				event: 'storage.relay_session.restored_missing_active',
+			});
+		} else if (recovery.action === 'rolled_back' && recovery.serializedValue) {
+			await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, recovery.serializedValue);
+			const runtimeError = new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.StorageCorrupt,
+				localize('vectorCodeMobileSessionRolledBack', 'Vector Code recovered the phone bridge from its last known-good secure session.'),
+				'Active relay session validation failed; a validated secure snapshot was restored.',
+				false,
+			);
+			this.runtime.transition(VectorCodeRuntimeState.Degraded, {
+				capabilities: this.runtime.getStatus().capabilities,
+				error: runtimeError,
+				correlationId: runtimeError.correlationId,
+				event: 'storage.relay_session.rolled_back',
+			});
+		} else if (recovery.action === 'reset') {
+			await this.clearActiveRelaySession();
+			const runtimeError = new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.StorageCorrupt,
+				localize('vectorCodeMobileSessionReset', 'Vector Code removed a damaged phone session. Create a fresh QR to reconnect.'),
+				'Active and known-good relay session validation failed; secure state was reset.',
+				false,
+			);
+			this.runtime.transition(VectorCodeRuntimeState.Degraded, {
+				capabilities: [VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE, VECTOR_CODE_MOBILE_CAPABILITY_PAIR],
+				error: runtimeError,
+				correlationId: runtimeError.correlationId,
+				event: 'storage.relay_session.reset',
+			});
 			return undefined;
 		}
 
-		try {
-			const candidate = JSON.parse(rawSession) as unknown;
-			if (isStoredRelaySession(candidate)) {
-				const relayHost = normalizeVectorCodeRelayHost(candidate.payload.relayHost);
-				if (!relayHost) {
-					await this.clearActiveRelaySession();
-					return undefined;
-				}
-				if (relayHost !== candidate.payload.relayHost) {
-					const migratedSession = {
-						...candidate,
-						payload: {
-							...candidate.payload,
-							relayHost
-						}
-					};
-					await this.storeActiveRelaySession(migratedSession.payload, {
-						relayToken: migratedSession.desktopRelayToken,
-						relayTokenExpiresAt: migratedSession.desktopRelayTokenExpiresAt
-					}, migratedSession.phonePairedAt);
-					return migratedSession;
-				}
-				return candidate;
-			}
-		} catch {
-			// Fall through and clear malformed session data below.
+		const candidate = recovery.value;
+		if (!candidate) {
+			return undefined;
 		}
-
-		await this.clearActiveRelaySession();
-		return undefined;
+		const relayHost = normalizeVectorCodeRelayHost(candidate.payload.relayHost);
+		if (!relayHost) {
+			await this.clearActiveRelaySession();
+			return undefined;
+		}
+		if (relayHost !== candidate.payload.relayHost) {
+			const migratedSession = {
+				...candidate,
+				payload: {
+					...candidate.payload,
+					relayHost
+				}
+			};
+			await this.storeActiveRelaySession(migratedSession.payload, {
+				relayToken: migratedSession.desktopRelayToken,
+				relayTokenExpiresAt: migratedSession.desktopRelayTokenExpiresAt
+			}, migratedSession.phonePairedAt);
+			return migratedSession;
+		}
+		return candidate;
 	}
 
 	private async clearActiveRelaySession(): Promise<void> {
-		await this.secretStorageService.delete(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY);
+		await Promise.all([
+			this.secretStorageService.delete(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY),
+			this.secretStorageService.delete(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY),
+			this.secretStorageService.delete(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY),
+		]);
 	}
 }
 
 registerSingleton(IVectorCodeMobileRelayService, VectorCodeMobileRelayService, InstantiationType.Delayed);
+
+function mobileCapabilities(state: VectorCodeMobileConnectionState): readonly string[] {
+	switch (state) {
+		case VectorCodeMobileConnectionState.Connected:
+			return [VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE, VECTOR_CODE_MOBILE_CAPABILITY_REMOTE];
+		case VectorCodeMobileConnectionState.Disconnected:
+		case VectorCodeMobileConnectionState.Pairing:
+		case VectorCodeMobileConnectionState.Expired:
+		case VectorCodeMobileConnectionState.Failed:
+			return [VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE, VECTOR_CODE_MOBILE_CAPABILITY_PAIR];
+		case VectorCodeMobileConnectionState.Reconnecting:
+		case VectorCodeMobileConnectionState.Unconfigured:
+			return [VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE];
+	}
+}
 
 async function createPairingSession(payload: IVectorCodeMobilePairingPayload): Promise<IVectorCodeMobilePairingSession> {
 	const payloadJson = JSON.stringify(payload);
@@ -893,6 +1190,10 @@ function isStoredRelaySession(value: unknown): value is IVectorCodeMobileStoredR
 		&& typeof value.desktopRelayTokenExpiresAt === 'string'
 		&& value.desktopRelayTokenExpiresAt.length > 0
 		&& (phonePairedAt === undefined || (typeof phonePairedAt === 'string' && isValidIsoDate(phonePairedAt)));
+}
+
+function isRecoverableStoredRelaySession(value: unknown): value is IVectorCodeMobileStoredRelaySession {
+	return isStoredRelaySession(value) && normalizeVectorCodeRelayHost(value.payload.relayHost) !== undefined;
 }
 
 function isPairingPayload(value: unknown): value is IVectorCodeMobilePairingPayload {

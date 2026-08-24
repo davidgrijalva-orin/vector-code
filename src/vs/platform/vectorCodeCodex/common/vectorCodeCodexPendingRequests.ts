@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationError } from '../../../base/common/errors.js';
+import { VectorCodeRuntimeError, VectorCodeRuntimeErrorCode } from '../../vectorCode/common/vectorCodeRuntime.js';
 import { VectorCodeCodexRequestId } from './vectorCodeCodexBridge.js';
 
 interface IVectorCodeCodexPendingRequest {
@@ -26,11 +27,23 @@ export class VectorCodeCodexPendingRequests {
 	create<TResult>(requestId: VectorCodeCodexRequestId, method: string, timeoutMs: number): Promise<TResult> {
 		return new Promise<TResult>((resolve, reject) => {
 			if (this.requests.has(requestId)) {
-				reject(new Error(`Duplicate Codex App Server request identifier: ${requestId}`));
+				reject(new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.InvalidState,
+					`Duplicate Codex App Server request identifier: ${requestId}`,
+					'Duplicate request correlation identifier.',
+					false,
+					String(requestId),
+				));
 				return;
 			}
 			const timeout = setTimeout(() => {
-				this.reject(requestId, new Error(`Codex App Server request timed out: ${method}`));
+				this.reject(requestId, new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.RequestTimeout,
+					`Codex App Server request timed out: ${method}`,
+					'The helper did not settle the correlated request before its deadline.',
+					true,
+					String(requestId),
+				));
 			}, timeoutMs);
 			this.requests.set(requestId, {
 				resolve: value => resolve(value as TResult),

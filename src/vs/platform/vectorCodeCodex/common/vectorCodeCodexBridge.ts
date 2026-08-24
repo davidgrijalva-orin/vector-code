@@ -10,6 +10,12 @@ export const VECTOR_CODE_CODEX_BRIDGE_CHANNEL = 'vectorCodeCodexBridge';
 
 export type VectorCodeCodexRequestId = number | string;
 
+const VECTOR_CODE_CODEX_AUTHENTICATION_ERROR_PATTERN = /(?:^|[^A-Za-z0-9])(?:auth(?:entication|orization)?|oauth|credentials?|sign[ -]?in|unauthorized|unauthenticated)(?:$|[^A-Za-z0-9])/i;
+
+export function isVectorCodeCodexAuthenticationError(message: string, protocolCode?: string): boolean {
+	return VECTOR_CODE_CODEX_AUTHENTICATION_ERROR_PATTERN.test(`${protocolCode ?? ''} ${message}`);
+}
+
 export interface IVectorCodeCodexBridgeStartOptions {
 	readonly cwd?: string;
 }

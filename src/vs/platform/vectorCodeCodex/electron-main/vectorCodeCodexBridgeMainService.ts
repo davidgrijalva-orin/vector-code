@@ -12,14 +12,15 @@ import { dirname, join } from '../../../base/common/path.js';
 import { findExecutable } from '../../../base/node/processes.js';
 import { generateUuid } from '../../../base/common/uuid.js';
 import { ILogService } from '../../log/common/log.js';
-import { IVectorCodeCodexBridgeConnectionChange, IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeRequest, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService, IVectorCodeCodexBridgeStartOptions, VectorCodeCodexRequestId } from '../common/vectorCodeCodexBridge.js';
+import { VectorCodeRuntimeError, VectorCodeRuntimeErrorCode } from '../../vectorCode/common/vectorCodeRuntime.js';
+import { isVectorCodeCodexAuthenticationError, IVectorCodeCodexBridgeConnectionChange, IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeRequest, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService, IVectorCodeCodexBridgeStartOptions, VectorCodeCodexRequestId } from '../common/vectorCodeCodexBridge.js';
 import { VectorCodeCodexPendingRequests } from '../common/vectorCodeCodexPendingRequests.js';
 
 interface IVectorCodeCodexBridgeConnection {
 	readonly process: ChildProcessWithoutNullStreams;
 	readonly output: ReadlineInterface;
 	readonly pending: VectorCodeCodexPendingRequests;
-	stderr: string;
+	stderrBytes: number;
 	stopping: boolean;
 }
 
@@ -34,7 +35,6 @@ interface IVectorCodeCodexProtocolMessage {
 const CODEX_REQUEST_TIMEOUT_MS = 120_000;
 const CODEX_REQUEST_TIMEOUT_MIN_MS = 1_000;
 const CODEX_REQUEST_TIMEOUT_MAX_MS = 300_000;
-const CODEX_STDERR_DETAIL_LIMIT = 8_000;
 
 export class VectorCodeCodexBridgeMainService extends Disposable implements IVectorCodeCodexBridgeService {
 	declare readonly _serviceBrand: undefined;
@@ -54,9 +54,16 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 	}
 
 	async start(options: IVectorCodeCodexBridgeStartOptions): Promise<string> {
+		const startupCorrelationId = `vector-codex-start-${generateUuid()}`;
 		const executable = await findExecutable('codex', options.cwd);
 		if (!executable) {
-			throw new Error('Codex CLI was not found. Install it with "npm install -g @openai/codex" and sign in before using Codex in Vector Code.');
+			throw new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.DependencyMissing,
+				'Codex CLI was not found. Install it with "npm install -g @openai/codex" and sign in before using Codex in Vector Code.',
+				'Executable lookup returned no Codex CLI candidate.',
+				false,
+				startupCorrelationId,
+			);
 		}
 
 		const connectionId = `vector-codex-${generateUuid()}`;
@@ -73,14 +80,14 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 			process: child,
 			output,
 			pending: new VectorCodeCodexPendingRequests(),
-			stderr: '',
+			stderrBytes: 0,
 			stopping: false,
 		};
 		this.connections.set(connectionId, connection);
 
 		output.on('line', line => this.handleOutputLine(connectionId, line));
 		child.stderr.on('data', data => {
-			connection.stderr = `${connection.stderr}${data.toString()}`.slice(-CODEX_STDERR_DETAIL_LIMIT);
+			connection.stderrBytes += Buffer.byteLength(data);
 		});
 		child.on('exit', (code, signal) => this.handleProcessExit(connectionId, code, signal));
 		child.on('error', error => this.handleProcessError(connectionId, error));
@@ -108,6 +115,7 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 		}
 
 		this._onDidChangeConnection.fire({ connectionId, state: 'started' });
+		this.logService.debug(`[VectorCode][Codex][${connectionId}] helper started.`);
 		return connectionId;
 	}
 
@@ -120,6 +128,8 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 			throw new Error('Codex App Server requests require a method.');
 		}
 		const result = connection.pending.create<TResult>(request.id, request.method, normalizeRequestTimeout(request.timeoutMs));
+		const startedAt = Date.now();
+		this.logService.debug(`[VectorCode][Codex][${request.id}] bridge request started (${request.method}).`);
 		try {
 			this.writeMessage(connection, request.params === undefined
 				? { id: request.id, method: request.method }
@@ -127,7 +137,15 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 		} catch (error) {
 			connection.pending.reject(request.id, error instanceof Error ? error : new Error(String(error)));
 		}
-		return result;
+		try {
+			const value = await result;
+			this.logService.debug(`[VectorCode][Codex][${request.id}] bridge request completed (${request.method}, ${Date.now() - startedAt} ms).`);
+			return value;
+		} catch (error) {
+			const code = error instanceof VectorCodeRuntimeError ? error.code : VectorCodeRuntimeErrorCode.Unknown;
+			this.logService.warn(`[VectorCode][Codex][${request.id}] bridge request failed (${request.method}, ${code}, ${Date.now() - startedAt} ms).`);
+			throw error;
+		}
 	}
 
 	async cancelRequest(connectionId: string, requestId: VectorCodeCodexRequestId): Promise<void> {
@@ -170,31 +188,31 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 		try {
 			parsed = JSON.parse(line);
 		} catch (error) {
-			this.logService.warn(`Codex App Server emitted invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+			this.logService.warn(`[VectorCode][Codex][${connectionId}] helper emitted invalid JSON (${error instanceof Error ? error.name : 'unknown_error'}).`);
 			return;
 		}
 		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-			this.logService.warn('Codex App Server emitted a JSON value that is not a protocol message.');
+			this.logService.warn(`[VectorCode][Codex][${connectionId}] helper emitted a JSON value that is not a protocol message.`);
 			return;
 		}
 		const message = parsed as IVectorCodeCodexProtocolMessage;
 
 		if (isRequestId(message.id) && message.method === undefined) {
 			const settled = message.error !== undefined
-				? connection.pending.reject(message.id, new Error(formatProtocolError(message.error)))
+				? connection.pending.reject(message.id, createCodexProtocolError(message.error, message.id))
 				: connection.pending.resolve(message.id, message.result);
 			if (!settled) {
-				this.logService.debug(`Codex App Server response ignored for settled or unknown request: ${message.id}`);
+				this.logService.debug(`[VectorCode][Codex][${message.id}] response ignored for a settled or unknown request.`);
 			}
 			return;
 		}
 
 		if (typeof message.method !== 'string') {
-			this.logService.warn('Codex App Server emitted an unrecognized protocol message.');
+			this.logService.warn(`[VectorCode][Codex][${connectionId}] helper emitted an unrecognized protocol message.`);
 			return;
 		}
 		if (message.id !== undefined && !isRequestId(message.id)) {
-			this.logService.warn(`Codex App Server emitted a request with an invalid identifier for method: ${message.method}`);
+			this.logService.warn(`[VectorCode][Codex][${connectionId}] helper emitted an invalid request identifier for method ${message.method}.`);
 			return;
 		}
 		if (isRequestId(message.id)) {
@@ -210,9 +228,8 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 			return;
 		}
 		const exitDetail = `Codex App Server exited${code === null ? '' : ` with code ${normalizeExitCode(code)}`}${signal ? ` (${signal})` : ''}.`;
-		const stderr = connection.stderr.trim();
-		if (stderr) {
-			this.logService.warn(`${exitDetail} Recent stderr: ${stderr}`);
+		if (connection.stderrBytes > 0) {
+			this.logService.warn(`[VectorCode][Codex][${connectionId}] ${exitDetail} Helper stderr was suppressed (${connection.stderrBytes} bytes).`);
 		}
 		const stopping = connection.stopping;
 		this.disposeConnection(connectionId, false);
@@ -223,15 +240,21 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 		if (!this.connections.has(connectionId)) {
 			return;
 		}
-		this.logService.error(`Codex App Server process error: ${error.message}`);
+		this.logService.error(`[VectorCode][Codex][${connectionId}] helper process error (${error.name}).`);
 		this.disposeConnection(connectionId, false);
-		this._onDidChangeConnection.fire({ connectionId, state: 'error', detail: error.message });
+		this._onDidChangeConnection.fire({ connectionId, state: 'error', detail: 'Codex helper process error.' });
 	}
 
 	private getConnection(connectionId: string): IVectorCodeCodexBridgeConnection {
 		const connection = this.connections.get(connectionId);
 		if (!connection || connection.stopping || connection.process.stdin.destroyed) {
-			throw new Error('Codex App Server is not running.');
+			throw new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.ConnectionLost,
+				'Codex App Server is not running.',
+				'No writable helper connection exists for the requested identifier.',
+				true,
+				connectionId,
+			);
 		}
 		return connection;
 	}
@@ -248,7 +271,13 @@ export class VectorCodeCodexBridgeMainService extends Disposable implements IVec
 		this.connections.delete(connectionId);
 		connection.stopping = terminate;
 		connection.output.close();
-		connection.pending.rejectAll(new Error('Codex App Server stopped before the request completed.'));
+		connection.pending.rejectAll(new VectorCodeRuntimeError(
+			VectorCodeRuntimeErrorCode.ConnectionLost,
+			'Codex App Server stopped before the request completed.',
+			'The helper connection closed while correlated requests were pending.',
+			true,
+			connectionId,
+		));
 		if (terminate && !connection.process.killed) {
 			connection.process.stdin.end();
 			connection.process.kill();
@@ -271,17 +300,24 @@ function normalizeExitCode(code: number): number {
 	return process.platform === 'win32' && code > 0x7fff_ffff ? code - 0x1_0000_0000 : code;
 }
 
-function formatProtocolError(value: unknown): string {
-	if (typeof value === 'string') {
-		return value;
-	}
-	if (value && typeof value === 'object') {
-		const message = (value as { message?: unknown }).message;
-		if (typeof message === 'string') {
-			return message;
-		}
-	}
-	return JSON.stringify(value);
+function createCodexProtocolError(value: unknown, requestId: VectorCodeCodexRequestId): VectorCodeRuntimeError {
+	const record = value && typeof value === 'object' ? value as { code?: unknown; message?: unknown } : undefined;
+	const message = typeof value === 'string' ? value : typeof record?.message === 'string' ? record.message : '';
+	const protocolCode = typeof record?.code === 'number' && Number.isFinite(record.code)
+		? String(record.code)
+		: typeof record?.code === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(record.code)
+			? record.code
+			: 'unknown';
+	const authenticationRequired = isVectorCodeCodexAuthenticationError(message, protocolCode);
+	return new VectorCodeRuntimeError(
+		authenticationRequired ? VectorCodeRuntimeErrorCode.AuthenticationRequired : VectorCodeRuntimeErrorCode.Unknown,
+		authenticationRequired
+			? 'Codex authentication is required. Sign in from the full terminal, then retry.'
+			: 'Codex could not complete the request. Try again or open Diagnostics.',
+		`Codex App Server returned protocol error code ${protocolCode}. Response content was suppressed.`,
+		!authenticationRequired,
+		String(requestId),
+	);
 }
 
 function resolveCodexLaunch(executable: string): { executable: string; args: string[]; env: NodeJS.ProcessEnv; shell: boolean } {

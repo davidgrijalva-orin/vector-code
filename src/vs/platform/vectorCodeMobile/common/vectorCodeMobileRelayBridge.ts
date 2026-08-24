@@ -9,11 +9,13 @@ import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL = 'vectorCodeMobileRelayBridge';
 
 export interface IVectorCodeMobileRelayBridgeConnectOptions {
+	readonly correlationId: string;
 	readonly url: string;
 	readonly authorizationHeader: string;
 }
 
 export interface IVectorCodeMobileRelayBridgeTokenOptions {
+	readonly correlationId: string;
 	readonly url: string;
 	readonly authorizationHeader: string;
 	readonly payload: {
@@ -28,6 +30,12 @@ export interface IVectorCodeMobileRelayBridgeTokenOptions {
 export interface IVectorCodeMobileRelayBridgeTokenResponse {
 	readonly relayToken: string;
 	readonly relayTokenExpiresAt: string;
+}
+
+export interface IVectorCodeMobileRelayBridgeSendOptions {
+	readonly correlationId: string;
+	readonly connectionId: string;
+	readonly message: string;
 }
 
 export interface IVectorCodeMobileRelayBridgeMessage {
@@ -51,6 +59,6 @@ export interface IVectorCodeMobileRelayBridgeService {
 
 	connect(options: IVectorCodeMobileRelayBridgeConnectOptions): Promise<string>;
 	createRelayToken(options: IVectorCodeMobileRelayBridgeTokenOptions): Promise<IVectorCodeMobileRelayBridgeTokenResponse | undefined>;
-	send(connectionId: string, message: string): Promise<void>;
+	send(options: IVectorCodeMobileRelayBridgeSendOptions): Promise<void>;
 	disconnect(connectionId: string): Promise<void>;
 }

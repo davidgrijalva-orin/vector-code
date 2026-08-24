@@ -19,11 +19,17 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService } from '../../../../platform/vectorCodeCodex/common/vectorCodeCodexBridge.js';
-import { IVectorCodeCodexMessage, IVectorCodeCodexModel, IVectorCodeCodexService, IVectorCodeCodexState, IVectorCodeCodexThread, IVectorCodeWorkbenchService, VectorCodeCodexConnectionState } from '../common/vectorCode.js';
+import { isVectorCodeRuntimeError, IVectorCodeRuntimeDiagnosticSummary, IVectorCodeRuntimeError, runVectorCodeRuntimeWithTimeout, toVectorCodeRuntimeError, VectorCodeRuntimeController, VectorCodeRuntimeError, VectorCodeRuntimeErrorCode, VectorCodeRuntimeState } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
+import { IVectorCodeCodexMessage, IVectorCodeCodexModel, IVectorCodeCodexService, IVectorCodeCodexState, IVectorCodeCodexThread, IVectorCodeWorkbenchService, VECTOR_CODE_CODEX_CAPABILITY_MESSAGE, VECTOR_CODE_CODEX_CAPABILITY_PLUGINS, VECTOR_CODE_CODEX_CAPABILITY_THREADS, VectorCodeCodexConnectionState } from '../common/vectorCode.js';
 import { VectorCodeCodexRestartPolicy } from '../common/vectorCodeCodexLifecycle.js';
 
+const CODEX_STARTUP_TIMEOUT_MS = 30_000;
 const CODEX_STARTUP_REQUEST_TIMEOUT_MS = 30_000;
-const CODEX_ERROR_DETAIL_LIMIT = 600;
+const CODEX_READY_CAPABILITIES = [
+	VECTOR_CODE_CODEX_CAPABILITY_MESSAGE,
+	VECTOR_CODE_CODEX_CAPABILITY_PLUGINS,
+	VECTOR_CODE_CODEX_CAPABILITY_THREADS,
+] as const;
 
 interface IVectorCodeCodexThreadData {
 	readonly id: string;
@@ -67,6 +73,7 @@ interface IVectorCodeCodexPluginPickItem {
 
 interface IVectorCodeCodexStatePatch {
 	readonly connectionState?: VectorCodeCodexConnectionState;
+	readonly runtime?: IVectorCodeCodexState['runtime'];
 	readonly detail?: string;
 	readonly accountLabel?: string | undefined;
 	readonly requiresAuthentication?: boolean;
@@ -87,9 +94,11 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 
 	private readonly _onDidChangeState = this._register(new Emitter<IVectorCodeCodexState>());
 	readonly onDidChangeState = this._onDidChangeState.event;
+	private readonly runtime = new VectorCodeRuntimeController('codex');
 
 	private state: IVectorCodeCodexState = {
 		connectionState: VectorCodeCodexConnectionState.Idle,
+		runtime: this.runtime.getStatus(),
 		detail: localize('vectorCodeCodexIdle', 'Start a Codex conversation for the active project.'),
 		requiresAuthentication: false,
 		threads: [],
@@ -105,7 +114,7 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 	private projectCancellation = new CancellationTokenSource();
 	private readonly restartPolicy = new VectorCodeCodexRestartPolicy();
 	private readonly restartScheduler: RunOnceScheduler;
-	private pendingConnectionFailureDetail: string | undefined;
+	private activeStartupCorrelationId: string | undefined;
 	private isDisposed = false;
 	private readonly writableThreadIds = new Set<string>();
 
@@ -133,17 +142,27 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			this.writableThreadIds.clear();
 			const detail = event.detail || localize('vectorCodeCodexStopped', 'Codex stopped.');
 			if (event.state === 'error') {
+				const runtimeError = this.createRuntimeError(detail, VectorCodeRuntimeErrorCode.ConnectionLost, true, event.connectionId);
 				if (this.startPromise) {
-					this.pendingConnectionFailureDetail = detail;
-					this.setState({ connectionState: VectorCodeCodexConnectionState.Error, detail: conciseErrorDetail(detail), turnInProgress: false });
+					this.setState({
+						connectionState: VectorCodeCodexConnectionState.Error,
+						runtime: this.runtime.transition(VectorCodeRuntimeState.Unavailable, { error: runtimeError, correlationId: runtimeError.correlationId }),
+						detail: runtimeError.userMessage,
+						turnInProgress: false,
+					});
 				} else {
-					this.scheduleRestart(detail);
+					this.scheduleRestart(runtimeError);
 				}
 				return;
 			}
 			this.restartScheduler.cancel();
 			this.restartPolicy.reset();
-			this.setState({ connectionState: VectorCodeCodexConnectionState.Idle, detail, turnInProgress: false });
+			this.setState({
+				connectionState: VectorCodeCodexConnectionState.Idle,
+				runtime: this.runtime.transition(VectorCodeRuntimeState.Stopped, { correlationId: event.connectionId }),
+				detail,
+				turnInProgress: false,
+			});
 		}));
 		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(() => {
 			this.projectEpoch++;
@@ -171,6 +190,13 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		return this.state;
 	}
 
+	getDiagnosticSummary(): IVectorCodeRuntimeDiagnosticSummary {
+		return this.runtime.getDiagnosticSummary([
+			localize('vectorCodeCodexDiagnosticRefresh', 'Use Refresh to retry the native Codex helper.'),
+			localize('vectorCodeCodexDiagnosticTerminal', 'Open Full Terminal to install, sign in, or inspect Codex directly.'),
+		]);
+	}
+
 	async ensureReady(): Promise<void> {
 		if (this.connectionId && this.state.connectionState === VectorCodeCodexConnectionState.Ready) {
 			return;
@@ -180,7 +206,6 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		}
 		this.restartScheduler.cancel();
 		this.restartPolicy.reset();
-		this.pendingConnectionFailureDetail = undefined;
 		return this.beginStartAttempt();
 	}
 
@@ -479,10 +504,11 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		this.isDisposed = true;
 		this.restartScheduler.cancel();
 		this.projectCancellation.dispose(true);
-		this.pendingConnectionFailureDetail = undefined;
+		this.activeStartupCorrelationId = undefined;
 		this.writableThreadIds.clear();
 		const connectionId = this.connectionId;
 		this.connectionId = undefined;
+		this.runtime.transition(VectorCodeRuntimeState.Stopped, { correlationId: connectionId });
 		if (connectionId) {
 			void this.bridgeService.stop(connectionId);
 		}
@@ -570,9 +596,13 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		const account = getRecord(response, 'account');
 		const requiresAuthentication = (booleanField(asRecord(response), 'requiresOpenaiAuth') ?? false) && !account;
 		const projectState = this.getActiveProjectState();
+		const runtimeStatus = this.runtime.getStatus();
 		this.setState({
 			accountLabel: normalizeAccountLabel(account),
 			requiresAuthentication,
+			...(runtimeStatus.state === VectorCodeRuntimeState.Ready || runtimeStatus.state === VectorCodeRuntimeState.Degraded
+				? { runtime: this.runtime.transition(runtimeStatus.state, { capabilities: codexReadyCapabilities(requiresAuthentication), event: 'account.capabilities.updated' }) }
+				: {}),
 			detail: requiresAuthentication
 				? this.getAuthenticationRequiredDetail()
 				: projectState.activeProjectPath
@@ -591,35 +621,54 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 	}
 
 	private async runStartAttempt(): Promise<void> {
-		let failure: unknown;
+		let failure: IVectorCodeRuntimeError | undefined;
 		try {
 			await this.start();
 		} catch (error) {
-			failure = error;
-			throw error;
+			if (isCancellationError(error)) {
+				throw error;
+			}
+			failure = this.createRuntimeError(
+				error,
+				VectorCodeRuntimeErrorCode.Unknown,
+				true,
+				this.activeStartupCorrelationId,
+			);
+			throw failure;
 		} finally {
 			this.startPromise = undefined;
 			if (failure !== undefined && !this.isDisposed && this.state.connectionState !== VectorCodeCodexConnectionState.Ready) {
-				const detail = this.pendingConnectionFailureDetail ?? errorMessage(failure);
-				this.pendingConnectionFailureDetail = undefined;
-				this.scheduleRestart(detail);
+				if (failure.retryable) {
+					this.scheduleRestart(failure);
+				} else {
+					this.setState({
+						connectionState: VectorCodeCodexConnectionState.Error,
+						runtime: this.runtime.transition(VectorCodeRuntimeState.Unavailable, { error: failure, correlationId: failure.correlationId }),
+						detail: failure.userMessage,
+						turnInProgress: false,
+					});
+				}
 			}
 		}
 	}
 
-	private scheduleRestart(detail: string): void {
+	private scheduleRestart(error: IVectorCodeRuntimeError): void {
 		if (this.isDisposed || this.restartScheduler.isScheduled()) {
 			return;
 		}
 		const retry = this.restartPolicy.nextRetry();
-		const conciseDetail = conciseErrorDetail(detail);
 		if (!retry) {
 			this.setState({
 				connectionState: VectorCodeCodexConnectionState.Error,
+				runtime: this.runtime.transition(VectorCodeRuntimeState.Unavailable, {
+					error,
+					attempt: this.restartPolicy.maxAttempts,
+					correlationId: error.correlationId,
+				}),
 				detail: localize(
 					'vectorCodeCodexRestartExhausted',
 					'{0} Automatic restart stopped after {1} attempts. Use Refresh to try again.',
-					conciseDetail,
+					error.userMessage,
 					this.restartPolicy.maxAttempts,
 				),
 				turnInProgress: false,
@@ -628,13 +677,19 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		}
 		this.setState({
 			connectionState: VectorCodeCodexConnectionState.Retrying,
+			runtime: this.runtime.transition(VectorCodeRuntimeState.Retrying, {
+				error,
+				attempt: retry.attempt,
+				nextRetryAt: Date.now() + retry.delayMs,
+				correlationId: error.correlationId,
+			}),
 			detail: localize(
 				'vectorCodeCodexRetrying',
 				'Codex stopped unexpectedly. Retrying in {0} seconds ({1}/{2}). {3}',
 				String(retry.delayMs / 1_000),
 				retry.attempt,
 				retry.maxAttempts,
-				conciseDetail,
+				error.userMessage,
 			),
 			turnInProgress: false,
 		});
@@ -649,18 +704,34 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			await this.beginStartAttempt();
 		} catch (error) {
 			if (!isCancellationError(error)) {
-				this.logService.warn(`Codex automatic restart failed: ${errorMessage(error)}`);
+				const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+				this.logService.warn(`[VectorCode][Codex][${runtimeError.correlationId}] automatic restart failed (${runtimeError.code}).`);
 			}
 		}
 	}
 
 	private async start(): Promise<void> {
+		const correlationId = this.runtime.createCorrelationId('startup');
+		this.activeStartupCorrelationId = correlationId;
 		this.setState({
 			connectionState: VectorCodeCodexConnectionState.Starting,
+			runtime: this.runtime.transition(VectorCodeRuntimeState.Starting, { correlationId, event: 'startup.waiting' }),
 			detail: localize('vectorCodeCodexStarting', 'Starting Codex...'),
 		});
 		try {
-			const connectionId = await this.bridgeService.start({ cwd: this.getActiveProjectPath() });
+			const startOperation = this.bridgeService.start({ cwd: this.getActiveProjectPath() });
+			const connectionId = await runVectorCodeRuntimeWithTimeout(
+				startOperation,
+				CODEX_STARTUP_TIMEOUT_MS,
+				new VectorCodeRuntimeError(
+					VectorCodeRuntimeErrorCode.StartupTimeout,
+					localize('vectorCodeCodexStartupTimeout', 'Codex took too long to start. Use Refresh to retry.'),
+					`Codex helper startup exceeded ${CODEX_STARTUP_TIMEOUT_MS} ms.`,
+					true,
+					correlationId,
+				),
+				lateConnectionId => this.bridgeService.stop(lateConnectionId),
+			);
 			if (this.isDisposed) {
 				await this.bridgeService.stop(connectionId).catch(() => undefined);
 				throw new CancellationError();
@@ -696,6 +767,7 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			this.setState({
 				...projectState,
 				connectionState: VectorCodeCodexConnectionState.Ready,
+				runtime: this.runtime.transition(VectorCodeRuntimeState.Ready, { capabilities: codexReadyCapabilities(requiresAuthentication), correlationId, event: 'startup.ready' }),
 				detail: requiresAuthentication
 					? this.getAuthenticationRequiredDetail()
 					: projectState.activeProjectPath
@@ -711,22 +783,33 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			await Promise.all([
 				this.refreshThreads().catch(error => {
 					if (!isCancellationError(error)) {
-						this.logService.warn(`Unable to refresh Codex conversations after startup: ${errorMessage(error)}`);
+						const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+						this.logService.warn(`[VectorCode][Codex][${runtimeError.correlationId}] conversation refresh failed after startup (${runtimeError.code}).`);
 					}
 				}),
 				this.refreshPluginCount().catch(error => {
 					if (!isCancellationError(error)) {
-						this.logService.warn(`Unable to refresh Codex plugins after startup: ${errorMessage(error)}`);
+						const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+						this.logService.warn(`[VectorCode][Codex][${runtimeError.correlationId}] plugin refresh failed after startup (${runtimeError.code}).`);
 					}
 				}),
 			]);
 		} catch (error) {
+			if (isCancellationError(error)) {
+				throw error;
+			}
+			const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true, correlationId);
+			this.runtime.record('startup.failed', correlationId, runtimeError);
 			const connectionId = this.connectionId;
 			this.connectionId = undefined;
 			if (connectionId) {
 				await this.bridgeService.stop(connectionId).catch(() => undefined);
 			}
-			throw error;
+			throw runtimeError;
+		} finally {
+			if (this.activeStartupCorrelationId === correlationId) {
+				this.activeStartupCorrelationId = undefined;
+			}
 		}
 	}
 
@@ -741,13 +824,32 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 			throw new CancellationError();
 		}
 		const requestId = `vector-code-${generateUuid()}`;
+		const startedAt = Date.now();
+		this.runtime.record(`request.${method}.started`, requestId);
+		this.logService.debug(`[VectorCode][Codex][${requestId}] request started (${method}).`);
 		const cancellationListener = cancellationToken.onCancellationRequested(() => {
 			void this.bridgeService.cancelRequest(connectionId, requestId).catch(error => {
-				this.logService.debug(`Unable to cancel Codex request ${requestId}: ${errorMessage(error)}`);
+				const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true, requestId);
+				this.logService.debug(`[VectorCode][Codex][${requestId}] request cancellation failed (${runtimeError.code}).`);
 			});
 		});
 		try {
-			return await this.bridgeService.request<TResult>(connectionId, { id: requestId, method, params, timeoutMs });
+			const result = await this.bridgeService.request<TResult>(connectionId, { id: requestId, method, params, timeoutMs });
+			this.runtime.record(`request.${method}.completed`, requestId);
+			this.logService.debug(`[VectorCode][Codex][${requestId}] request completed (${method}, ${Date.now() - startedAt} ms).`);
+			if (this.runtime.getStatus().state === VectorCodeRuntimeState.Degraded) {
+				this.setState({ runtime: this.runtime.transition(VectorCodeRuntimeState.Ready, { capabilities: codexReadyCapabilities(this.state.requiresAuthentication), correlationId: requestId, event: 'request.recovered' }) });
+			}
+			return result;
+		} catch (error) {
+			if (isCancellationError(error)) {
+				this.runtime.record(`request.${method}.cancelled`, requestId);
+				throw error;
+			}
+			const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true, requestId);
+			this.runtime.record(`request.${method}.failed`, requestId, runtimeError);
+			this.logService.warn(`[VectorCode][Codex][${requestId}] request failed (${method}, ${runtimeError.code}, ${Date.now() - startedAt} ms).`);
+			throw runtimeError;
 		} finally {
 			cancellationListener.dispose();
 		}
@@ -1090,7 +1192,12 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 
 	private requireConnection(): string {
 		if (!this.connectionId) {
-			throw new Error(localize('vectorCodeCodexNotRunning', 'Codex is not running.'));
+			throw new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.InvalidState,
+				localize('vectorCodeCodexNotRunning', 'Codex is not running.'),
+				'No active Codex helper connection is available.',
+				true,
+			);
 		}
 		return this.connectionId;
 	}
@@ -1133,9 +1240,55 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		if (isCancellationError(error)) {
 			return;
 		}
-		const message = errorMessage(error);
-		this.setState({ detail: message });
-		this.notificationService.error(message);
+		const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true);
+		const runtimeState = this.connectionId ? VectorCodeRuntimeState.Degraded : VectorCodeRuntimeState.Unavailable;
+		this.setState({
+			runtime: this.runtime.transition(runtimeState, {
+				capabilities: this.connectionId ? this.runtime.getStatus().capabilities : [],
+				error: runtimeError,
+				correlationId: runtimeError.correlationId,
+				event: 'operation.failed',
+			}),
+			detail: runtimeError.userMessage,
+		});
+		this.notificationService.error(runtimeError.userMessage);
+	}
+
+	private createRuntimeError(error: unknown, fallbackCode: VectorCodeRuntimeErrorCode, fallbackRetryable: boolean, correlationId?: string): VectorCodeRuntimeError {
+		if (isVectorCodeRuntimeError(error)) {
+			return toVectorCodeRuntimeError(error, {
+				code: error.code,
+				userMessage: error.userMessage,
+				retryable: error.retryable,
+				correlationId: error.correlationId,
+			});
+		}
+		const detail = errorMessage(error);
+		const normalized = detail.toLowerCase();
+		let code = fallbackCode;
+		let retryable = fallbackRetryable;
+		if (/\benoent\b|codex cli (?:was not found|is not installed)|npm install -g @openai\/codex/.test(normalized)) {
+			code = VectorCodeRuntimeErrorCode.DependencyMissing;
+			retryable = false;
+		} else if (/timed out|timeout/.test(normalized)) {
+			code = fallbackCode === VectorCodeRuntimeErrorCode.StartupTimeout
+				? VectorCodeRuntimeErrorCode.StartupTimeout
+				: VectorCodeRuntimeErrorCode.RequestTimeout;
+			retryable = true;
+		} else if (/codex app server (?:is not running|stopped|exited)|codex helper process error|connection.+(?:closed|lost)/.test(normalized)) {
+			code = VectorCodeRuntimeErrorCode.ConnectionLost;
+			retryable = true;
+		}
+		const userMessage = code === VectorCodeRuntimeErrorCode.DependencyMissing
+			? localize('vectorCodeCodexDependencyMissing', 'Codex CLI is not installed. Install it, then use Refresh.')
+			: code === VectorCodeRuntimeErrorCode.StartupTimeout
+				? localize('vectorCodeCodexStartupTimedOut', 'Codex took too long to start. Use Refresh to retry.')
+				: code === VectorCodeRuntimeErrorCode.RequestTimeout
+					? localize('vectorCodeCodexRequestTimedOut', 'Codex did not respond in time. Try the action again.')
+					: code === VectorCodeRuntimeErrorCode.ConnectionLost
+						? localize('vectorCodeCodexConnectionLost', 'Codex stopped unexpectedly. Vector Code will retry automatically.')
+						: localize('vectorCodeCodexOperationFailed', 'Codex could not complete the operation. Use Refresh or open Full Terminal for diagnostics.');
+		return toVectorCodeRuntimeError(error, { code, userMessage, retryable, correlationId });
 	}
 }
 
@@ -1450,19 +1603,18 @@ function formatJson(value: unknown): string {
 	}
 }
 
-function conciseErrorDetail(detail: string): string {
-	const normalized = detail.replace(/\s+/g, ' ').trim() || localize('vectorCodeCodexUnexpectedStop', 'Codex App Server stopped unexpectedly.');
-	return normalized.length <= CODEX_ERROR_DETAIL_LIMIT
-		? normalized
-		: `${normalized.slice(0, CODEX_ERROR_DETAIL_LIMIT - 1)}…`;
-}
-
 function errorMessage(error: unknown): string {
 	if (error instanceof Error) {
 		return error.message;
 	}
 	const record = asRecord(error);
 	return stringField(record, 'message') ?? stringField(record, 'additionalDetails') ?? formatJson(error);
+}
+
+function codexReadyCapabilities(requiresAuthentication: boolean): readonly string[] {
+	return requiresAuthentication
+		? [VECTOR_CODE_CODEX_CAPABILITY_PLUGINS, VECTOR_CODE_CODEX_CAPABILITY_THREADS]
+		: CODEX_READY_CAPABILITIES;
 }
 
 registerSingleton(IVectorCodeCodexService, VectorCodeCodexService, InstantiationType.Delayed);

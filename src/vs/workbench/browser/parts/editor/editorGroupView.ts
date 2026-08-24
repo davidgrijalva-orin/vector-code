@@ -511,6 +511,7 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 		if (this.isEmpty) {
 			this.element.classList.add('empty');
 			this.element.tabIndex = 0;
+			this.element.setAttribute('role', 'group');
 			this.element.setAttribute('aria-label', localize('emptyEditorGroup', "{0} (empty)", this.ariaLabel));
 		}
 
@@ -518,6 +519,7 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 		else {
 			this.element.classList.remove('empty');
 			this.element.removeAttribute('tabIndex');
+			this.element.removeAttribute('role');
 			this.element.removeAttribute('aria-label');
 		}
 

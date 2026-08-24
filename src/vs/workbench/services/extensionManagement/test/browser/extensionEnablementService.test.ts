@@ -103,6 +103,10 @@ export class TestExtensionEnablementService extends ExtensionEnablementService {
 		this._register(disposables);
 	}
 
+	protected override loopCheckForMaliciousExtensions(): void {
+		void this.checkForMaliciousExtensions();
+	}
+
 	public async waitUntilInitialized(): Promise<void> {
 		await this.extensionsManager.whenInitialized();
 	}

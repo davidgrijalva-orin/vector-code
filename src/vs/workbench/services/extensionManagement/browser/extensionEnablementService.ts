@@ -707,13 +707,13 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		this.globalExtensionEnablementService.enableExtension(extension);
 	}
 
-	private loopCheckForMaliciousExtensions(): void {
+	protected loopCheckForMaliciousExtensions(): void {
 		this.checkForMaliciousExtensions()
 			.then(() => this.delayer.trigger(() => { }, 1000 * 60 * 5)) // every five minutes
 			.then(() => this.loopCheckForMaliciousExtensions());
 	}
 
-	private async checkForMaliciousExtensions(): Promise<void> {
+	protected async checkForMaliciousExtensions(): Promise<void> {
 		try {
 			const extensionsControlManifest = await this.extensionManagementService.getExtensionsControlManifest();
 			const changed = this.storeMaliciousExtensions(extensionsControlManifest.malicious.map(({ extensionOrPublisher }) => extensionOrPublisher));

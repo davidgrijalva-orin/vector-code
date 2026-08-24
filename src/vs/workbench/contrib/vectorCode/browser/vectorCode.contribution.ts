@@ -115,10 +115,6 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 			this.renderProjectList(projectList, projectListDisposables);
 		};
 		updateProjects();
-		const activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri();
-		if (activeProjectUri) {
-			void this.vectorCodeWorkbenchService.switchProject(activeProjectUri);
-		}
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(updateProjects));
 	}

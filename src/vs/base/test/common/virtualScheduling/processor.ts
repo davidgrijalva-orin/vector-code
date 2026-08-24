@@ -361,9 +361,18 @@ export class VirtualTimeProcessor extends Disposable {
 
 	private _buildOverflow(run: Run): Error {
 		const local = this._executedTotal - run.executedAtStart;
+		const recentEvents = this._history
+			.slice(-5)
+			.map(event => `${event.time}ms ${event.source.toString()}`)
+			.join(', ');
+		const nextEvent = this._clock.peekNext();
+		const diagnostics = recentEvents || nextEvent
+			? ` Recent events: ${recentEvents || 'none'}. Next event: ${nextEvent ? `${nextEvent.time}ms ${nextEvent.source.toString()}` : 'none'}.`
+			: '';
+		const nextEventStack = nextEvent?.source.stackTrace ? `\nNext event was scheduled at:\n${nextEvent.source.stackTrace}` : '';
 		return new Error(
 			`[VirtualTimeProcessor] Run #${run.id} exceeded maxEvents (${run.maxEvents}) — ` +
-			`executed ${local} virtual event(s) and the queue is still not empty.`
+			`executed ${local} virtual event(s) and the queue is still not empty.${diagnostics}${nextEventStack}`
 		);
 	}
 

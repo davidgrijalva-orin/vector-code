@@ -92,6 +92,7 @@ export class IssueReporterModel {
 		}
 		return `
 Type: <b>${this.getIssueTypeTitle()}</b>
+
 ${this._data.issueDescription}
 ${this.getExtensionVersion()}
 VS Code version: ${this._data.versionInfo && this._data.versionInfo.vscodeVersion}

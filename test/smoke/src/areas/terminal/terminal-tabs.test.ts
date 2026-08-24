@@ -57,10 +57,7 @@ export function setup(options?: { skipSuite: boolean }) {
 
 		it('should create a split terminal when single tab is alt clicked', async () => {
 			await terminal.createTerminal();
-			const page = await terminal.getPage();
-			page.keyboard.down('Alt');
-			await terminal.clickSingleTab();
-			page.keyboard.up('Alt');
+			await terminal.clickSingleTab(['Alt']);
 			await terminal.assertTerminalGroups([[{}, {}]]);
 		});
 
@@ -74,7 +71,7 @@ export function setup(options?: { skipSuite: boolean }) {
 			await terminal.runCommand(TerminalCommandId.Show);
 			await terminal.runCommand(TerminalCommandId.Split);
 			await terminal.runCommand(TerminalCommandId.Join);
-			await terminal.assertTerminalGroups([[{}], [{}]]);
+			await terminal.assertTerminalGroups([[{}, {}]]);
 		});
 
 		it('should join tabs when more than one non-split terminal', async () => {

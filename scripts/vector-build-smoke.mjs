@@ -121,6 +121,8 @@ function verifyWebviewPreloadCsp(filePath, label, passes) {
 
 	check(csp.includes('script-src'), `${label}: CSP must define script-src`);
 	check(csp.includes(`'sha256-${hash}'`), `${label}: script-src hash is stale; expected sha256-${hash}`);
+	// This is a CSP source expression, not user-facing text.
+	// eslint-disable-next-line local/code-no-unexternalized-strings
 	check(csp.includes("'self'"), `${label}: script-src must keep 'self' for packaged preload resources`);
 	pass(passes, `${label}: webview preload CSP hash matches inline module script`);
 }
@@ -186,10 +188,16 @@ function verifyWindowsAppBundle(args, passes) {
 	check(product.applicationName === 'vector-code', `Windows app bundle: expected applicationName "vector-code", got ${product.applicationName}`);
 	check(product.quality === args.quality, `Windows app bundle: expected quality ${args.quality}, got ${product.quality}`);
 	check(typeof product.updateUrl === 'string' && product.updateUrl.startsWith('https://'), 'Windows app bundle: product.updateUrl must be an https URL');
+	if (args.version) {
+		check(product.version === args.version, `Windows app bundle: expected product version ${args.version}, got ${product.version}`);
+	}
+	if (args.commit) {
+		check(product.commit === args.commit, `Windows app bundle: expected source commit ${args.commit}, got ${product.commit}`);
+	}
 	if (expectedPackageVersion) {
 		check(packageJson.version === expectedPackageVersion, `Windows app bundle: expected package version ${expectedPackageVersion}, got ${packageJson.version}`);
 	}
-	pass(passes, 'Windows app bundle: product and package metadata are consistent');
+	pass(passes, 'Windows app bundle: product, package, version, and source commit metadata are consistent');
 
 	requireFile(path.join(appDir, 'Vector Code.exe'), 'Windows app bundle', minWindowsSetupSize, passes);
 	requireFile(path.join(appDir, 'bin', 'vector-code'), 'Windows app bundle', 1, passes);

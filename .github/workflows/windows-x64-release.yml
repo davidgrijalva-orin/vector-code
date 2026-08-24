@@ -203,12 +203,14 @@ jobs:
             --archive '${{ steps.package.outputs.archive }}' `
             --release-base-url $releaseBase
 
-      - name: Device smoke test Windows Markdown preview
+      - name: Device smoke test Windows golden path
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           node scripts/vector-device-smoke.mjs `
             --app-dir '..\VSCode-win32-x64' `
+            --expected-version '${{ steps.meta.outputs.version }}' `
+            --expected-commit '${{ github.sha }}' `
             --workspace-dir '.tmp\vector-device-smoke\workspace' `
             --user-data-dir '.tmp\vector-device-smoke\user-data' `
             --extensions-dir '.tmp\vector-device-smoke\extensions' `
@@ -219,7 +221,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: vector-code-windows-x64-device-smoke-${{ steps.meta.outputs.version }}
+          name: vector-code-windows-x64-golden-path-${{ steps.meta.outputs.version }}
           path: .build/logs/vector-device-smoke/**
           if-no-files-found: ignore
           retention-days: 14

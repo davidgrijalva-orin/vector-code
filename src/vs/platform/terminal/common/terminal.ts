@@ -163,6 +163,16 @@ export const enum GeneralShellType {
 }
 export type TerminalShellType = PosixShellType | WindowsShellType | GeneralShellType | undefined;
 
+export const AGENT_CLI_SHELL_TYPES: ReadonlySet<GeneralShellType> = new Set([
+	GeneralShellType.Claude,
+	GeneralShellType.Codex,
+	GeneralShellType.Gemini,
+]);
+
+export function isAgentCliShellType(shellType: TerminalShellType): boolean {
+	return shellType !== undefined && AGENT_CLI_SHELL_TYPES.has(shellType as GeneralShellType);
+}
+
 export interface IRawTerminalInstanceLayoutInfo<T> {
 	relativeSize: number;
 	terminal: T;

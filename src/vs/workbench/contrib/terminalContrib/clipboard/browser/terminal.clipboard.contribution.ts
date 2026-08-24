@@ -15,12 +15,12 @@ import { Emitter } from '../../../../../base/common/event.js';
 import { BrowserFeatures } from '../../../../../base/browser/canIUse.js';
 import { TerminalCapability, type ITerminalCommand } from '../../../../../platform/terminal/common/capabilities/capabilities.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { TerminalSettingId } from '../../../../../platform/terminal/common/terminal.js';
+import { isAgentCliShellType, TerminalSettingId } from '../../../../../platform/terminal/common/terminal.js';
 import { isLinux, isMacintosh } from '../../../../../base/common/platform.js';
 import { INotificationService } from '../../../../../platform/notification/common/notification.js';
-import { registerActiveInstanceAction, registerActiveXtermAction } from '../../../terminal/browser/terminalActions.js';
+import { registerActiveInstanceAction, registerActiveXtermAction, registerContextualInstanceAction, type ITerminalServicesCollection } from '../../../terminal/browser/terminalActions.js';
 import { TerminalCommandId } from '../../../terminal/common/terminal.js';
-import { localize2 } from '../../../../../nls.js';
+import { localize, localize2 } from '../../../../../nls.js';
 import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
 import { TerminalContextKeys } from '../../../terminal/common/terminalContextKey.js';
 import { KeyCode, KeyMod } from '../../../../../base/common/keyCodes.js';
@@ -142,8 +142,7 @@ export class TerminalClipboardContribution extends Disposable implements ITermin
 					return;
 				}
 				if (rightClickBehavior === 'copyPaste' && this._ctx.instance.hasSelection()) {
-					await this.copySelection();
-					this._ctx.instance.clearSelection();
+					return;
 				} else {
 					if (BrowserFeatures.clipboard.readText) {
 						this.paste();
@@ -183,6 +182,43 @@ registerTerminalContribution(TerminalClipboardContribution.ID, TerminalClipboard
 // #region Actions
 
 const terminalAvailableWhenClause = ContextKeyExpr.or(TerminalContextKeys.processSupported, TerminalContextKeys.terminalHasBeenCreated);
+const terminalSelectionWhenClause = ContextKeyExpr.or(TerminalContextKeys.textSelectedInFocused, ContextKeyExpr.and(terminalAvailableWhenClause, TerminalContextKeys.textSelected));
+
+export function findAgentCliTerminal(instances: readonly ITerminalInstance[], activeInstance: ITerminalInstance | undefined): ITerminalInstance | undefined {
+	if (activeInstance && isAgentCliTerminal(activeInstance)) {
+		return activeInstance;
+	}
+	return instances.find(isAgentCliTerminal);
+}
+
+function isAgentCliTerminal(instance: ITerminalInstance): boolean {
+	return isAgentCliShellType(instance.shellType);
+}
+
+export function prepareSelectionForTerminalInput(selection: string, bracketedPasteMode: boolean): string {
+	if (bracketedPasteMode) {
+		return selection.replace(/(?:\r\n|\r|\n)+$/, '');
+	}
+	return selection.replace(/(?:\r\n|\r|\n)+/g, ' ').trim();
+}
+
+export async function sendSelectionToTerminalInput(source: ITerminalInstance, target: ITerminalInstance, c: ITerminalServicesCollection, notificationService: INotificationService): Promise<void> {
+	const selection = source.selection;
+	if (!selection) {
+		notificationService.warn(localize('terminal.integrated.sendSelection.noSelection', 'The terminal has no selection to send.'));
+		return;
+	}
+	const bracketedPasteMode = target.xterm?.raw.modes.bracketedPasteMode === true;
+	const text = prepareSelectionForTerminalInput(selection, bracketedPasteMode);
+	if (!text) {
+		notificationService.warn(localize('terminal.integrated.sendSelection.emptySelection', 'The terminal selection contains no text to send.'));
+		return;
+	}
+	c.service.setActiveInstance(target);
+	await c.service.revealTerminal(target);
+	await target.sendText(text, false, bracketedPasteMode);
+	await target.focusWhenReady(true);
+}
 
 // TODO: Move these commands into this terminalContrib/
 registerActiveInstanceAction({
@@ -287,10 +323,35 @@ if (BrowserFeatures.clipboard.writeText) {
 		title: localize2('workbench.action.terminal.copySelectionAsHtml', 'Copy Selection as HTML'),
 		f1: true,
 		category: terminalStrings.actionCategory,
-		precondition: ContextKeyExpr.or(TerminalContextKeys.textSelectedInFocused, ContextKeyExpr.and(terminalAvailableWhenClause, TerminalContextKeys.textSelected)),
+		precondition: terminalSelectionWhenClause,
 		run: (xterm) => xterm.copySelection(true)
 	});
 }
+
+registerContextualInstanceAction({
+	id: TerminalCommandId.SendSelectionToTerminalInput,
+	title: localize2('workbench.action.terminal.sendSelectionToTerminalInput', 'Send Terminal Selection to Terminal Input'),
+	precondition: terminalSelectionWhenClause,
+	run: async (instance, c, accessor) => {
+		const notificationService = accessor.get(INotificationService);
+		await sendSelectionToTerminalInput(instance, instance, c, notificationService);
+	}
+});
+
+registerContextualInstanceAction({
+	id: TerminalCommandId.SendSelectionToAgentTerminal,
+	title: localize2('workbench.action.terminal.sendSelectionToAgentTerminal', 'Send Terminal Selection to Agent Terminal'),
+	precondition: terminalSelectionWhenClause,
+	run: async (instance, c, accessor) => {
+		const notificationService = accessor.get(INotificationService);
+		const target = findAgentCliTerminal(c.service.instances, c.service.activeInstance);
+		if (!target) {
+			notificationService.info(localize('terminal.integrated.sendSelectionToAgent.noAgentTerminal', 'No Claude, Codex, or Gemini terminal is open.'));
+			return;
+		}
+		await sendSelectionToTerminalInput(instance, target, c, notificationService);
+	}
+});
 
 if (BrowserFeatures.clipboard.readText) {
 	registerActiveInstanceAction({

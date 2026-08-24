@@ -64,7 +64,7 @@ export function setup(options?: { skipSuite: boolean }) {
 
 		it('should create new terminals in the active editor group via plus button', async () => {
 			await terminal.runCommand(TerminalCommandId.CreateNewEditor);
-			await terminal.clickPlusButton();
+			await terminal.clickPlusButton('editor');
 			await terminal.assertEditorGroupCount(1);
 		});
 

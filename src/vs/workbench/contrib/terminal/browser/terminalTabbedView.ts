@@ -139,6 +139,7 @@ export class TerminalTabbedView extends Disposable {
 			this._renderHorizontalTabs();
 		}));
 		this._register(this._terminalGroupService.onDidChangeActiveInstance(() => this._renderHorizontalTabs()));
+		this._register(this._terminalService.onAnyInstanceTitleChange(() => this._renderHorizontalTabs()));
 		this._register(this._layoutService.onDidChangePanelPosition(() => this._renderHorizontalTabs()));
 
 		this._register(Event.any(this._terminalService.onDidChangeInstances, this._terminalService.onDidDisposeInstance)(() => {
@@ -275,6 +276,9 @@ export class TerminalTabbedView extends Disposable {
 		const activeInstance = this._terminalGroupService.activeInstance;
 		let activeTab: HTMLElement | undefined;
 		for (const [index, instance] of this._terminalGroupService.instances.entries()) {
+			const group = this._terminalGroupService.getGroupForInstance(instance);
+			const groupIndex = group ? this._terminalGroupService.groups.indexOf(group) : -1;
+			const instanceIndex = group?.terminalInstances.indexOf(instance) ?? -1;
 			const terminalTitle = instance.title || localize('vectorTerminalDefaultTitle', 'Terminal {0}', index + 1);
 			const tab = document.createElement('button');
 			tab.className = 'vector-terminal-tab';
@@ -283,8 +287,12 @@ export class TerminalTabbedView extends Disposable {
 				activeTab = tab;
 			}
 			tab.type = 'button';
+			tab.dataset.index = String(index);
+			tab.dataset.terminalGroupIndex = String(groupIndex);
+			tab.dataset.terminalInstanceIndex = String(instanceIndex);
 			tab.setAttribute('aria-label', terminalTitle);
-			tab.title = localize('vectorTerminalTabTitle', 'Click to focus. Double-click or use the edit icon to rename.');
+			tab.setAttribute('aria-pressed', String(activeInstance === instance));
+			tab.title = localize('vectorTerminalTabTitle', 'Click to focus. Alt-click to split. Double-click or use the edit icon to rename.');
 			const title = dom.append(tab, $('.vector-terminal-tab__title'));
 			title.textContent = terminalTitle;
 			if (instance.description) {
@@ -311,6 +319,10 @@ export class TerminalTabbedView extends Disposable {
 					void this._terminalService.safeDisposeTerminal(instance);
 					return;
 				}
+				if (event.altKey || event.ctrlKey || this._terminalContainer.classList.contains('alt-active')) {
+					void this._splitTerminalTab(instance);
+					return;
+				}
 				this._terminalService.setActiveInstance(instance);
 				instance.focusWhenReady();
 			}));
@@ -322,6 +334,12 @@ export class TerminalTabbedView extends Disposable {
 			}));
 		}
 		activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	}
+
+	private async _splitTerminalTab(instance: ITerminalInstance): Promise<void> {
+		this._terminalService.setActiveInstance(instance);
+		const split = await this._terminalService.createTerminal({ location: { parentTerminal: instance } });
+		split.focusWhenReady();
 	}
 
 	private _clearHorizontalTabs(): void {

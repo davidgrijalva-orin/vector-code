@@ -9,7 +9,7 @@ import * as uuid from '../../../../../base/common/uuid.js';
 import {
 	IExtensionGalleryService, IGalleryExtensionAssets, IGalleryExtension, IExtensionManagementService, IExtensionTipsService, getTargetPlatform,
 } from '../../../../../platform/extensionManagement/common/extensionManagement.js';
-import { IWorkbenchExtensionEnablementService, IWorkbenchExtensionManagementService } from '../../../../services/extensionManagement/common/extensionManagement.js';
+import { EnablementState, IExtensionManagementServerService, IWorkbenchExtensionEnablementService, IWorkbenchExtensionManagementService } from '../../../../services/extensionManagement/common/extensionManagement.js';
 import { ExtensionGalleryService } from '../../../../../platform/extensionManagement/common/extensionGalleryService.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
@@ -18,7 +18,7 @@ import { NullTelemetryService } from '../../../../../platform/telemetry/common/t
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { TestLifecycleService } from '../../../../test/browser/workbenchTestServices.js';
 import { TestContextService, TestProductService, TestStorageService } from '../../../../test/common/workbenchTestServices.js';
-import { TestExtensionTipsService, TestSharedProcessService } from '../../../../test/electron-browser/workbenchTestServices.js';
+import { TestSharedProcessService } from '../../../../test/electron-browser/workbenchTestServices.js';
 import { TestNotificationService } from '../../../../../platform/notification/test/common/testNotificationService.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { URI } from '../../../../../base/common/uri.js';
@@ -27,8 +27,7 @@ import { TestConfigurationService } from '../../../../../platform/configuration/
 import { IPager } from '../../../../../base/common/paging.js';
 import { getGalleryExtensionId } from '../../../../../platform/extensionManagement/common/extensionManagementUtil.js';
 import { IEnvironmentService } from '../../../../../platform/environment/common/environment.js';
-import { ConfigurationKey, IExtensionsWorkbenchService } from '../../common/extensions.js';
-import { TestExtensionEnablementService } from '../../../../services/extensionManagement/test/browser/extensionEnablementService.test.js';
+import { ConfigurationKey, IExtension, IExtensionsWorkbenchService } from '../../common/extensions.js';
 import { IURLService } from '../../../../../platform/url/common/url.js';
 import { ITextModel } from '../../../../../editor/common/model.js';
 import { IModelService } from '../../../../../editor/common/services/model.js';
@@ -36,6 +35,7 @@ import { ILifecycleService } from '../../../../services/lifecycle/common/lifecyc
 import { INotificationService, Severity, IPromptChoice, IPromptOptions } from '../../../../../platform/notification/common/notification.js';
 import { NativeURLService } from '../../../../../platform/url/common/urlService.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
+import { IUserDataSyncEnablementService } from '../../../../../platform/userDataSync/common/userDataSync.js';
 import { ExtensionType } from '../../../../../platform/extensions/common/extensions.js';
 import { ISharedProcessService } from '../../../../../platform/ipc/electron-browser/services.js';
 import { FileService } from '../../../../../platform/files/common/fileService.js';
@@ -45,7 +45,6 @@ import { IProductService } from '../../../../../platform/product/common/productS
 import { ExtensionRecommendationsService } from '../../browser/extensionRecommendationsService.js';
 import { NoOpWorkspaceTagsService } from '../../../tags/browser/workspaceTagsService.js';
 import { IWorkspaceTagsService } from '../../../tags/common/workspaceTags.js';
-import { ExtensionsWorkbenchService } from '../../browser/extensionsWorkbenchService.js';
 import { IExtensionService } from '../../../../services/extensions/common/extensions.js';
 import { IWorkspaceExtensionsConfigService, WorkspaceExtensionsConfigService } from '../../../../services/extensionRecommendations/common/workspaceExtensionsConfig.js';
 import { IExtensionIgnoredRecommendationsService } from '../../../../services/extensionRecommendations/common/extensionRecommendations.js';
@@ -187,6 +186,12 @@ function aGalleryExtension(name: string, properties: any = {}, galleryExtensionP
 	return <IGalleryExtension>galleryExtension;
 }
 
+class TestExtensionRecommendationNotificationService extends ExtensionRecommendationNotificationService {
+	override hasToIgnoreRecommendationNotifications(): boolean {
+		return false;
+	}
+}
+
 suite('ExtensionRecommendationsService Test', () => {
 	let disposableStore: DisposableStore;
 	let workspaceService: IWorkspaceContextService;
@@ -240,7 +245,21 @@ suite('ExtensionRecommendationsService Test', () => {
 			extensions: [],
 			async whenInstalledExtensionsRegistered() { return true; }
 		});
-		instantiationService.stub(IWorkbenchExtensionEnablementService, disposableStore.add(new TestExtensionEnablementService(instantiationService)));
+		instantiationService.stub(IWorkbenchExtensionEnablementService, {
+			onEnablementChanged: Event.None,
+			getEnablementState: () => EnablementState.EnabledGlobally,
+			isEnabled: () => true,
+			isEnabledEnablementState: () => true,
+		});
+		instantiationService.stub(IExtensionManagementServerService, {
+			localExtensionManagementServer: null,
+			remoteExtensionManagementServer: null,
+			webExtensionManagementServer: null,
+		});
+		instantiationService.stub(IUserDataSyncEnablementService, {
+			isEnabled: () => false,
+			isResourceEnabled: () => false,
+		});
 		instantiationService.stub(ITelemetryService, NullTelemetryService);
 		instantiationService.stub(IURLService, NativeURLService);
 		instantiationService.stub(IWorkspaceTagsService, new NoOpWorkspaceTagsService());
@@ -290,13 +309,27 @@ suite('ExtensionRecommendationsService Test', () => {
 
 		instantiationService.stub(IUpdateService, { onStateChange: Event.None, state: State.Uninitialized });
 		instantiationService.stub(IMeteredConnectionService, { isConnectionMetered: false, onDidChangeIsConnectionMetered: Event.None });
-		instantiationService.set(IExtensionsWorkbenchService, disposableStore.add(instantiationService.createInstance(ExtensionsWorkbenchService)));
-		instantiationService.stub(IExtensionTipsService, disposableStore.add(instantiationService.createInstance(TestExtensionTipsService)));
+		instantiationService.stubPromise(IExtensionManagementService, 'getInstalled', []);
+		instantiationService.stub(IExtensionsWorkbenchService, {
+			queryLocal: async () => await instantiationService.get(IExtensionManagementService).getInstalled() as unknown as IExtension[],
+			getExtensions: async extensionInfos => mockExtensionGallery
+				.filter(gallery => extensionInfos.some(extensionInfo => extensionInfo.id.toLowerCase() === gallery.identifier.id.toLowerCase()))
+				.map(gallery => ({
+					identifier: gallery.identifier,
+					displayName: gallery.displayName,
+					publisherDisplayName: gallery.publisherDisplayName,
+					gallery,
+				}) as IExtension),
+		});
+		instantiationService.stub(IExtensionTipsService, {
+			getConfigBasedTips: async () => [],
+			getImportantExecutableBasedTips: async () => [],
+			getOtherExecutableBasedTips: async () => [],
+		});
 
 		onModelAddedEvent = new Emitter<ITextModel>();
 
 		instantiationService.stub(IEnvironmentService, {});
-		instantiationService.stubPromise(IExtensionManagementService, 'getInstalled', []);
 		instantiationService.stub(IExtensionGalleryService, 'isEnabled', true);
 		instantiationService.stubPromise(IExtensionGalleryService, 'query', aPage<IGalleryExtension>(...mockExtensionGallery));
 		instantiationService.stubPromise(IExtensionGalleryService, 'getExtensions', mockExtensionGallery);
@@ -342,7 +375,7 @@ suite('ExtensionRecommendationsService Test', () => {
 		instantiationService.stub(IWorkspaceContextService, workspaceService);
 		instantiationService.stub(IWorkspaceExtensionsConfigService, disposableStore.add(instantiationService.createInstance(WorkspaceExtensionsConfigService)));
 		instantiationService.stub(IExtensionIgnoredRecommendationsService, disposableStore.add(instantiationService.createInstance(ExtensionIgnoredRecommendationsService)));
-		instantiationService.stub(IExtensionRecommendationNotificationService, disposableStore.add(instantiationService.createInstance(ExtensionRecommendationNotificationService)));
+		instantiationService.stub(IExtensionRecommendationNotificationService, disposableStore.add(instantiationService.createInstance(TestExtensionRecommendationNotificationService)));
 	}
 
 	function testNoPromptForValidRecommendations(recommendations: string[]) {

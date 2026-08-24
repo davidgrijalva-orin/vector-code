@@ -29,10 +29,7 @@ export function setup(options?: { skipSuite: boolean }) {
 			const cwd = 'test';
 			await terminal.runCommandInTerminal(`mkdir ${cwd}`);
 			await terminal.runCommandInTerminal(`cd ${cwd}`);
-			const page = await terminal.getPage();
-			page.keyboard.down('Alt');
-			await terminal.clickSingleTab();
-			page.keyboard.up('Alt');
+			await terminal.clickSingleTab(['Alt']);
 			await terminal.assertTerminalGroups([[{ description: cwd }, { description: cwd }]]);
 		});
 	});

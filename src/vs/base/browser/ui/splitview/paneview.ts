@@ -52,6 +52,7 @@ export abstract class Pane extends Disposable implements IView {
 
 	readonly element: HTMLElement;
 	private header: HTMLElement | undefined;
+	private headerToggle: HTMLElement | undefined;
 	private body!: HTMLElement;
 
 	protected _expanded: boolean;
@@ -85,7 +86,7 @@ export abstract class Pane extends Disposable implements IView {
 
 	set ariaHeaderLabel(newLabel: string) {
 		this._ariaHeaderLabel = newLabel;
-		this.header?.setAttribute('aria-label', this.ariaHeaderLabel);
+		this.headerToggle?.setAttribute('aria-label', this.ariaHeaderLabel);
 	}
 
 	get draggableElement(): HTMLElement | undefined {
@@ -249,10 +250,7 @@ export abstract class Pane extends Disposable implements IView {
 
 		this.header = $('.pane-header');
 		append(this.element, this.header);
-		this.header.setAttribute('tabindex', '0');
-		// Use role button so the aria-expanded state gets read https://github.com/microsoft/vscode/issues/95996
-		this.header.setAttribute('role', 'button');
-		this.header.setAttribute('aria-label', this.ariaHeaderLabel);
+		this.headerToggle = undefined;
 		this.renderHeader(this.header);
 
 		const focusTracker = trackFocus(this.header);
@@ -263,10 +261,8 @@ export abstract class Pane extends Disposable implements IView {
 		this.updateHeader();
 
 		const eventDisposables = this._register(new DisposableStore());
-		const onKeyDown = this._register(new DomEmitter(this.header, 'keydown'));
+		const onKeyDown = this._register(new DomEmitter(this.headerToggle ?? this.header, 'keydown'));
 		const onHeaderKeyDown = Event.map(onKeyDown.event, e => new StandardKeyboardEvent(e), eventDisposables);
-
-		this._register(Event.filter(onHeaderKeyDown, e => e.keyCode === KeyCode.Enter || e.keyCode === KeyCode.Space, eventDisposables)(() => this.setExpanded(!this.isExpanded()), null));
 
 		this._register(Event.filter(onHeaderKeyDown, e => e.keyCode === KeyCode.LeftArrow, eventDisposables)(() => this.setExpanded(false), null));
 
@@ -326,19 +322,22 @@ export abstract class Pane extends Disposable implements IView {
 		}
 		const expanded = !this.headerVisible || this.isExpanded();
 
-		if (this.collapsible) {
-			this.header.setAttribute('tabindex', '0');
-			this.header.setAttribute('role', 'button');
-		} else {
-			this.header.removeAttribute('tabindex');
-			this.header.removeAttribute('role');
+		if (this.headerToggle) {
+			if (this.collapsible) {
+				this.headerToggle.removeAttribute('disabled');
+				this.headerToggle.setAttribute('aria-label', this.ariaHeaderLabel);
+				this.headerToggle.setAttribute('aria-expanded', String(expanded));
+			} else {
+				this.headerToggle.setAttribute('disabled', 'true');
+				this.headerToggle.removeAttribute('aria-label');
+				this.headerToggle.removeAttribute('aria-expanded');
+			}
 		}
 
 		this.header.style.lineHeight = `${this.headerSize}px`;
 		this.header.classList.toggle('hidden', !this.headerVisible);
 		this.header.classList.toggle('expanded', expanded);
 		this.header.classList.toggle('not-collapsible', !this.collapsible);
-		this.header.setAttribute('aria-expanded', String(expanded));
 
 		this.header.style.color = this.collapsible ? this.styles.headerForeground ?? '' : '';
 		this.header.style.backgroundColor = (this.collapsible ? this.styles.headerBackground : 'transparent') ?? '';
@@ -347,6 +346,11 @@ export abstract class Pane extends Disposable implements IView {
 	}
 
 	protected abstract renderHeader(container: HTMLElement): void;
+
+	protected setHeaderToggle(element: HTMLElement): void {
+		this.headerToggle = element;
+	}
+
 	protected abstract renderBody(container: HTMLElement): void;
 	protected abstract layoutBody(height: number, width: number): void;
 }

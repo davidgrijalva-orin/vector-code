@@ -2933,7 +2933,7 @@ body,
 	color: #eef4f2 !important;
 }
 
-.monaco-workbench .part.sidebar .pane-header > .codicon:first-of-type::before,
+.monaco-workbench .part.sidebar .pane-header > .twisty-container.codicon:first-of-type::before,
 .monaco-workbench .explorer-folders-view .monaco-tl-twistie:not(.codicon-tree-item-loading)::before {
 	background: currentColor !important;
 	content: "" !important;
@@ -2944,12 +2944,12 @@ body,
 	width: 14px !important;
 }
 
-.monaco-workbench .part.sidebar .pane-header > .codicon:first-of-type,
+.monaco-workbench .part.sidebar .pane-header > .twisty-container.codicon:first-of-type,
 .monaco-workbench .explorer-folders-view .monaco-tl-twistie {
 	color: rgba(220, 231, 228, 0.54) !important;
 }
 
-.monaco-workbench .part.sidebar .pane-header:not(.expanded) > .codicon:first-of-type::before,
+.monaco-workbench .part.sidebar .pane-header:not(.expanded) > .twisty-container.codicon:first-of-type::before,
 .monaco-workbench .explorer-folders-view .monaco-tl-twistie.collapsed:not(.codicon-tree-item-loading)::before {
 	transform: rotate(-90deg) !important;
 }

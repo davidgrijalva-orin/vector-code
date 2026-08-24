@@ -455,7 +455,8 @@ export abstract class ViewPane extends Pane implements IView {
 	protected renderHeader(container: HTMLElement): void {
 		this.headerContainer = container;
 
-		this.twistiesContainer = append(container, $(`.twisty-container${ThemeIcon.asCSSSelector(this.getTwistyIcon(this.isExpanded()))}`));
+		this.twistiesContainer = append(container, $(`button.twisty-container${ThemeIcon.asCSSSelector(this.getTwistyIcon(this.isExpanded()))}`, { type: 'button' }));
+		this.setHeaderToggle(this.twistiesContainer);
 
 		this.renderHeaderTitle(container, this.title);
 

@@ -20,11 +20,13 @@ export enum Selector {
 	Name = '.label-name',
 	Description = '.label-description',
 	XtermFocused = '.terminal.xterm.focus',
-	PlusButton = '.codicon-plus',
+	PanelPlusButton = '.vector-terminal-tabs-actions > .codicon-add',
+	EditorPlusButton = '.editor .codicon-plus',
 	EditorGroups = '.editor .split-view-view',
 	EditorTab = '.terminal-tab',
-	SingleTab = '.single-terminal-tab',
-	Tabs = '.tabs-list .monaco-list-row',
+	SingleTab = '.vector-terminal-tabs-list > .vector-terminal-tab:only-child',
+	SingleTabName = '.vector-terminal-tabs-list > .vector-terminal-tab:only-child .vector-terminal-tab__title',
+	Tabs = '.vector-terminal-tabs-list > .vector-terminal-tab',
 	SplitButton = '.editor .codicon-split-horizontal',
 	XtermSplitIndex0 = '#terminal .terminal-groups-container .split-view-view:nth-child(1) .terminal-wrapper',
 	XtermSplitIndex1 = '#terminal .terminal-groups-container .split-view-view:nth-child(2) .terminal-wrapper',
@@ -194,19 +196,15 @@ export class Terminal {
 	async assertTerminalGroups(expectedGroups: TerminalGroup[]): Promise<void> {
 		let expectedCount = 0;
 		expectedGroups.forEach(g => expectedCount += g.length);
+		await this.code.waitForElements(Selector.Tabs, true, tabs => tabs.length === expectedCount);
+
 		let index = 0;
-		while (index < expectedCount) {
-			for (let groupIndex = 0; groupIndex < expectedGroups.length; groupIndex++) {
-				const terminalsInGroup = expectedGroups[groupIndex].length;
-				let indexInGroup = 0;
-				const isSplit = terminalsInGroup > 1;
-				while (indexInGroup < terminalsInGroup) {
-					const instance = expectedGroups[groupIndex][indexInGroup];
-					const nameRegex = instance.name && isSplit ? new RegExp('\\s*[├┌└]\\s*' + instance.name) : instance.name ? new RegExp(/^\s*/ + instance.name) : undefined;
-					await this.assertTabExpected(undefined, index, nameRegex, instance.icon, instance.color, instance.description);
-					indexInGroup++;
-					index++;
-				}
+		for (const [groupIndex, group] of expectedGroups.entries()) {
+			for (const [indexInGroup, instance] of group.entries()) {
+				const nameRegex = instance.name ? new RegExp(instance.name) : undefined;
+				await this.code.waitForElement(`${Selector.Tabs}[data-index="${index}"][data-terminal-group-index="${groupIndex}"][data-terminal-instance-index="${indexInGroup}"]`);
+				await this.assertTabExpected(undefined, index, nameRegex, instance.icon, instance.color, instance.description);
+				index++;
 			}
 		}
 	}
@@ -215,35 +213,35 @@ export class Terminal {
 		const tabCount = (await this.code.waitForElements(Selector.Tabs, true)).length;
 		const groups: TerminalGroup[] = [];
 		for (let i = 0; i < tabCount; i++) {
-			const title = await this.code.waitForElement(`${Selector.Tabs}[data-index="${i}"] ${Selector.TabsEntry} ${Selector.Name}`, e => e?.textContent?.length ? e?.textContent?.length > 1 : false);
-			const description: IElement | undefined = await this.code.waitForElement(`${Selector.Tabs}[data-index="${i}"] ${Selector.TabsEntry} ${Selector.Description}`, () => true);
+			const tab = await this.code.waitForElement(`${Selector.Tabs}[data-index="${i}"]`);
+			const title = await this.code.waitForElement(`${Selector.Tabs}[data-index="${i}"] .vector-terminal-tab__title`, e => e?.textContent?.length ? e.textContent.length > 1 : false);
+			const description: IElement | undefined = await this.code.waitForElement(`${Selector.Tabs}[data-index="${i}"] .vector-terminal-tab__description`, () => true);
 
 			const label: TerminalLabel = {
-				name: title.textContent.replace(/^[├┌└]\s*/, ''),
+				name: title.textContent,
 				description: description?.textContent
 			};
-			// It's a new group if the tab does not start with ├ or └
-			if (title.textContent.match(/^[├└]/)) {
-				groups[groups.length - 1].push(label);
-			} else {
-				groups.push([label]);
+			const groupIndex = Number(tab.attributes['data-terminal-group-index']);
+			while (groups.length <= groupIndex) {
+				groups.push([]);
 			}
+			groups[groupIndex].push(label);
 		}
 		return groups;
 	}
 
 	async getSingleTabName(): Promise<string> {
-		const tab = await this.code.waitForElement(Selector.SingleTab, singleTab => !!singleTab && singleTab?.textContent.length > 1);
+		const tab = await this.code.waitForElement(Selector.SingleTabName, singleTab => !!singleTab && singleTab.textContent.length > 1);
 		return tab.textContent;
 	}
 
 	private async assertTabExpected(selector?: string, listIndex?: number, nameRegex?: RegExp, icon?: string, color?: string, description?: string): Promise<void> {
-		if (listIndex) {
+		if (listIndex !== undefined) {
 			if (nameRegex) {
-				await this.code.waitForElement(`${Selector.Tabs}[data-index="${listIndex}"] ${Selector.TabsEntry} ${Selector.Name}`, entry => !!entry && !!entry?.textContent.match(nameRegex));
-				if (description) {
-					await this.code.waitForElement(`${Selector.Tabs}[data-index="${listIndex}"] ${Selector.TabsEntry} ${Selector.Description}`, e => !!e && e.textContent === description);
-				}
+				await this.code.waitForElement(`${Selector.Tabs}[data-index="${listIndex}"] .vector-terminal-tab__title`, entry => !!entry && !!entry.textContent.match(nameRegex));
+			}
+			if (description) {
+				await this.code.waitForElement(`${Selector.Tabs}[data-index="${listIndex}"] .vector-terminal-tab__description`, e => !!e && e.textContent === description);
 			}
 			if (color) {
 				await this.code.waitForElement(`${Selector.Tabs}[data-index="${listIndex}"] ${Selector.TabsEntry} .monaco-icon-label.terminal-icon-terminal_ansi${color}`);
@@ -284,16 +282,26 @@ export class Terminal {
 		}
 	}
 
-	async clickPlusButton(): Promise<void> {
-		await this.code.waitAndClick(Selector.PlusButton);
+	async clickPlusButton(location: 'panel' | 'editor' = 'panel'): Promise<void> {
+		await this.code.waitAndClick(location === 'editor' ? Selector.EditorPlusButton : Selector.PanelPlusButton);
 	}
 
 	async clickSplitButton(): Promise<void> {
 		await this.code.waitAndClick(Selector.SplitButton);
 	}
 
-	async clickSingleTab(): Promise<void> {
-		await this.code.waitAndClick(Selector.SingleTab);
+	async clickSingleTab(modifiers?: ('Alt' | 'Control' | 'Meta' | 'Shift')[]): Promise<void> {
+		const page = await this.getPage();
+		if (!modifiers?.length) {
+			await page.click(Selector.SingleTab);
+			return;
+		}
+		await page.dispatchEvent(Selector.SingleTab, 'click', {
+			altKey: modifiers.includes('Alt'),
+			ctrlKey: modifiers.includes('Control'),
+			metaKey: modifiers.includes('Meta'),
+			shiftKey: modifiers.includes('Shift')
+		});
 	}
 
 	async waitForTerminalText(accept: (buffer: string[]) => boolean, message?: string, splitIndex?: 0 | 1): Promise<void> {

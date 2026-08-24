@@ -244,8 +244,12 @@ async function openProjectFile(page, fileName, timeoutMs) {
 	const quickInput = page.locator('.quick-input-widget input').first();
 	await quickInput.waitFor({ state: 'visible', timeout: timeoutMs });
 	await quickInput.fill(fileName);
-	await page.waitForTimeout(300);
+	const focusedResult = page.locator('.quick-input-widget .quick-input-list .monaco-list-row.focused')
+		.filter({ hasText: fileName })
+		.first();
+	await focusedResult.waitFor({ state: 'visible', timeout: timeoutMs });
 	await page.keyboard.press('Enter');
+	await quickInput.waitFor({ state: 'hidden', timeout: timeoutMs });
 	const activeTab = page.locator('.tab.active').filter({ hasText: fileName }).first();
 	await activeTab.waitFor({ state: 'visible', timeout: timeoutMs });
 }

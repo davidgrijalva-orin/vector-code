@@ -27,6 +27,10 @@ suite('VectorCodeProjectState', () => {
 		strictEqual(resolveVectorCodeActiveProjectUri([first, second]), first.uri);
 	});
 
+	test('keeps the first live candidate when another project is added', () => {
+		strictEqual(resolveVectorCodeActiveProjectUri([first, second], first.uri.toString(), second.uri.toString()), first.uri);
+	});
+
 	test('returns undefined when no projects are open', () => {
 		strictEqual(resolveVectorCodeActiveProjectUri([], second.uri.toString()), undefined);
 	});

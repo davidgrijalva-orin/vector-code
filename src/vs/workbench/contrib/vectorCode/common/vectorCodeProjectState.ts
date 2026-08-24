@@ -12,9 +12,12 @@ import { IVectorCodeProjectSummary } from './vectorCode.js';
  */
 export function resolveVectorCodeActiveProjectUri(
 	projects: readonly IVectorCodeProjectSummary[],
-	preferredProjectId?: string,
+	...preferredProjectIds: readonly (string | undefined)[]
 ): URI | undefined {
-	if (preferredProjectId) {
+	for (const preferredProjectId of preferredProjectIds) {
+		if (!preferredProjectId) {
+			continue;
+		}
 		const preferredProject = projects.find(project => project.uri.toString() === preferredProjectId);
 		if (preferredProject) {
 			return preferredProject.uri;

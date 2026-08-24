@@ -1115,7 +1115,8 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		this.terminalState.prune(projectKeys);
 		const nextProject = resolveVectorCodeActiveProjectUri(
 			projects,
-			preferredProjectUri?.toString() ?? this.activeProjectUri?.toString(),
+			this.activeProjectUri?.toString(),
+			preferredProjectUri?.toString(),
 		);
 		if (nextProject?.toString() !== this.activeProjectUri?.toString()) {
 			void this.switchProject(nextProject);

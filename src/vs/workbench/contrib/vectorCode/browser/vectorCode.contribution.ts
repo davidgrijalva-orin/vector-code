@@ -106,6 +106,10 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 			this.renderProjectList(projectList, projectListDisposables);
 		};
 		updateProjects();
+		const activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri();
+		if (activeProjectUri) {
+			void this.vectorCodeWorkbenchService.switchProject(activeProjectUri);
+		}
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(updateProjects));
 	}
@@ -115,17 +119,12 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 		clearNode(container);
 		const projects = this.vectorCodeWorkbenchService.getProjectSummaries();
 		if (!projects.length) {
-			void this.vectorCodeWorkbenchService.switchProject(undefined);
 			const empty = append(container, $('.vector-code-project-switcher__empty'));
 			empty.textContent = localize('vectorCodeProjectsListEmpty', 'Add a project to populate the file tree.');
 			return;
 		}
 
-		let activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri()?.toString();
-		if (!activeProjectUri || !projects.some(project => project.uri.toString() === activeProjectUri)) {
-			activeProjectUri = projects[0].uri.toString();
-			void this.vectorCodeWorkbenchService.switchProject(projects[0].uri);
-		}
+		const activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri()?.toString();
 
 		for (const project of projects) {
 			const projectUri = project.uri.toString();

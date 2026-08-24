@@ -15,6 +15,7 @@ import { FileOperationError, FileOperationResult, FileType, IFileService } from 
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
+import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { EditorResourceAccessor, SideBySideEditor } from '../../../common/editor.js';
@@ -30,6 +31,7 @@ import { ITerminalGroupService, ITerminalInstance, ITerminalService } from '../.
 import { TERMINAL_VIEW_ID } from '../../terminal/common/terminal.js';
 import { IVectorCodeMobileRelayService, IVectorCodeProjectSummary, IVectorCodeWorkbenchService, VECTOR_CODE_VIEW_CONTAINER_ID, VectorCodeMobileConnectionState } from '../common/vectorCode.js';
 import { inferVectorCodeLanguage } from '../common/vectorCodeLanguageInference.js';
+import { resolveVectorCodeActiveProjectUri } from '../common/vectorCodeProjectState.js';
 import {
 	createVectorCodeMobileRemoteErrorResponse,
 	createVectorCodeMobileRemoteResponse,
@@ -55,6 +57,7 @@ import {
 import { VectorCodeMobileTerminalStateStore } from './vectorCodeMobileTerminalState.js';
 
 const SET_ACTIVE_PROJECT_ROOT_COMMAND_ID = 'workbench.files.action.setActiveProjectRoot';
+const VECTOR_CODE_ACTIVE_PROJECT_STORAGE_KEY = 'vectorCode.activeProject';
 const VECTOR_CODE_MOBILE_FILE_TREE_MAX_DEPTH = 8;
 const VECTOR_CODE_MOBILE_FILE_TREE_MAX_CHILDREN_PER_FOLDER = 500;
 const VECTOR_CODE_MOBILE_TERMINAL_OUTPUT_MAX_LINES = 200;
@@ -133,6 +136,7 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IVectorCodeMobileRelayService private readonly mobileRelayService: IVectorCodeMobileRelayService,
 		@INotificationService private readonly notificationService: INotificationService,
+		@IStorageService private readonly storageService: IStorageService,
 		@ITerminalGroupService private readonly terminalGroupService: ITerminalGroupService,
 		@ITerminalService private readonly terminalService: ITerminalService,
 		@IViewsService private readonly viewsService: IViewsService,
@@ -140,7 +144,13 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		@IWorkspaceEditingService private readonly workspaceEditingService: IWorkspaceEditingService,
 	) {
 		super();
-		this.projectKeys = new Set(this.getProjectSummaries().map(project => project.uri.toString()));
+		const projects = this.getProjectSummaries();
+		this.activeProjectUri = resolveVectorCodeActiveProjectUri(
+			projects,
+			this.storageService.get(VECTOR_CODE_ACTIVE_PROJECT_STORAGE_KEY, StorageScope.WORKSPACE),
+		);
+		this.persistActiveProject();
+		this.projectKeys = new Set(projects.map(project => project.uri.toString()));
 		this._register(this.terminalService.onDidCreateInstance(instance => this.adoptTerminalInstance(instance)));
 		this._register(this.terminalService.onDidDisposeInstance(instance => this.terminalState.forget(instance)));
 		this._register(this.terminalService.onDidChangeActiveInstance(instance => {
@@ -300,22 +310,24 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			return;
 		}
 
-		const projectKey = this.activeProjectUri?.toString();
-		let instance = projectKey ? this.terminalState.getActive(projectKey) : undefined;
-		if (!instance && projectKey) {
+		const projectUri = await this.getActiveProjectUriOrShowRecovery(localize('vectorCodeTerminalProjectRequired', 'Open a project before starting a project terminal.'));
+		if (!projectUri) {
+			return;
+		}
+		const projectKey = projectUri.toString();
+		let instance = this.terminalState.getActive(projectKey);
+		if (!instance) {
 			instance = this.terminalState.getInstances(projectKey)[0];
 		}
 		if (!instance && this.terminalService.isProcessSupportRegistered) {
 			instance = await this.terminalService.createTerminal({
 				location: TerminalLocation.Panel,
-				cwd: this.activeProjectUri
+				cwd: projectUri
 			});
-			if (projectKey) {
-				this.terminalState.adopt(instance, projectKey, true);
-			}
+			this.terminalState.adopt(instance, projectKey, true);
 		}
 
-		if (instance && projectKey) {
+		if (instance) {
 			this.terminalState.setActive(projectKey, instance);
 			await this.terminalService.showBackgroundTerminal(instance);
 			this.terminalService.setActiveInstance(instance);
@@ -739,13 +751,23 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 	}
 
 	private async doSwitchProject(projectUri: URI | undefined): Promise<void> {
+		const projects = this.getProjectSummaries();
+		const requestedProjectId = projectUri?.toString();
+		if (requestedProjectId && !projects.some(project => project.uri.toString() === requestedProjectId)) {
+			throw new Error(localize('vectorCodeProjectNotOpen', 'The selected project is no longer open in this window.'));
+		}
+		const nextProjectUri = resolveVectorCodeActiveProjectUri(
+			projects,
+			requestedProjectId ?? this.activeProjectUri?.toString(),
+		);
 		const previousProjectUri = this.activeProjectUri;
 		const previousProjectKey = previousProjectUri?.toString();
-		const nextProjectKey = projectUri?.toString();
+		const nextProjectKey = nextProjectUri?.toString();
 		const terminalLayoutState = this.captureTerminalLayoutState();
 
 		if (previousProjectKey === nextProjectKey) {
-			await this.showProjectFiles(projectUri);
+			this.persistActiveProject();
+			await this.showProjectFiles(nextProjectUri);
 			return;
 		}
 
@@ -756,7 +778,8 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 			if (previousProjectKey) {
 				previousTerminalInstances = this.captureProjectTerminalState(previousProjectKey);
 			}
-			this.activeProjectUri = projectUri;
+			this.activeProjectUri = nextProjectUri;
+			this.persistActiveProject();
 			if (previousProjectKey) {
 				await this.restoreProjectTerminalState(nextProjectKey);
 				this.hideTerminalInstances(previousTerminalInstances);
@@ -764,9 +787,9 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 				this.captureProjectTerminalState(nextProjectKey);
 			}
 
-			await this.showProjectFiles(projectUri);
+			await this.showProjectFiles(nextProjectUri);
 			await this.restoreTerminalLayoutState(terminalLayoutState);
-			this._onDidChangeActiveProject.fire(projectUri);
+			this._onDidChangeActiveProject.fire(nextProjectUri);
 		} finally {
 			this.projectSwitching = false;
 		}
@@ -1090,17 +1113,37 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 
 	private pruneProjectState(projects: readonly IVectorCodeProjectSummary[], projectKeys: ReadonlySet<string>, preferredProjectUri?: URI): void {
 		this.terminalState.prune(projectKeys);
-
-		if (preferredProjectUri) {
-			void this.switchProject(preferredProjectUri);
+		const nextProject = resolveVectorCodeActiveProjectUri(
+			projects,
+			preferredProjectUri?.toString() ?? this.activeProjectUri?.toString(),
+		);
+		if (nextProject?.toString() !== this.activeProjectUri?.toString()) {
+			void this.switchProject(nextProject);
 			return;
 		}
+		this.persistActiveProject();
+	}
 
-		const activeProjectKey = this.activeProjectUri?.toString();
-		if (activeProjectKey && !projectKeys.has(activeProjectKey)) {
-			const nextProject = projects[0]?.uri;
-			void this.switchProject(nextProject);
+	private persistActiveProject(): void {
+		if (this.activeProjectUri) {
+			this.storageService.store(
+				VECTOR_CODE_ACTIVE_PROJECT_STORAGE_KEY,
+				this.activeProjectUri.toString(),
+				StorageScope.WORKSPACE,
+				StorageTarget.MACHINE,
+			);
+			return;
 		}
+		this.storageService.remove(VECTOR_CODE_ACTIVE_PROJECT_STORAGE_KEY, StorageScope.WORKSPACE);
+	}
+
+	private async getActiveProjectUriOrShowRecovery(message: string): Promise<URI | undefined> {
+		if (this.activeProjectUri) {
+			return this.activeProjectUri;
+		}
+		this.notificationService.info(message);
+		await this.viewsService.openViewContainer(EXPLORER_VIEWLET_ID, true);
+		return undefined;
 	}
 }
 

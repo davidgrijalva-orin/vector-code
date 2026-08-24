@@ -12,12 +12,54 @@ import {
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
 	VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID,
+	VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
+	VECTOR_CODE_OPEN_CODEX_COMMAND_ID,
+	VECTOR_CODE_OPEN_CODEX_TERMINAL_COMMAND_ID,
 	VECTOR_CODE_OPEN_CONTROL_COMMAND_ID,
 	VECTOR_CODE_VIEW_CONTAINER_ID
 } from '../common/vectorCode.js';
 
 const vectorCodeCategory = localize2('vectorCodeCategory', 'Vector Code');
 const projectsCategory = localize2('vectorCodeProjectsCategory', 'Projects');
+
+registerAction2(class OpenVectorCodeCodexAction extends Action2 {
+	constructor() {
+		super({
+			id: VECTOR_CODE_OPEN_CODEX_COMMAND_ID,
+			title: localize2('vectorCodeOpenCodex', 'Codex'),
+			icon: Codicon.sparkle,
+			category: vectorCodeCategory,
+			f1: true,
+			menu: {
+				id: MenuId.TitleBar,
+				group: 'navigation',
+				order: 8990
+			}
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const viewsService = accessor.get(IViewsService);
+		await viewsService.openViewContainer(VECTOR_CODE_CODEX_VIEW_CONTAINER_ID, true);
+	}
+});
+
+registerAction2(class OpenVectorCodeCodexTerminalAction extends Action2 {
+	constructor() {
+		super({
+			id: VECTOR_CODE_OPEN_CODEX_TERMINAL_COMMAND_ID,
+			title: localize2('vectorCodeOpenCodexTerminal', 'Codex: Open Full Terminal Experience'),
+			icon: Codicon.terminal,
+			category: vectorCodeCategory,
+			f1: true,
+		});
+	}
+
+	override async run(accessor: ServicesAccessor): Promise<void> {
+		const vectorCodeWorkbenchService = accessor.get(IVectorCodeWorkbenchService);
+		await vectorCodeWorkbenchService.openCodexTerminal();
+	}
+});
 
 registerAction2(class OpenVectorCodeTerminalPanelAction extends Action2 {
 	constructor() {

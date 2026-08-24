@@ -16,7 +16,7 @@ import { InstantiationType, registerSingleton } from '../../../../platform/insta
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
+import { GeneralShellType, TerminalLocation } from '../../../../platform/terminal/common/terminal.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { EditorResourceAccessor, SideBySideEditor } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
@@ -302,6 +302,33 @@ class VectorCodeWorkbenchService extends Disposable implements IVectorCodeWorkbe
 		}
 		const status = await this.mobileRelayService.startPairing();
 		this.notificationService.info(status.detail);
+	}
+
+	async openCodexTerminal(): Promise<void> {
+		const projectUri = await this.getActiveProjectUriOrShowRecovery(localize('vectorCodeCodexTerminalProjectRequired', 'Open a project before starting a Codex terminal.'));
+		if (!projectUri) {
+			return;
+		}
+		const projectKey = projectUri.toString();
+		let instance = this.terminalState.getInstances(projectKey).find(isCodexTerminal);
+		if (!instance) {
+			instance = await this.terminalService.createTerminal({
+				location: TerminalLocation.Panel,
+				cwd: projectUri,
+				config: {
+					name: localize('vectorCodeCodexTerminalName', 'Codex'),
+					executable: 'codex',
+					args: ['--no-alt-screen'],
+					waitOnExit: true
+				},
+				skipContributedProfileCheck: true
+			});
+			this.terminalState.adopt(instance, projectKey, true);
+		}
+		this.terminalState.setActive(projectKey, instance);
+		this.terminalService.setActiveInstance(instance);
+		await this.terminalService.revealTerminal(instance);
+		await instance.focusWhenReady(true);
 	}
 
 	async toggleActiveProjectTerminalPanel(): Promise<void> {
@@ -1160,6 +1187,14 @@ function getRequiredMobilePayloadString(payload: Record<string, unknown>, key: s
 function getOptionalMobilePayloadString(payload: Record<string, unknown>, key: string): string | undefined {
 	const value = payload[key];
 	return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function isCodexTerminal(instance: ITerminalInstance): boolean {
+	if (instance.shellType === GeneralShellType.Codex) {
+		return true;
+	}
+	const executable = instance.shellLaunchConfig.executable?.replaceAll('\\', '/').split('/').pop()?.toLowerCase();
+	return executable === 'codex' || executable === 'codex.exe' || executable === 'codex.cmd';
 }
 
 function getMobilePayloadBoolean(payload: Record<string, unknown>, key: string): boolean | undefined {

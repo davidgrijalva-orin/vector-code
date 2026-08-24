@@ -12,11 +12,84 @@ import { type IVectorCodeMobileRemoteEnvelope, type IVectorCodeMobileRemoteWorks
 export const VECTOR_CODE_VIEW_CONTAINER_ID = 'workbench.view.vectorCode';
 export const VECTOR_CODE_CONTROL_VIEW_ID = 'workbench.views.vectorCode.control';
 export const VECTOR_CODE_PROJECTS_VIEW_ID = 'workbench.views.vectorCode.projects';
+export const VECTOR_CODE_CODEX_VIEW_CONTAINER_ID = 'workbench.view.vectorCodeCodex';
+export const VECTOR_CODE_CODEX_VIEW_ID = 'workbench.views.vectorCode.codex';
 
 export const VECTOR_CODE_OPEN_CONTROL_COMMAND_ID = 'vectorCode.openControl';
 export const VECTOR_CODE_ADD_PROJECT_COMMAND_ID = 'vectorCode.addProjectToWorkspace';
 export const VECTOR_CODE_CONNECT_MOBILE_COMMAND_ID = 'vectorCode.connectMobileApp';
+export const VECTOR_CODE_OPEN_CODEX_COMMAND_ID = 'vectorCode.openCodex';
+export const VECTOR_CODE_OPEN_CODEX_TERMINAL_COMMAND_ID = 'vectorCode.openCodexTerminal';
 export const VECTOR_CODE_OPEN_ADMIN_TERMINAL_COMMAND_ID = 'vectorCode.openAdminTerminalWindow';
+
+export const enum VectorCodeCodexConnectionState {
+	Idle = 'idle',
+	Starting = 'starting',
+	Retrying = 'retrying',
+	Ready = 'ready',
+	Error = 'error'
+}
+
+export type VectorCodeCodexMessageRole = 'user' | 'assistant' | 'reasoning' | 'activity' | 'error';
+
+export interface IVectorCodeCodexMessage {
+	readonly id: string;
+	readonly role: VectorCodeCodexMessageRole;
+	readonly title: string;
+	readonly text: string;
+	readonly status?: string;
+}
+
+export interface IVectorCodeCodexThread {
+	readonly id: string;
+	readonly title: string;
+	readonly updatedAt: number;
+	readonly status: string;
+}
+
+export interface IVectorCodeCodexModel {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly reasoningEfforts: readonly string[];
+	readonly defaultReasoningEffort?: string;
+}
+
+export interface IVectorCodeCodexState {
+	readonly connectionState: VectorCodeCodexConnectionState;
+	readonly detail: string;
+	readonly accountLabel?: string;
+	readonly requiresAuthentication: boolean;
+	readonly activeProjectName?: string;
+	readonly activeProjectPath?: string;
+	readonly threads: readonly IVectorCodeCodexThread[];
+	readonly activeThreadId?: string;
+	readonly messages: readonly IVectorCodeCodexMessage[];
+	readonly turnInProgress: boolean;
+	readonly models: readonly IVectorCodeCodexModel[];
+	readonly selectedModel?: string;
+	readonly selectedReasoningEffort?: string;
+	readonly installedPluginCount: number;
+}
+
+export const IVectorCodeCodexService = createDecorator<IVectorCodeCodexService>('vectorCodeCodexService');
+
+export interface IVectorCodeCodexService {
+	readonly _serviceBrand: undefined;
+	readonly onDidChangeState: Event<IVectorCodeCodexState>;
+
+	getState(): IVectorCodeCodexState;
+	ensureReady(): Promise<void>;
+	refreshThreads(): Promise<void>;
+	createThread(): Promise<void>;
+	selectThread(threadId: string): Promise<void>;
+	sendMessage(text: string): Promise<void>;
+	interruptTurn(): Promise<void>;
+	forkActiveThread(): Promise<void>;
+	archiveActiveThread(): Promise<void>;
+	managePlugins(): Promise<void>;
+	selectModel(model: string, reasoningEffort?: string): void;
+}
 
 export interface IVectorCodeProjectSummary {
 	readonly name: string;
@@ -89,5 +162,6 @@ export interface IVectorCodeWorkbenchService {
 	addProjectToWorkspace(): Promise<void>;
 	closeProject(projectUri: URI): Promise<void>;
 	connectMobileApp(): Promise<void>;
+	openCodexTerminal(): Promise<void>;
 	toggleActiveProjectTerminalPanel(): Promise<void>;
 }

@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { isPublicRoute, sendPublicFile } from './public-files.mjs';
 
 const PORT = Number.parseInt(process.env.PORT ?? '3000', 10);
@@ -323,7 +324,11 @@ export function createUpdateFeedServer() {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+export function isMainModule(moduleUrl, entryPath = process.argv[1]) {
+  return typeof entryPath === 'string' && moduleUrl === pathToFileURL(entryPath).href;
+}
+
+if (isMainModule(import.meta.url)) {
   createUpdateFeedServer().listen(PORT, () => {
     console.log(`Vector Code update feed listening on ${PORT}`);
   });

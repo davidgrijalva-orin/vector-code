@@ -3,13 +3,22 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import {
   createUpdateFeedServer,
+  isMainModule,
   parseVectorUpdateFeed,
   resetVectorUpdateFeedCache,
   resolveVectorUpdate,
   selectLatestDownload
 } from './server.mjs';
+
+describe('isMainModule', () => {
+  it('normalizes the entry path before comparing it with the module URL', () => {
+    assert.equal(isMainModule(pathToFileURL(process.argv[1]).href), true);
+    assert.equal(isMainModule(import.meta.url, join(process.cwd(), 'not-the-test-entry.mjs')), false);
+  });
+});
 
 const feed = parseVectorUpdateFeed({
   schemaVersion: 1,
@@ -101,6 +110,9 @@ describe('createUpdateFeedServer', () => {
       assert.match(landing.headers.get('content-type'), /text\/html/);
       const landingText = await landing.text();
       assert.match(landingText, /Vector Code/);
+      assert.match(landingText, /Desktop editor for multi-repo work/);
+      assert.match(landingText, /Keeps each repo's workspace separate/);
+      assert.match(landingText, /Phone connection/);
       assert.match(landingText, /\/download\/windows/);
       assert.match(landingText, /\/download\/macos/);
 

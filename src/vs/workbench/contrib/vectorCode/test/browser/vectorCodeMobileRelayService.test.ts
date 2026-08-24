@@ -39,6 +39,19 @@ suite('VectorCodeMobileRelayService', () => {
 		await flushMicrotasks();
 	});
 
+	const recreateService = async (): Promise<void> => {
+		service.dispose();
+		service = disposables.add(new VectorCodeMobileRelayService(secretStorage, storageService, bridge));
+		await flushMicrotasks();
+	};
+
+	test('reading status does not append lifecycle diagnostics', () => {
+		const eventCount = service.getDiagnosticSummary().recentEvents.length;
+		service.getStatus();
+		service.getStatus();
+		strictEqual(service.getDiagnosticSummary().recentEvents.length, eventCount);
+	});
+
 	test('keeps the current bridge when refresh fails and enforces QR expiry', async () => {
 		const first = await service.startPairing('relay.example.test', 'issuer-token');
 		strictEqual(first.state, VectorCodeMobileConnectionState.Pairing);
@@ -100,15 +113,41 @@ suite('VectorCodeMobileRelayService', () => {
 		strictEqual(typeof knownGood, 'string');
 
 		await secretStorage.set('vectorCode.mobile.activeRelaySession', '{broken');
-		service.dispose();
-		service = disposables.add(new VectorCodeMobileRelayService(secretStorage, storageService, bridge));
-		await flushMicrotasks();
+		await recreateService();
 
 		strictEqual(await secretStorage.get('vectorCode.mobile.activeRelaySession'), knownGood);
-		const quarantine = JSON.parse((await secretStorage.get('vectorCode.mobile.quarantinedRelaySession')) ?? '{}') as { value?: string };
-		strictEqual(quarantine.value, '{broken');
+		const serializedQuarantine = (await secretStorage.get('vectorCode.mobile.quarantinedRelaySession')) ?? '{}';
+		const quarantine = JSON.parse(serializedQuarantine) as { byteLength?: number; sha256?: string; value?: string };
+		strictEqual(quarantine.byteLength, 7);
+		strictEqual(typeof quarantine.sha256, 'string');
+		strictEqual(quarantine.value, undefined);
+		strictEqual(serializedQuarantine.includes('{broken'), false);
 		const summary = service.getDiagnosticSummary();
 		strictEqual(summary.recentEvents.some(event => event.event === 'storage.relay_session.rolled_back' && event.errorCode === VectorCodeRuntimeErrorCode.StorageCorrupt), true);
+	});
+
+	test('restores a valid snapshot when a partial write omitted the active session', async () => {
+		await service.startPairing('relay.example.test', 'issuer-token');
+		const knownGood = await secretStorage.get('vectorCode.mobile.knownGoodRelaySession');
+		await secretStorage.delete('vectorCode.mobile.activeRelaySession');
+
+		await recreateService();
+
+		strictEqual(await secretStorage.get('vectorCode.mobile.activeRelaySession'), knownGood);
+		strictEqual(service.getDiagnosticSummary().recentEvents.some(event => event.event === 'storage.relay_session.restored_missing_active'), true);
+	});
+
+	test('resets invalid active and known-good sessions without retaining raw quarantine data', async () => {
+		await service.startPairing('relay.example.test', 'issuer-token');
+		await secretStorage.set('vectorCode.mobile.activeRelaySession', '{active-broken');
+		await secretStorage.set('vectorCode.mobile.knownGoodRelaySession', '{snapshot-broken');
+
+		await recreateService();
+
+		strictEqual(await secretStorage.get('vectorCode.mobile.activeRelaySession'), undefined);
+		strictEqual(await secretStorage.get('vectorCode.mobile.knownGoodRelaySession'), undefined);
+		strictEqual(await secretStorage.get('vectorCode.mobile.quarantinedRelaySession'), undefined);
+		strictEqual(service.getDiagnosticSummary().recentEvents.some(event => event.event === 'storage.relay_session.reset' && event.errorCode === VectorCodeRuntimeErrorCode.StorageCorrupt), true);
 	});
 });
 

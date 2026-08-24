@@ -461,8 +461,10 @@ function formatVectorCodeRuntimeDiagnosticSummary(summary: IVectorCodeRuntimeDia
 			summary.status.error.userMessage,
 			localize('vectorCodeDiagnosticCause', 'Safe cause: {0}', summary.status.error.cause),
 			localize('vectorCodeDiagnosticRetryable', 'Retryable: {0}', summary.status.error.retryable ? localize('vectorCodeDiagnosticYes', 'yes') : localize('vectorCodeDiagnosticNo', 'no')),
-			localize('vectorCodeDiagnosticCorrelation', 'Correlation: {0}', summary.status.error.correlationId),
 		);
+		if (summary.status.error.correlationId) {
+			lines.push(localize('vectorCodeDiagnosticCorrelation', 'Correlation: {0}', summary.status.error.correlationId));
+		}
 	}
 	if (summary.recentEvents.length) {
 		lines.push('', localize('vectorCodeDiagnosticRecentEvents', 'Recent events:'));
@@ -476,7 +478,9 @@ function formatVectorCodeRuntimeDiagnosticSummary(summary: IVectorCodeRuntimeDia
 			));
 		}
 	}
-	lines.push('', localize('vectorCodeDiagnosticRecovery', 'Recovery actions:'), ...summary.recoveryActions.map(action => `• ${action}`));
+	if (summary.recoveryActions.length) {
+		lines.push('', localize('vectorCodeDiagnosticRecovery', 'Recovery actions:'), ...summary.recoveryActions.map(action => `• ${action}`));
+	}
 	return lines.join('\n');
 }
 

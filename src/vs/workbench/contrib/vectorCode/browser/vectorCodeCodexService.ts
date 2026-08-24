@@ -19,7 +19,7 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IVectorCodeCodexBridgeNotification, IVectorCodeCodexBridgeServerRequest, IVectorCodeCodexBridgeService } from '../../../../platform/vectorCodeCodex/common/vectorCodeCodexBridge.js';
-import { IVectorCodeRuntimeDiagnosticSummary, IVectorCodeRuntimeError, runVectorCodeRuntimeWithTimeout, toVectorCodeRuntimeError, VectorCodeRuntimeController, VectorCodeRuntimeError, VectorCodeRuntimeErrorCode, VectorCodeRuntimeState } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
+import { isVectorCodeRuntimeError, IVectorCodeRuntimeDiagnosticSummary, IVectorCodeRuntimeError, runVectorCodeRuntimeWithTimeout, toVectorCodeRuntimeError, VectorCodeRuntimeController, VectorCodeRuntimeError, VectorCodeRuntimeErrorCode, VectorCodeRuntimeState } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
 import { IVectorCodeCodexMessage, IVectorCodeCodexModel, IVectorCodeCodexService, IVectorCodeCodexState, IVectorCodeCodexThread, IVectorCodeWorkbenchService, VECTOR_CODE_CODEX_CAPABILITY_MESSAGE, VECTOR_CODE_CODEX_CAPABILITY_PLUGINS, VECTOR_CODE_CODEX_CAPABILITY_THREADS, VectorCodeCodexConnectionState } from '../common/vectorCode.js';
 import { VectorCodeCodexRestartPolicy } from '../common/vectorCodeCodexLifecycle.js';
 
@@ -625,6 +625,9 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 		try {
 			await this.start();
 		} catch (error) {
+			if (isCancellationError(error)) {
+				throw error;
+			}
 			failure = this.createRuntimeError(
 				error,
 				VectorCodeRuntimeErrorCode.Unknown,
@@ -792,6 +795,9 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 				}),
 			]);
 		} catch (error) {
+			if (isCancellationError(error)) {
+				throw error;
+			}
 			const runtimeError = this.createRuntimeError(error, VectorCodeRuntimeErrorCode.Unknown, true, correlationId);
 			this.runtime.record('startup.failed', correlationId, runtimeError);
 			const connectionId = this.connectionId;
@@ -1249,14 +1255,19 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 	}
 
 	private createRuntimeError(error: unknown, fallbackCode: VectorCodeRuntimeErrorCode, fallbackRetryable: boolean, correlationId?: string): VectorCodeRuntimeError {
-		if (error instanceof VectorCodeRuntimeError) {
-			return error;
+		if (isVectorCodeRuntimeError(error)) {
+			return toVectorCodeRuntimeError(error, {
+				code: error.code,
+				userMessage: error.userMessage,
+				retryable: error.retryable,
+				correlationId: error.correlationId,
+			});
 		}
 		const detail = errorMessage(error);
 		const normalized = detail.toLowerCase();
 		let code = fallbackCode;
 		let retryable = fallbackRetryable;
-		if (/not found|enoent|cli is not installed|install.+codex/.test(normalized)) {
+		if (/\benoent\b|codex cli (?:was not found|is not installed)|npm install -g @openai\/codex/.test(normalized)) {
 			code = VectorCodeRuntimeErrorCode.DependencyMissing;
 			retryable = false;
 		} else if (/timed out|timeout/.test(normalized)) {
@@ -1264,7 +1275,7 @@ class VectorCodeCodexService extends Disposable implements IVectorCodeCodexServi
 				? VectorCodeRuntimeErrorCode.StartupTimeout
 				: VectorCodeRuntimeErrorCode.RequestTimeout;
 			retryable = true;
-		} else if (/not running|stopped|exited|connection.+(?:closed|lost)/.test(normalized)) {
+		} else if (/codex app server (?:is not running|stopped|exited)|codex helper process error|connection.+(?:closed|lost)/.test(normalized)) {
 			code = VectorCodeRuntimeErrorCode.ConnectionLost;
 			retryable = true;
 		}

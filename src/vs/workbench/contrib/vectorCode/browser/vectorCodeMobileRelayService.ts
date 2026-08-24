@@ -66,8 +66,9 @@ interface IVectorCodeMobileStoredRelayIssuerCredential {
 
 interface IVectorCodeMobileQuarantinedRelaySession {
 	readonly quarantinedAt: string;
-	readonly reason: 'invalid_active_session';
-	readonly value: string;
+	readonly reason: 'invalid_active_session' | 'invalid_known_good_session';
+	readonly byteLength: number;
+	readonly sha256: string;
 }
 
 type VectorCodeMobileConnectionStatusInput = Omit<IVectorCodeMobileConnectionStatus, 'runtime'>;
@@ -135,7 +136,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		}
 
 		const relayHost = this.getStoredRelayHost();
-		return this.withRuntimeStatus(relayHost ? {
+		const status: VectorCodeMobileConnectionStatusInput = relayHost ? {
 			state: VectorCodeMobileConnectionState.Disconnected,
 			label: localize('vectorCodeMobileRelayHostConfigured', 'Phone connection ready'),
 			detail: localize('vectorCodeMobileRelayHostConfiguredDetail', 'Create a QR pairing session for the mobile app.'),
@@ -144,7 +145,8 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			state: VectorCodeMobileConnectionState.Unconfigured,
 			label: localize('vectorCodeMobileRelayHostRequired', 'Phone connection unavailable'),
 			detail: localize('vectorCodeMobileRelayHostRequiredDetail', 'Mobile pairing is not configured for this desktop.')
-		});
+		};
+		return { ...status, runtime: this.runtime.getStatus() };
 	}
 
 	getDiagnosticSummary(): IVectorCodeRuntimeDiagnosticSummary {
@@ -242,7 +244,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			});
 		} catch (error) {
 			this.recordRuntimeFailure(
-				'relay.token.failed',
+				'pairing.token.failed',
 				error,
 				VectorCodeRuntimeErrorCode.NetworkUnavailable,
 				localize('vectorCodeMobileRelayTokenRuntimeUnavailable', 'The secure relay token service is unavailable.'),
@@ -276,7 +278,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 			await this.replaceDesktopRelayConnection(payload, relayTokens.desktopRelayToken, undefined, connection => this.storeActiveRelaySession(payload, relayTokens.desktopRelayToken, connection.phonePairedAt));
 		} catch (error) {
 			this.recordRuntimeFailure(
-				'relay.connect.failed',
+				'pairing.connect.failed',
 				error,
 				VectorCodeRuntimeErrorCode.NetworkUnavailable,
 				localize('vectorCodeMobileRelayConnectRuntimeUnavailable', 'The secure phone relay could not connect.'),
@@ -978,20 +980,38 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		const serializedSession = JSON.stringify(session);
 		await this.secretStorageService.set(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY, serializedSession);
 		await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, serializedSession);
+		try {
+			await this.secretStorageService.delete(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY);
+		} catch (error) {
+			this.recordRuntimeFailure(
+				'storage.relay_session.quarantine_cleanup_failed',
+				error,
+				VectorCodeRuntimeErrorCode.StorageUnavailable,
+				localize('vectorCodeMobileQuarantineCleanupUnavailable', 'Secure storage could not clear old phone-session recovery metadata.'),
+				true,
+			);
+		}
 	}
 
 	private async readActiveRelaySession(): Promise<IVectorCodeMobileStoredRelaySession | undefined> {
 		const rawSession = await this.secretStorageService.get(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY);
-		if (!rawSession) {
+		const knownGoodSession = await this.secretStorageService.get(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY);
+		if (rawSession === undefined && knownGoodSession === undefined) {
 			return undefined;
 		}
-		const knownGoodSession = await this.secretStorageService.get(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY);
-		const recovery = recoverVectorCodeJsonState(rawSession, knownGoodSession, isRecoverableStoredRelaySession);
+		const restoringMissingActiveSession = rawSession === undefined;
+		const recovery = recoverVectorCodeJsonState(
+			rawSession ?? knownGoodSession,
+			restoringMissingActiveSession ? undefined : knownGoodSession,
+			isRecoverableStoredRelaySession,
+		);
 		if (recovery.quarantinedValue) {
+			const quarantinedBytes = new TextEncoder().encode(recovery.quarantinedValue);
 			const quarantine: IVectorCodeMobileQuarantinedRelaySession = {
 				quarantinedAt: new Date().toISOString(),
-				reason: 'invalid_active_session',
-				value: recovery.quarantinedValue
+				reason: restoringMissingActiveSession ? 'invalid_known_good_session' : 'invalid_active_session',
+				byteLength: quarantinedBytes.byteLength,
+				sha256: await sha256Base64Url(quarantinedBytes),
 			};
 			try {
 				await this.secretStorageService.set(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY, JSON.stringify(quarantine));
@@ -1004,7 +1024,21 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 				this.runtime.record('storage.relay_session.quarantine_failed', runtimeError.correlationId, runtimeError);
 			}
 		}
-		if (recovery.action === 'rolled_back' && recovery.serializedValue) {
+		if (restoringMissingActiveSession && recovery.action === 'current' && recovery.serializedValue) {
+			await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, recovery.serializedValue);
+			const runtimeError = new VectorCodeRuntimeError(
+				VectorCodeRuntimeErrorCode.StorageCorrupt,
+				localize('vectorCodeMobileSessionRestored', 'Vector Code restored a partially saved phone session from its secure snapshot.'),
+				'Active relay session was missing; a validated secure snapshot was restored.',
+				false,
+			);
+			this.runtime.transition(VectorCodeRuntimeState.Degraded, {
+				capabilities: this.runtime.getStatus().capabilities,
+				error: runtimeError,
+				correlationId: runtimeError.correlationId,
+				event: 'storage.relay_session.restored_missing_active',
+			});
+		} else if (recovery.action === 'rolled_back' && recovery.serializedValue) {
 			await this.secretStorageService.set(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY, recovery.serializedValue);
 			const runtimeError = new VectorCodeRuntimeError(
 				VectorCodeRuntimeErrorCode.StorageCorrupt,
@@ -1065,6 +1099,7 @@ export class VectorCodeMobileRelayService extends Disposable implements IVectorC
 		await Promise.all([
 			this.secretStorageService.delete(VECTOR_CODE_MOBILE_ACTIVE_RELAY_SESSION_SECRET_KEY),
 			this.secretStorageService.delete(VECTOR_CODE_MOBILE_KNOWN_GOOD_RELAY_SESSION_SECRET_KEY),
+			this.secretStorageService.delete(VECTOR_CODE_MOBILE_QUARANTINED_RELAY_SESSION_SECRET_KEY),
 		]);
 	}
 }

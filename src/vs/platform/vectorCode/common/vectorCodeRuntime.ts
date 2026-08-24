@@ -123,7 +123,14 @@ export class VectorCodeRuntimeController {
 
 	transition(state: VectorCodeRuntimeState, options: IVectorCodeRuntimeTransition = {}): IVectorCodeRuntimeStatus {
 		const capabilities = [...new Set(options.capabilities ?? [])].sort();
-		const error = options.error ?? (keepsRuntimeError(state) ? this.status.error : undefined);
+		const error = options.error
+			? toVectorCodeRuntimeError(options.error, {
+				code: options.error.code,
+				userMessage: options.error.userMessage,
+				retryable: options.error.retryable,
+				correlationId: options.error.correlationId,
+			})
+			: (keepsRuntimeError(state) ? this.status.error : undefined);
 		this.status = {
 			state,
 			capabilities,
@@ -207,7 +214,7 @@ export function sanitizeVectorCodeDiagnosticText(value: unknown): string {
 		.replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer <redacted>')
 		.replace(/\b(?:vta_|sk-|gh[opusr]_|xox[baprs]-)[A-Za-z0-9_-]{8,}\b/gi, '<redacted>')
 		.replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '<redacted>')
-		.replace(/\b(token|key|secret|authorization)=([^\s&]+)/gi, '$1=<redacted>')
+		.replace(/["']?\b([A-Za-z0-9_-]*(?:token|key|secret)|authorization)\b["']?\s*(?:=|:)\s*(?:"[^"]*"|'[^']*'|[^\s,&;]+)/gi, '$1=<redacted>')
 		.replace(/\bhttps?:\/\/[^\s,;]+/gi, '<url>')
 		.replace(/\b[a-z]:\\(?:[^\\\s]+\\)*[^\\\s]*/gi, '<path>')
 		.replace(/\\\\[^\\\s]+\\(?:[^\\\s]+\\)*[^\\\s]*/g, '<path>')

@@ -83,11 +83,29 @@ suite('VectorCodeRuntime', () => {
 	});
 
 	test('redacts secret and project detail from diagnostic text', () => {
-		const diagnostic = sanitizeVectorCodeDiagnosticText('authorization=my-secret /Users/person/project/file.ts C:\\Users\\person\\source.ts \\\\server\\private\\file.ts https://relay.test/path?token=hidden vta_1234567890abcdef');
+		const diagnostic = sanitizeVectorCodeDiagnosticText('authorization=my-secret relayToken: "relay-secret" "apiKey":"api-secret" /Users/person/project/file.ts C:\\Users\\person\\source.ts \\\\server\\private\\file.ts https://relay.test/path?token=hidden vta_1234567890abcdef');
 		strictEqual(diagnostic.includes('my-secret'), false);
+		strictEqual(diagnostic.includes('relay-secret'), false);
+		strictEqual(diagnostic.includes('api-secret'), false);
 		strictEqual(diagnostic.includes('person'), false);
 		strictEqual(diagnostic.includes('server'), false);
 		strictEqual(diagnostic.includes('relay.test'), false);
 		strictEqual(diagnostic.includes('vta_'), false);
+	});
+
+	test('normalizes external runtime errors before storing them', () => {
+		const runtime = new VectorCodeRuntimeController('relay');
+		const status = runtime.transition(VectorCodeRuntimeState.Degraded, {
+			error: {
+				code: VectorCodeRuntimeErrorCode.StorageUnavailable,
+				userMessage: 'Secure storage is unavailable.',
+				cause: 'relayToken: "must-not-survive"',
+				retryable: true,
+				correlationId: 'relay-storage-1',
+			},
+		});
+
+		strictEqual(status.error?.cause.includes('must-not-survive'), false);
+		strictEqual(status.error?.correlationId, 'relay-storage-1');
 	});
 });

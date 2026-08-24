@@ -9,11 +9,13 @@ import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL = 'vectorCodeMobileRelayBridge';
 
 export interface IVectorCodeMobileRelayBridgeConnectOptions {
+	readonly correlationId: string;
 	readonly url: string;
 	readonly authorizationHeader: string;
 }
 
 export interface IVectorCodeMobileRelayBridgeTokenOptions {
+	readonly correlationId: string;
 	readonly url: string;
 	readonly authorizationHeader: string;
 	readonly payload: {

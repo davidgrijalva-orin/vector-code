@@ -13,6 +13,7 @@ import { ICommandService } from '../../../../platform/commands/common/commands.j
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
+import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IHoverService } from '../../../../platform/hover/browser/hover.js';
 import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -23,6 +24,7 @@ import { IQuickInputService } from '../../../../platform/quickinput/common/quick
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
+import { hasVectorCodeRuntimeCapability, IVectorCodeRuntimeDiagnosticSummary } from '../../../../platform/vectorCode/common/vectorCodeRuntime.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { IViewPaneOptions, ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContainer.js';
@@ -37,11 +39,16 @@ import {
 	IVectorCodeCodexService,
 	IVectorCodeWorkbenchService,
 	VECTOR_CODE_ADD_PROJECT_COMMAND_ID,
+	VECTOR_CODE_CODEX_CAPABILITY_MESSAGE,
+	VECTOR_CODE_CODEX_CAPABILITY_PLUGINS,
+	VECTOR_CODE_CODEX_CAPABILITY_THREADS,
 	VECTOR_CODE_CONTROL_VIEW_ID,
 	VECTOR_CODE_CODEX_VIEW_CONTAINER_ID,
 	VECTOR_CODE_CODEX_VIEW_ID,
 	VECTOR_CODE_PROJECTS_VIEW_ID,
 	VECTOR_CODE_VIEW_CONTAINER_ID,
+	VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE,
+	VECTOR_CODE_MOBILE_CAPABILITY_PAIR,
 	VectorCodeCodexConnectionState,
 	VectorCodeMobileConnectionState
 } from '../common/vectorCode.js';
@@ -68,6 +75,7 @@ abstract class VectorCodeViewPane extends ViewPane {
 		@IVectorCodeWorkbenchService protected readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
 		@IWorkspaceContextService protected readonly workspaceContextService: IWorkspaceContextService,
 		@IVectorCodeMobileRelayService protected readonly mobileRelayService: IVectorCodeMobileRelayService,
+		@IDialogService protected readonly dialogService: IDialogService,
 		@INotificationService protected readonly notificationService: INotificationService,
 		@IQuickInputService protected readonly quickInputService: IQuickInputService,
 		@IKeybindingService keybindingService: IKeybindingService,
@@ -191,6 +199,7 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 		const toolbar = append(root, $('.vector-code-codex__toolbar'));
 		const newButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexNew', 'New'), Codicon.add);
 		const refreshButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexRefresh', 'Refresh'), Codicon.refresh);
+		const diagnosticsButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexDiagnostics', 'Diagnostics'), Codicon.output);
 		const pluginsButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexPlugins', 'Plugins'), Codicon.extensions);
 		const pluginsButtonLabel = pluginsButton.lastElementChild as HTMLElement;
 		const forkButton = this.renderCodexButton(toolbar, localize('vectorCodeCodexFork', 'Fork'), Codicon.gitPullRequestCreate);
@@ -251,9 +260,8 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 		};
 		const updateComposer = (): void => {
 			const state = this.codexService.getState();
-			const ready = state.connectionState === VectorCodeCodexConnectionState.Ready;
 			const projectReady = Boolean(state.activeProjectPath);
-			const canMessage = ready && projectReady && !state.requiresAuthentication;
+			const canMessage = hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_MESSAGE) && projectReady && !state.requiresAuthentication;
 			prompt.disabled = !canMessage;
 			prompt.placeholder = state.requiresAuthentication
 				? localize('vectorCodeCodexPromptSignInRequired', 'Sign in from the Codex terminal to send messages')
@@ -300,7 +308,7 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 				threadSelect.appendChild(option);
 			}
 			threadSelect.value = state.activeThreadId ?? '';
-			threadSelect.disabled = state.connectionState !== VectorCodeCodexConnectionState.Ready || !state.activeProjectPath || state.turnInProgress;
+			threadSelect.disabled = !hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_THREADS) || !state.activeProjectPath || state.turnInProgress;
 
 			clearNode(modelSelect);
 			for (const model of state.models) {
@@ -376,14 +384,14 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 				messages.scrollTop = messages.scrollHeight;
 			}
 
-			const ready = state.connectionState === VectorCodeCodexConnectionState.Ready;
-			newButton.disabled = !ready || !state.activeProjectPath || state.requiresAuthentication || state.turnInProgress;
+			newButton.disabled = !hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_MESSAGE) || !state.activeProjectPath || state.requiresAuthentication || state.turnInProgress;
 			refreshButton.disabled = state.connectionState === VectorCodeCodexConnectionState.Starting;
-			pluginsButton.disabled = !ready || state.turnInProgress;
+			diagnosticsButton.disabled = false;
+			pluginsButton.disabled = !hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_PLUGINS) || state.turnInProgress;
 			pluginsButtonLabel.textContent = localize('vectorCodeCodexPluginsCount', 'Plugins ({0})', state.installedPluginCount);
 			pluginsButton.title = localize('vectorCodeCodexManagePlugins', 'Manage {0} installed Codex plugin(s)', state.installedPluginCount);
-			forkButton.disabled = !ready || !state.activeThreadId || state.turnInProgress;
-			archiveButton.disabled = !ready || !state.activeThreadId || state.turnInProgress;
+			forkButton.disabled = !hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_THREADS) || !state.activeThreadId || state.turnInProgress;
+			archiveButton.disabled = !hasVectorCodeRuntimeCapability(state.runtime, VECTOR_CODE_CODEX_CAPABILITY_THREADS) || !state.activeThreadId || state.turnInProgress;
 			updateComposer();
 		};
 
@@ -393,6 +401,9 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 			await this.codexService.ensureReady();
 			await this.codexService.refreshThreads();
 		})));
+		this._register(addDisposableListener(diagnosticsButton, EventType.CLICK, () => {
+			void this.openDiagnosticSummary(localize('vectorCodeCodexDiagnosticTitle', 'Codex diagnostics'), this.codexService.getDiagnosticSummary());
+		}));
 		this._register(addDisposableListener(pluginsButton, EventType.CLICK, () => run(() => this.codexService.managePlugins())));
 		this._register(addDisposableListener(forkButton, EventType.CLICK, () => run(() => this.codexService.forkActiveThread())));
 		this._register(addDisposableListener(archiveButton, EventType.CLICK, () => run(() => this.codexService.archiveActiveThread())));
@@ -431,6 +442,42 @@ class VectorCodeCodexView extends VectorCodeViewPane {
 		container.appendChild(button);
 		return button;
 	}
+
+	private async openDiagnosticSummary(title: string, summary: IVectorCodeRuntimeDiagnosticSummary): Promise<void> {
+		await this.dialogService.info(title, formatVectorCodeRuntimeDiagnosticSummary(summary));
+	}
+}
+
+function formatVectorCodeRuntimeDiagnosticSummary(summary: IVectorCodeRuntimeDiagnosticSummary): string {
+	const lines = [
+		localize('vectorCodeDiagnosticService', 'Service: {0}', summary.service),
+		localize('vectorCodeDiagnosticState', 'State: {0}', summary.status.state),
+		localize('vectorCodeDiagnosticCapabilities', 'Available capabilities: {0}', summary.status.capabilities.join(', ') || localize('vectorCodeDiagnosticCapabilitiesNone', 'none')),
+	];
+	if (summary.status.error) {
+		lines.push(
+			'',
+			localize('vectorCodeDiagnosticLatestIssue', 'Latest issue: {0}', summary.status.error.code),
+			summary.status.error.userMessage,
+			localize('vectorCodeDiagnosticCause', 'Safe cause: {0}', summary.status.error.cause),
+			localize('vectorCodeDiagnosticRetryable', 'Retryable: {0}', summary.status.error.retryable ? localize('vectorCodeDiagnosticYes', 'yes') : localize('vectorCodeDiagnosticNo', 'no')),
+			localize('vectorCodeDiagnosticCorrelation', 'Correlation: {0}', summary.status.error.correlationId),
+		);
+	}
+	if (summary.recentEvents.length) {
+		lines.push('', localize('vectorCodeDiagnosticRecentEvents', 'Recent events:'));
+		for (const event of summary.recentEvents.slice(-8)) {
+			lines.push(localize(
+				'vectorCodeDiagnosticEvent',
+				'{0} — {1} — {2}',
+				new Date(event.timestamp).toLocaleTimeString(),
+				event.event,
+				event.correlationId,
+			));
+		}
+	}
+	lines.push('', localize('vectorCodeDiagnosticRecovery', 'Recovery actions:'), ...summary.recoveryActions.map(action => `• ${action}`));
+	return lines.join('\n');
 }
 
 class VectorCodeLayoutContribution extends Disposable implements IWorkbenchContribution {
@@ -477,21 +524,19 @@ class VectorCodeControlView extends VectorCodeViewPane {
 		const actions = append(mobile.card, $('.vector-code-control__card-actions'));
 		const configureButton = this.renderButton(actions, localize('vectorCodeMobileConfigureRelay', 'Configure Secure Relay'), Codicon.key);
 		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Create / Refresh QR'), Codicon.refresh);
+		const diagnosticsButton = this.renderButton(actions, localize('vectorCodeMobileDiagnostics', 'Diagnostics'), Codicon.output);
 		const pairingContainer = append(mobile.card, $('.vector-code-control__pairing'));
 		const pairingDisposables = this._register(new DisposableStore());
 		let currentStatus = mobileStatus;
 
 		const canRefreshPairing = (status: IVectorCodeMobileConnectionStatus): boolean => {
-			return (status.state === VectorCodeMobileConnectionState.Disconnected
-				|| status.state === VectorCodeMobileConnectionState.Pairing
-				|| status.state === VectorCodeMobileConnectionState.Expired
-				|| status.state === VectorCodeMobileConnectionState.Failed)
+			return hasVectorCodeRuntimeCapability(status.runtime, VECTOR_CODE_MOBILE_CAPABILITY_PAIR)
 				&& !status.requiresRelayIssuerToken;
 		};
 
 		const updateStartButton = (status: IVectorCodeMobileConnectionStatus, busy = false): void => {
 			setVisibility(Boolean(status.requiresRelayIssuerToken), configureButton);
-			configureButton.disabled = busy;
+			configureButton.disabled = busy || !hasVectorCodeRuntimeCapability(status.runtime, VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE);
 			setVisibility(!status.requiresRelayIssuerToken, startButton);
 			startButton.disabled = busy || !canRefreshPairing(status);
 			startButton.title = startButton.disabled && !busy
@@ -585,6 +630,12 @@ class VectorCodeControlView extends VectorCodeViewPane {
 
 		renderStatus(mobileStatus);
 		this._register(this.mobileRelayService.onDidChangeStatus(renderStatus));
+		this._register(addDisposableListener(diagnosticsButton, EventType.CLICK, () => {
+			void this.dialogService.info(
+				localize('vectorCodeMobileDiagnosticTitle', 'Phone Bridge diagnostics'),
+				formatVectorCodeRuntimeDiagnosticSummary(this.mobileRelayService.getDiagnosticSummary()),
+			);
+		}));
 		if (mobileStatus.state === VectorCodeMobileConnectionState.Disconnected && !mobileStatus.pairing) {
 			void createPairing(false);
 		}

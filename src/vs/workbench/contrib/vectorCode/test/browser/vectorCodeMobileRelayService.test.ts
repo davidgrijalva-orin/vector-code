@@ -10,9 +10,10 @@ import { Disposable, toDisposable } from '../../../../../base/common/lifecycle.j
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { TestSecretStorageService } from '../../../../../platform/secrets/test/common/testSecretStorageService.js';
 import { InMemoryStorageService } from '../../../../../platform/storage/common/storage.js';
+import { VectorCodeRuntimeErrorCode, VectorCodeRuntimeState } from '../../../../../platform/vectorCode/common/vectorCodeRuntime.js';
 import { IVectorCodeMobileRelayBridgeConnectOptions, IVectorCodeMobileRelayBridgeConnectionChange, IVectorCodeMobileRelayBridgeMessage, IVectorCodeMobileRelayBridgeService, IVectorCodeMobileRelayBridgeTokenOptions, IVectorCodeMobileRelayBridgeTokenResponse } from '../../../../../platform/vectorCodeMobile/common/vectorCodeMobileRelayBridge.js';
 import { VectorCodeMobileRelayService } from '../../browser/vectorCodeMobileRelayService.js';
-import { VectorCodeMobileConnectionState } from '../../common/vectorCode.js';
+import { VECTOR_CODE_MOBILE_CAPABILITY_REMOTE, VectorCodeMobileConnectionState } from '../../common/vectorCode.js';
 
 suite('VectorCodeMobileRelayService', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
@@ -20,12 +21,13 @@ suite('VectorCodeMobileRelayService', () => {
 	let bridge: TestVectorCodeMobileRelayBridge;
 	let service: VectorCodeMobileRelayService;
 	let secretStorage: TestSecretStorageService;
+	let storageService: InMemoryStorageService;
 	let clock: sinon.SinonFakeTimers;
 
 	setup(async () => {
 		clock = sinon.useFakeTimers({ now });
 		disposables.add(toDisposable(() => clock.restore()));
-		const storageService = disposables.add(new InMemoryStorageService());
+		storageService = disposables.add(new InMemoryStorageService());
 		await storageService.initialize();
 		bridge = disposables.add(new TestVectorCodeMobileRelayBridge());
 		secretStorage = disposables.add(new TestSecretStorageService());
@@ -70,6 +72,8 @@ suite('VectorCodeMobileRelayService', () => {
 		});
 		await flushMicrotasks();
 		strictEqual(service.getStatus().state, VectorCodeMobileConnectionState.Connected);
+		strictEqual(service.getStatus().runtime.state, VectorCodeRuntimeState.Ready);
+		strictEqual(service.getStatus().runtime.capabilities.includes(VECTOR_CODE_MOBILE_CAPABILITY_REMOTE), true);
 
 		await clock.tickAsync(5 * 60_000 + 100);
 		strictEqual(service.getStatus().state, VectorCodeMobileConnectionState.Connected);
@@ -88,6 +92,23 @@ suite('VectorCodeMobileRelayService', () => {
 		await clock.tickAsync(1_000);
 		strictEqual(service.getStatus().state, VectorCodeMobileConnectionState.Pairing);
 		strictEqual(bridge.connectCount, 3);
+	});
+
+	test('quarantines corrupt secure state and restores the last known-good phone session', async () => {
+		await service.startPairing('relay.example.test', 'issuer-token');
+		const knownGood = await secretStorage.get('vectorCode.mobile.knownGoodRelaySession');
+		strictEqual(typeof knownGood, 'string');
+
+		await secretStorage.set('vectorCode.mobile.activeRelaySession', '{broken');
+		service.dispose();
+		service = disposables.add(new VectorCodeMobileRelayService(secretStorage, storageService, bridge));
+		await flushMicrotasks();
+
+		strictEqual(await secretStorage.get('vectorCode.mobile.activeRelaySession'), knownGood);
+		const quarantine = JSON.parse((await secretStorage.get('vectorCode.mobile.quarantinedRelaySession')) ?? '{}') as { value?: string };
+		strictEqual(quarantine.value, '{broken');
+		const summary = service.getDiagnosticSummary();
+		strictEqual(summary.recentEvents.some(event => event.event === 'storage.relay_session.rolled_back' && event.errorCode === VectorCodeRuntimeErrorCode.StorageCorrupt), true);
 	});
 });
 

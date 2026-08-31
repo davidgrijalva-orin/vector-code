@@ -19,7 +19,7 @@ env:
 jobs:
   compile:
     name: Compile & Hygiene
-    runs-on: [ self-hosted, 1ES.Pool=1es-vscode-oss-ubuntu-22.04-x64, "JobId=compile-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}" ]
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout microsoft/vscode
         uses: actions/checkout@v6
@@ -174,4 +174,3 @@ jobs:
     with:
       job_name: Remote
       remote_tests: true
-

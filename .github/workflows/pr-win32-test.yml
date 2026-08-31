@@ -233,7 +233,8 @@ jobs:
 
       - name: 🧪 Run smoke tests (Browser, Chromium)
         if: ${{ inputs.browser_tests }}
-        timeout-minutes: 20
+        # Standard GitHub-hosted runners need enough time for the complete browser smoke suite.
+        timeout-minutes: 40
         shell: pwsh
         run: npm run smoketest-no-compile -- --web --tracing --headless
 

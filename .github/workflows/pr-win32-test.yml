@@ -10,6 +10,9 @@ on:
       browser_tests:
         type: boolean
         default: false
+      browser_smoke_tests:
+        type: boolean
+        default: false
       remote_tests:
         type: boolean
         default: false
@@ -17,7 +20,7 @@ on:
 jobs:
   windows-test:
     name: ${{ inputs.job_name }}
-    runs-on: [ self-hosted, 1ES.Pool=1es-vscode-oss-windows-2022-x64, "JobId=windows-test-${{ inputs.job_name }}-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}" ]
+    runs-on: windows-2022
     env:
       ARTIFACT_NAME: ${{ (inputs.electron_tests && 'electron') || (inputs.browser_tests && 'browser') || (inputs.remote_tests && 'remote') || 'unknown' }}
       NPM_ARCH: x64
@@ -232,7 +235,8 @@ jobs:
         run: npm run smoketest-no-compile -- --tracing
 
       - name: 🧪 Run smoke tests (Browser, Chromium)
-        if: ${{ inputs.browser_tests }}
+        # Linux owns the full browser smoke suite. Keep Windows browser coverage at unit and integration levels.
+        if: ${{ inputs.browser_tests && inputs.browser_smoke_tests }}
         timeout-minutes: 20
         shell: pwsh
         run: npm run smoketest-no-compile -- --web --tracing --headless

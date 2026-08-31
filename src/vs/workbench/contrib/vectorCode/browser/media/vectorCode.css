@@ -1781,6 +1781,10 @@ body,
 	background: #0d1211 !important;
 }
 
+.monaco-workbench .part.sidebar .empty-pane-message {
+	color: var(--vectorcode-shell-muted) !important;
+}
+
 .monaco-workbench .part.sidebar > .composite.title {
 	min-height: 36px;
 	padding-left: 8px;

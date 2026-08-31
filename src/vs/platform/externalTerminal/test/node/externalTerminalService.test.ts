@@ -100,6 +100,8 @@ suite('ExternalTerminalService', () => {
 				strictEqual(opts.detached, true);
 				strictEqual(opts.windowsHide, true);
 				const decodedCommand = Buffer.from(args[3], 'base64').toString('utf16le');
+				// This asserts generated PowerShell syntax, not user-facing text.
+				// eslint-disable-next-line local/code-no-unexternalized-strings
 				strictEqual(decodedCommand, "Start-Process -FilePath 'wt' -ArgumentList @('-d', '.') -WorkingDirectory 'C:/foo' -Verb RunAs");
 				return {
 					on: (event: string, listener: (code: number) => void) => {

@@ -436,6 +436,8 @@ function setupSpawnErrorHandling(
 }
 
 function quotePowerShellString(value: string): string {
+	// This is PowerShell syntax, not user-facing text.
+	// eslint-disable-next-line local/code-no-unexternalized-strings
 	return `'${value.replace(/'/g, "''")}'`;
 }
 

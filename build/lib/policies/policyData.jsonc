@@ -16,6 +16,13 @@
             }
         },
         {
+            "key": "InteractiveSession",
+            "name": {
+                "key": "interactiveSessionConfigurationTitle",
+                "value": "Chat"
+            }
+        },
+        {
             "key": "Telemetry",
             "name": {
                 "key": "telemetryConfigurationTitle",
@@ -31,21 +38,6 @@
         }
     ],
     "policies": [
-        {
-            "key": "vectorCode.approvedAccountOrganizations",
-            "name": "VectorCodeApprovedAccountOrganizations",
-            "category": "Extensions",
-            "minimumVersion": "1.118",
-            "localization": {
-                "description": {
-                    "key": "vectorCode.approvedAccountOrganizations.policy.description",
-                    "value": "Setting this policy to a non-empty list activates the Approved Account gate: restricted account-policy values apply until the user signs into a GitHub account whose organizations intersect this list and the account-side policy data has resolved. Comparison is case-insensitive. Use '*' as a wildcard to accept any signed-in GitHub or GHE account."
-                }
-            },
-            "type": "array",
-            "default": [],
-            "included": false
-        },
         {
             "key": "extensions.gallery.serviceUrl",
             "name": "ExtensionGalleryServiceUrl",
@@ -84,7 +76,7 @@
             "localization": {
                 "description": {
                     "key": "updateMode",
-                    "value": "Configure whether you receive automatic updates. Requires a restart after change. The updates are fetched from a Microsoft online service."
+                    "value": "Configure whether you receive automatic updates. Requires a restart after change. The updates are fetched from the Vector Code update service."
                 },
                 "enumDescriptions": [
                     {
@@ -163,6 +155,66 @@
                 "description": {
                     "key": "telemetry.feedback.enabled",
                     "value": "Enable feedback mechanisms such as the issue reporter, surveys, and other feedback options."
+                }
+            },
+            "type": "boolean",
+            "default": true,
+            "included": true
+        },
+        {
+            "key": "vectorcode.nextEditSuggestions.enabled",
+            "name": "VectorCodeNextEditSuggestions",
+            "category": "InteractiveSession",
+            "minimumVersion": "1.99",
+            "localization": {
+                "description": {
+                    "key": "vectorcode.nextEditSuggestions.enabled",
+                    "value": "Whether to enable next edit suggestions (NES). NES can propose a next edit based on your recent changes."
+                }
+            },
+            "type": "boolean",
+            "default": true,
+            "included": true
+        },
+        {
+            "key": "vectorcode.chat.reviewSelection.enabled",
+            "name": "VectorCodeReviewSelection",
+            "category": "InteractiveSession",
+            "minimumVersion": "1.104",
+            "localization": {
+                "description": {
+                    "key": "vectorcode.chat.reviewSelection.enabled",
+                    "value": "Enables code review on current selection."
+                }
+            },
+            "type": "boolean",
+            "default": true,
+            "included": true
+        },
+        {
+            "key": "vectorcode.chat.reviewAgent.enabled",
+            "name": "VectorCodeReviewAgent",
+            "category": "InteractiveSession",
+            "minimumVersion": "1.104",
+            "localization": {
+                "description": {
+                    "key": "vectorcode.chat.reviewAgent.enabled",
+                    "value": "Enables the code review agent."
+                }
+            },
+            "type": "boolean",
+            "default": true,
+            "included": true
+        },
+        {
+            "key": "vectorcode.chat.claudeAgent.enabled",
+            "name": "Claude3PIntegration",
+            "category": "InteractiveSession",
+            "minimumVersion": "1.113",
+            "localization": {
+                "description": {
+                    "key": "vectorcode.chat.claudeAgent.enabled",
+                    "value": "Enable Claude Agent sessions in VS Code. Start and resume agentic coding sessions powered by Anthropic Claude Agent SDK directly in the editor. Uses your existing VectorCode subscription."
                 }
             },
             "type": "boolean",

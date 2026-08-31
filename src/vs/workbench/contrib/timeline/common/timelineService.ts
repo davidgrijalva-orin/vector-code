@@ -8,9 +8,7 @@ import { Emitter } from '../../../../base/common/event.js';
 import { Disposable, DisposableMap, IDisposable } from '../../../../base/common/lifecycle.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { ITimelineService, TimelineChangeEvent, TimelineOptions, TimelineProvidersChangeEvent, TimelineProvider, TimelinePaneId } from './timeline.js';
-import { IViewsService } from '../../../services/views/common/viewsService.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { ITimelineService, TimelineChangeEvent, TimelineOptions, TimelineProvidersChangeEvent, TimelineProvider } from './timeline.js';
 import { IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 
 export const TimelineHasProviderContext = new RawContextKey<boolean>('timelineHasProvider', false);
@@ -34,8 +32,6 @@ export class TimelineService extends Disposable implements ITimelineService {
 
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@IViewsService protected viewsService: IViewsService,
-		@IConfigurationService protected configurationService: IConfigurationService,
 		@IContextKeyService protected contextKeyService: IContextKeyService,
 	) {
 		super();
@@ -132,7 +128,6 @@ export class TimelineService extends Disposable implements ITimelineService {
 	}
 
 	setUri(uri: URI) {
-		this.viewsService.openView(TimelinePaneId, true);
 		this._onDidChangeUri.fire(uri);
 	}
 

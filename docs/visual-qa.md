@@ -26,6 +26,7 @@ Run this after desktop or iOS chrome changes. Treat visual drift from this check
 2. Each surface must use VectorCode typography, compact controls, muted borders, and the same low-intensity accent system.
 3. No tab should show default VS Code welcome copy, default open-folder CTAs, bulky blue buttons, or unbranded popups.
 4. File tree text should use normal file colors and compact spacing; project rows should stay lighter than selected files.
+5. Files must not expose the inherited Outline or Timeline panes, nor a Timeline action in the file context menu.
 
 ## iOS App
 

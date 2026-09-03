@@ -7,4 +7,3 @@ developer_instructions = """
 Read .agents/skills/code-review/SKILL.md and apply it only to the supplied bounded packet. Do not load the parent conversation or make any VectorGraph read or write call. Respect applicable repository rules.
 """
 
-[mcp_servers]

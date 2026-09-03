@@ -33,8 +33,9 @@ access discovery, record the limitation, and stop before selecting or mutating w
    explicitly waived. Re-fetch related tickets when state is uncertain.
 4. Before implementation, re-read ownership and status to avoid a stale claim,
    then set the actual In Progress status via the CLI and verify it by reading
-   back. The CLI has no proven atomic claim/lease: do not race another agent. If another
-   claim may exist or ownership is ambiguous, stop before implementation.
+   back. The CLI has no proven atomic claim/lease. Proceed only under an external
+   single-runner guarantee or after verifying a unique owner claim; status read-back alone
+   is not ownership. Stop before implementation if exclusivity is not established.
    Preserve existing ticket descriptions, requirements, and unrelated context.
 
 ## Investigate, plan, implement
@@ -60,8 +61,9 @@ More workers require a concrete benefit. Avoid delegation for sequential edits o
 work requiring nearly all the parent's context. Default to Sol Medium in Codex;
 inherit the configured capable Claude model. Do not escalate reasoning by habit.
 
-Use `implementation-worker` with the native `vg-worker` agent when available.
-Supply only objective, relevant acceptance criteria, files/modules, interfaces,
+Before delegating, the primary must ensure the child has no tracker-capable MCP
+servers; if that boundary cannot be enforced, do not delegate. Use `implementation-worker`
+with the native `vg-worker` agent when available. Supply only objective, relevant acceptance criteria, files/modules, interfaces,
 discovered constraints including applicable nested rules, ownership boundaries,
 and required checks. Use fresh context (Codex `fork_turns="none"` when exposed;
 Claude's named Agent subagent). Do not request full-history forks. Native agents

@@ -2,6 +2,8 @@ name = "vg-worker"
 description = "Bounded independent implementation assignment from the primary agent."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
 developer_instructions = """
-Read .agents/skills/implementation-worker/SKILL.md and apply it only to the supplied bounded packet. Do not load the parent conversation or query VectorGraph. Respect applicable repository rules.
+Read .agents/skills/implementation-worker/SKILL.md and apply it only to the supplied bounded packet. Do not load the parent conversation or make any VectorGraph read or write call. Respect applicable repository rules.
 """
+

@@ -10,7 +10,8 @@ Use the installed VectorGraph CLI independently of the experimental plugin.
 Read the repository's `docs/AGENT_WORKFLOW.md` for its verified workspace/team,
 commands, and constraints, then `docs/VECTORGRAPH_CLI.md` for exact CLI syntax.
 Do not inherit the CLI's active workspace. Pass the verified workspace explicitly
-on every call. If this repository has no verified binding, follow the documented
+on every workspace-scoped call; discovery commands such as `version`, `workspace list`,
+and `api operations` do not take a workspace. If this repository has no verified binding, follow the documented
 access discovery, record the limitation, and stop before selecting or mutating work.
 
 ## Resume and select
@@ -32,7 +33,9 @@ access discovery, record the limitation, and stop before selecting or mutating w
    explicitly waived. Re-fetch related tickets when state is uncertain.
 4. Before implementation, re-read ownership and status to avoid a stale claim,
    then set the actual In Progress status via the CLI and verify it by reading
-   back. The CLI has no proven atomic claim/lease: do not race another agent.
+   back. The CLI has no proven atomic claim/lease. Proceed only under an external
+   single-runner guarantee or after verifying a unique owner claim; status read-back alone
+   is not ownership. Stop before implementation if exclusivity is not established.
    Preserve existing ticket descriptions, requirements, and unrelated context.
 
 ## Investigate, plan, implement
@@ -58,8 +61,10 @@ More workers require a concrete benefit. Avoid delegation for sequential edits o
 work requiring nearly all the parent's context. Default to Sol Medium in Codex;
 inherit the configured capable Claude model. Do not escalate reasoning by habit.
 
-Use `implementation-worker` with the native `vg-worker` agent when available.
-Supply only objective, relevant acceptance criteria, files/modules, interfaces,
+Before delegating, the primary must isolate the child from tracker-capable MCP
+servers, VectorGraph credentials, and any callable VectorGraph command. If those boundaries
+cannot be enforced, do not delegate. Use `implementation-worker` with the native `vg-worker`
+agent when available. Supply only objective, relevant acceptance criteria, files/modules, interfaces,
 discovered constraints including applicable nested rules, ownership boundaries,
 and required checks. Use fresh context (Codex `fork_turns="none"` when exposed;
 Claude's named Agent subagent). Do not request full-history forks. Native agents
@@ -80,8 +85,10 @@ For meaningful behavioral changes, use one independent `vg-reviewer` with the
 review when deterministic evidence suffices. Send only objective, acceptance
 criteria, final diff (including new files), changed tests, validation results,
 and directly relevant code as needed. Supply the candidate revision or patch
-when the reviewer's worktree would otherwise show an older version. The reviewer
-must be different from the implementer, must not receive the full conversation,
+when the reviewer's worktree would otherwise show an older version. Before spawning the reviewer, the primary must use a read-only parent permission
+mode because live parent overrides can supersede the custom-agent default. If that cannot
+be enforced, report the gap and skip the independent review. The reviewer must be
+different from the implementer, must not receive the full conversation,
 and must not rediscover VectorGraph or implement the fix. If independent execution
 is unavailable, report that gap; do not label self-review independent review.
 

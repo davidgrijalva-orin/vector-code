@@ -2,7 +2,7 @@
 name: vg-worker
 description: Bounded independent implementation assignment from the primary agent.
 model: inherit
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write
 skills:
   - implementation-worker
 ---

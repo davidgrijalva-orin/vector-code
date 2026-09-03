@@ -19,8 +19,9 @@ with the primary. Do not choose tickets, query the whole tracker, change ticket
 status, redesign unrelated modules, or spawn further agents. The primary integrates
 the result and owns overall acceptance and VectorGraph updates.
 
-Run in a fresh native `vg-worker` subagent context when delegated. Request a native
-worktree only when it solves a file-ownership conflict; return the patch/commit
+The primary delegates this skill only through a fresh native `vg-worker` subagent
+context. Request a native worktree only when it solves a file-ownership conflict; return
+the patch/commit
 identity so the primary validates the integrated candidate.
 
 Return only:

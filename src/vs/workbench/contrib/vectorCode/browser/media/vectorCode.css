@@ -1020,6 +1020,7 @@ body,
 }
 
 .vector-code-project-switcher__project-select {
+	box-sizing: border-box;
 	background: transparent;
 	border: 0;
 	color: inherit;

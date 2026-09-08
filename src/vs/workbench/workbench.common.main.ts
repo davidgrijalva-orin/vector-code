@@ -350,6 +350,7 @@ import './contrib/welcomeViews/common/newFile.contribution.js';
 
 // Vector Code
 import './contrib/vectorCode/browser/vectorCode.contribution.js';
+import './contrib/vectorCode/browser/vectorGraphTickets.contribution.js';
 
 // Call Hierarchy
 import './contrib/callHierarchy/browser/callHierarchy.contribution.js';

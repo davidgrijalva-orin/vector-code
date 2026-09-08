@@ -65,6 +65,9 @@ import { ILoggerService, ILogService } from '../../platform/log/common/log.js';
 import { IMenubarMainService, MenubarMainService } from '../../platform/menubar/electron-main/menubarMainService.js';
 import { INativeHostMainService, NativeHostMainService } from '../../platform/native/electron-main/nativeHostMainService.js';
 import { IVectorCodeCodexBridgeService, VECTOR_CODE_CODEX_BRIDGE_CHANNEL } from '../../platform/vectorCodeCodex/common/vectorCodeCodexBridge.js';
+import { VectorGraphChannel } from '../../platform/vectorGraph/common/vectorGraphIpc.js';
+import { IVectorGraphService, VECTOR_GRAPH_CHANNEL } from '../../platform/vectorGraph/common/vectorGraph.js';
+import { VectorGraphMainService } from '../../platform/vectorGraph/electron-main/vectorGraphMainService.js';
 import { VectorCodeCodexBridgeMainService } from '../../platform/vectorCodeCodex/electron-main/vectorCodeCodexBridgeMainService.js';
 import { IVectorCodeMobileRelayBridgeService, VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL } from '../../platform/vectorCodeMobile/common/vectorCodeMobileRelayBridge.js';
 import { VectorCodeMobileRelayBridgeMainService } from '../../platform/vectorCodeMobile/electron-main/vectorCodeMobileRelayBridgeMainService.js';
@@ -1052,6 +1055,7 @@ export class CodeApplication extends Disposable {
 
 		// Native Host
 		services.set(INativeHostMainService, new SyncDescriptor(NativeHostMainService, undefined, false /* proxied to other processes */));
+		services.set(IVectorGraphService, new SyncDescriptor(VectorGraphMainService));
 		services.set(IVectorCodeCodexBridgeService, new SyncDescriptor(VectorCodeCodexBridgeMainService, undefined, false /* proxied to other processes */));
 		services.set(IVectorCodeMobileRelayBridgeService, new SyncDescriptor(VectorCodeMobileRelayBridgeMainService, undefined, false /* proxied to other processes */));
 
@@ -1228,6 +1232,7 @@ export class CodeApplication extends Disposable {
 		mainProcessElectronServer.registerChannel('nativeHost', nativeHostChannel);
 		sharedProcessClient.then(client => client.registerChannel('nativeHost', nativeHostChannel));
 
+		mainProcessElectronServer.registerChannel(VECTOR_GRAPH_CHANNEL, new VectorGraphChannel(accessor.get(IVectorGraphService)));
 		const vectorCodeCodexBridgeChannel = ProxyChannel.fromService(accessor.get(IVectorCodeCodexBridgeService), disposables);
 		mainProcessElectronServer.registerChannel(VECTOR_CODE_CODEX_BRIDGE_CHANNEL, vectorCodeCodexBridgeChannel);
 

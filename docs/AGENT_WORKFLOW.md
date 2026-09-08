@@ -42,8 +42,10 @@ The primary runs deterministic validation, requests one independent review for
 meaningful changes, resolves findings, checks every criterion and delivery gate,
 then updates the ticket. Critical/High fixes get one focused follow-up review.
 
-Codex project configuration selects `gpt-5.6-sol` with `medium` reasoning. Claude
-subagents inherit the session model; Sol is not a Claude model identifier.
+Codex project and native agent configurations select Astra (`gpt-6-astra`) with
+`medium` reasoning. Use Fable 5.1 for Claude Code sessions; Claude subagents inherit
+the session model. Select Fable 5.1 in Claude Code when starting the session; these
+Markdown instructions do not switch the running model.
 Mandatory product/CI reviews still apply. Existing user settings and permissions
 are preserved; project configuration loads according to each tool's normal trust
 rules. No background service or scheduler is installed. Fresh sessions resume

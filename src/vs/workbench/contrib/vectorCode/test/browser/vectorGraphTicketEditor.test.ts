@@ -41,7 +41,7 @@ suite('VectorGraph ticket editor', () => {
 		strictEqual(rendered.element.querySelector('h2')?.textContent, 'Acceptance criteria');
 		strictEqual(rendered.element.querySelector('strong')?.textContent, 'Keep project flow');
 		strictEqual(rendered.element.querySelector('script'), null);
-		strictEqual(rendered.element.querySelector('img[src^="https:"]'), null);
+		strictEqual(rendered.element.querySelector('img'), null);
 		strictEqual(rendered.element.querySelector('a[data-href^="command:"]'), null);
 	});
 

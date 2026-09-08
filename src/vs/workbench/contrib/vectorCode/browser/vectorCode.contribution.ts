@@ -52,6 +52,7 @@ import {
 	VectorCodeCodexConnectionState,
 	VectorCodeMobileConnectionState
 } from '../common/vectorCode.js';
+import { VectorCodeProjectSwitcher } from './vectorCodeProjectSwitcher.js';
 import './vectorCodeActions.js';
 import './vectorCodeCodexService.js';
 import './vectorCodeMobileRelayService.js';
@@ -108,77 +109,20 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 		super.renderBody(container);
 		container.classList.add('vector-code-projects-view');
 
-		const root = append(container, $('.vector-code-project-switcher'));
-		const header = append(root, $('.vector-code-project-switcher__header'));
-		const status = append(header, $('.vector-code-project-switcher__status'));
-		const addButton = this.renderIconButton(header, localize('vectorCodeAddProject', 'Add Project'), Codicon.add);
-		this._register(addDisposableListener(addButton, EventType.CLICK, () => {
-			void this.commandService.executeCommand(VECTOR_CODE_ADD_PROJECT_COMMAND_ID);
+		const switcher = this._register(new VectorCodeProjectSwitcher(container, {
+			add: () => this.commandService.executeCommand(VECTOR_CODE_ADD_PROJECT_COMMAND_ID),
+			select: project => this.vectorCodeWorkbenchService.switchProject(project.uri),
+			close: project => this.vectorCodeWorkbenchService.closeProject(project.uri),
+			onError: error => this.notificationService.error(error)
 		}));
-
-		const projectList = append(root, $('.vector-code-project-switcher__list'));
-		const projectListDisposables = this._register(new DisposableStore());
-		const updateProjects = () => {
-			status.textContent = this.vectorCodeWorkbenchService.getProjectStatusLabel();
-			this.renderProjectList(projectList, projectListDisposables);
-		};
+		const updateProjects = () => switcher.update(
+			this.vectorCodeWorkbenchService.getProjectSummaries(),
+			this.vectorCodeWorkbenchService.getActiveProjectUri(),
+			this.vectorCodeWorkbenchService.getProjectStatusLabel()
+		);
 		updateProjects();
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(updateProjects));
-	}
-
-	private renderProjectList(container: HTMLElement, disposables: DisposableStore): void {
-		disposables.clear();
-		clearNode(container);
-		const projects = this.vectorCodeWorkbenchService.getProjectSummaries();
-		if (!projects.length) {
-			const empty = append(container, $('.vector-code-project-switcher__empty'));
-			empty.textContent = localize('vectorCodeProjectsListEmpty', 'Add a project to populate the file tree.');
-			return;
-		}
-
-		const activeProjectUri = this.vectorCodeWorkbenchService.getActiveProjectUri()?.toString();
-
-		for (const project of projects) {
-			const projectUri = project.uri.toString();
-			const item = document.createElement('div');
-			item.className = 'vector-code-project-switcher__project';
-			item.classList.toggle('vector-code-project-switcher__project--active', projectUri === activeProjectUri);
-			item.title = `${project.name}\n${project.uriLabel}`;
-			const selectButton = document.createElement('button');
-			selectButton.className = 'vector-code-project-switcher__project-select';
-			selectButton.type = 'button';
-			selectButton.setAttribute('aria-label', localize('vectorCodeSelectProject', 'Select {0}', project.name));
-			const name = append(selectButton, $('.vector-code-project-switcher__project-name'));
-			name.textContent = project.name;
-			const path = append(selectButton, $('.vector-code-project-switcher__project-path'));
-			path.textContent = project.uriLabel;
-			path.title = project.uriLabel;
-			item.appendChild(selectButton);
-			const closeButton = this.renderIconButton(item, localize('vectorCodeCloseProject', 'Close {0}', project.name), Codicon.close);
-			closeButton.classList.add('vector-code-project-switcher__project-close');
-			container.appendChild(item);
-
-			disposables.add(addDisposableListener(selectButton, EventType.CLICK, () => {
-				void this.vectorCodeWorkbenchService.switchProject(project.uri);
-			}));
-			disposables.add(addDisposableListener(closeButton, EventType.CLICK, event => {
-				event.stopPropagation();
-				void this.vectorCodeWorkbenchService.closeProject(project.uri);
-			}));
-		}
-	}
-
-	private renderIconButton(container: HTMLElement, title: string, icon: ThemeIcon): HTMLButtonElement {
-		const button = document.createElement('button');
-		button.className = 'vector-code-project-switcher__icon-button';
-		button.type = 'button';
-		button.title = title;
-		button.setAttribute('aria-label', title);
-		const iconNode = append(button, $('.vector-code-project-switcher__icon'));
-		iconNode.classList.add(...ThemeIcon.asClassNameArray(icon));
-		container.appendChild(button);
-		return button;
 	}
 }
 

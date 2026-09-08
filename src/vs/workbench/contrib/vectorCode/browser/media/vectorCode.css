@@ -1034,8 +1034,8 @@ body,
 }
 
 .vector-code-project-switcher__project-select:focus-visible,
-.vector-code-project-switcher__project-close:focus-visible {
-	outline: 1px solid #37d6c2;
+.vector-code-project-switcher__icon-button:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: 2px;
 }
 
@@ -3216,7 +3216,7 @@ body,
 	border: 1px solid var(--vectorcode-tab-border) !important;
 	border-radius: var(--vectorcode-tab-radius) !important;
 	color: var(--vectorcode-tab-text) !important;
-	grid-template-rows: 14px 12px !important;
+	grid-template-rows: minmax(0, 1fr) !important;
 	height: 38px !important;
 	min-height: 30px !important;
 	padding: 4px 7px 4px 16px !important;
@@ -4128,4 +4128,14 @@ body,
 
 .vector-code-codex__button-icon {
 	font-size: 13px;
+}
+
+/* Keep recovery guidance readable in the existing narrow project pane. */
+.vector-code-project-switcher__empty {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.vector-code-project-switcher button[aria-busy="true"] {
+	cursor: progress;
 }

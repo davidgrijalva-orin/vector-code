@@ -35,8 +35,9 @@ Required applicable nested instructions still apply; do not broadly reload conte
 
 Codex discovers `.agents/skills/`; Claude Code discovers `.claude/skills/`.
 Keep matching skill files identical. Native `vg-worker` and `vg-reviewer` agents
-use bounded, fresh contexts. Codex project defaults are Sol Medium; Claude agents
-inherit the configured capable model. Do not escalate ordinary work automatically.
+use bounded, fresh contexts. Use Astra (`gpt-6-astra`) with medium reasoning for
+Codex. Use Fable 5.1 for Claude Code sessions; Claude agents inherit that session
+model. Do not escalate ordinary work automatically.
 
 
 This file provides instructions for AI coding agents working with the VectorCode workbench codebase.

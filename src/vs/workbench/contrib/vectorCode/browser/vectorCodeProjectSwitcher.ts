@@ -36,6 +36,7 @@ export class VectorCodeProjectSwitcher extends Disposable {
 	private readonly empty: HTMLElement;
 	private readonly addButton: HTMLButtonElement;
 	private readonly rows = new Map<string, IProjectRow>();
+	private lastSelection: HTMLButtonElement | undefined;
 
 	constructor(container: HTMLElement, private readonly actions: IProjectActions) {
 		super();
@@ -110,7 +111,7 @@ export class VectorCodeProjectSwitcher extends Disposable {
 		const close = this.createIconButton(element, '', Codicon.close);
 		close.classList.add('vector-code-project-switcher__project-close');
 		const row: IProjectRow = { project, element, select, close, name, path, disposables: new DisposableStore() };
-		this.registerAction(select, () => this.actions.select(row.project), row.disposables);
+		this.registerAction(select, () => this.actions.select(row.project), row.disposables, true);
 		this.registerAction(close, () => this.actions.close(row.project), row.disposables);
 		return row;
 	}
@@ -124,25 +125,35 @@ export class VectorCodeProjectSwitcher extends Disposable {
 		return button;
 	}
 
-	private registerAction(button: HTMLButtonElement, action: () => Promise<unknown>, disposables: DisposableStore): void {
-		let pending = false;
+	private registerAction(button: HTMLButtonElement, action: () => Promise<unknown>, disposables: DisposableStore, selection = false): void {
+		let pending = 0;
 		disposables.add(addDisposableListener(button, EventType.CLICK, async event => {
 			event.stopPropagation();
-			if (pending) {
+			if (pending && (!selection || this.lastSelection === button)) {
 				return;
 			}
-			pending = true;
-			// Keep the control focusable while preventing repeated activation.
-			button.setAttribute('aria-disabled', 'true');
+			pending++;
+			if (selection) {
+				// A -> B -> A is a new choice even while the first A is pending.
+				this.lastSelection = button;
+			} else {
+				button.setAttribute('aria-disabled', 'true');
+			}
 			button.setAttribute('aria-busy', 'true');
 			try {
 				await action();
 			} catch (error) {
-				this.actions.onError(localize('vectorCodeProjectActionFailed', 'Unable to complete the project action. Try again. {0}', toErrorMessage(error)));
+				if (!disposables.isDisposed && !this._store.isDisposed) {
+					this.actions.onError(localize('vectorCodeProjectActionFailed', 'Unable to complete the project action. Try again. {0}', toErrorMessage(error)));
+				}
 			} finally {
-				pending = false;
-				button.removeAttribute('aria-disabled');
-				button.removeAttribute('aria-busy');
+				if (--pending === 0) {
+					button.removeAttribute('aria-disabled');
+					button.removeAttribute('aria-busy');
+					if (this.lastSelection === button) {
+						this.lastSelection = undefined;
+					}
+				}
 			}
 		}));
 	}

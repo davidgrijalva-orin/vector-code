@@ -141,6 +141,34 @@ suite('VectorCodeProjectSwitcher', () => {
 		strictEqual(calls, 2);
 	});
 
+	test('rapid A to B to A preserves the final choice and its busy state', async () => {
+		const requests: { project: string; completion: DeferredPromise<void> }[] = [];
+		select = project => {
+			const completion = new DeferredPromise<void>();
+			requests.push({ project: project.name, completion });
+			return completion.p;
+		};
+		button('Select Alpha').click();
+		button('Select Beta').click();
+		button('Select Alpha').click();
+		button('Select Alpha').click();
+		deepStrictEqual(requests.map(request => request.project), ['Alpha', 'Beta', 'Alpha']);
+		await requests[0].completion.complete();
+		strictEqual(button('Select Alpha').getAttribute('aria-busy'), 'true');
+		await requests[1].completion.complete();
+		await requests[2].completion.complete();
+		strictEqual(button('Select Alpha').hasAttribute('aria-busy'), false);
+	});
+
+	test('a disposed view does not report a late action failure', async () => {
+		const pending = new DeferredPromise<void>();
+		select = () => pending.p;
+		button('Select Beta').click();
+		switcher.dispose();
+		await pending.error(new Error('Late failure'));
+		deepStrictEqual(errors, []);
+	});
+
 	test('close actions do not select the project and removed controls cannot run', async () => {
 		let selected = 0;
 		let closed = 0;

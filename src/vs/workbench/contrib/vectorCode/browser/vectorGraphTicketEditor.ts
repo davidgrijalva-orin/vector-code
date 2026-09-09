@@ -92,7 +92,7 @@ export class VectorGraphTicketEditor extends EditorPane {
 			const article = append(this.root, $('article.vector-graph-ticket-editor__article'));
 			const toolbar = append(article, $('.vector-graph-ticket-editor__toolbar'));
 			append(toolbar, $('span')).textContent = ticket.identifier;
-			this.action(toolbar, localize('ticketRefresh', 'Refresh'), () => { void this.load(input, token); });
+			this.action(toolbar, localize('ticketRefresh', 'Refresh'), () => this.reload(input));
 			append(article, $('h1')).textContent = ticket.title;
 			const metadata = append(article, $('.vector-graph-ticket-editor__metadata'));
 			for (const value of [ticket.status, ticket.priority, ticket.project].filter(Boolean)) { append(metadata, $('span')).textContent = value!; }
@@ -108,8 +108,11 @@ export class VectorGraphTicketEditor extends EditorPane {
 		} catch (error) {
 			if (generation !== this.generation || token.isCancellationRequested || this.input !== input || this._store.isDisposed) { return; }
 			status.textContent = toErrorMessage(error);
-			this.action(this.root, localize('ticketRetry', 'Retry'), () => { void this.load(input, token); });
+			this.action(this.root, localize('ticketRetry', 'Retry'), () => this.reload(input));
 		}
+	}
+	private reload(input: VectorGraphTicketInput): void {
+		void this.load(input, CancellationToken.None);
 	}
 	private action(parent: HTMLElement, label: string, run: () => void): void {
 		const button = append(parent, $<HTMLButtonElement>('button'));

@@ -4,13 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { strictEqual } from 'assert';
+import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { EditorInputCapabilities } from '../../../../common/editor.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { VectorGraphTicketInput, VectorGraphTicketSerializer, renderVectorGraphMarkdown } from '../../browser/vectorGraphTicketEditor.js';
+import { VectorGraphTicketEditor, VectorGraphTicketInput, VectorGraphTicketSerializer, renderVectorGraphMarkdown } from '../../browser/vectorGraphTicketEditor.js';
 
 import { MarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
 import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
+import { IVectorGraphService } from '../../../../../platform/vectorGraph/common/vectorGraph.js';
+import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
+import { TestThemeService } from '../../../../../platform/theme/test/common/testThemeService.js';
+import { TestStorageService } from '../../../../test/common/workbenchTestServices.js';
+import { TestEditorGroupView } from '../../../../test/browser/workbenchTestServices.js';
 
 suite('VectorGraph ticket editor', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
@@ -43,6 +49,30 @@ suite('VectorGraph ticket editor', () => {
 		strictEqual(rendered.element.querySelector('script'), null);
 		strictEqual(rendered.element.querySelector('img'), null);
 		strictEqual(rendered.element.querySelector('a[data-href^="command:"]'), null);
+	});
+	test('refresh remains active after the setInput token is cancelled', async () => {
+		let request = 0;
+		const graph = {
+			getTicket: async () => ({
+				identifier: 'VC-52', title: `Ticket request ${++request}`, status: 'In Progress', category: 'started', priority: 'high', project: '', description: '', comments: []
+			})
+		} as unknown as IVectorGraphService;
+		const opener = { open: async () => true } as unknown as IOpenerService;
+		const editor = store.add(new VectorGraphTicketEditor(
+			new TestEditorGroupView(1), NullTelemetryService, new TestThemeService(), store.add(new TestStorageService()),
+			graph, new MarkdownRendererService(opener), opener));
+		const container = document.createElement('div');
+		editor.create(container);
+		const input = store.add(new VectorGraphTicketInput(workspace, 'VC-52'));
+		const setInputCancellation = store.add(new CancellationTokenSource());
+		await editor.setInput(input, undefined, Object.create(null), setInputCancellation.token);
+		strictEqual(container.querySelector('h1')?.textContent, 'Ticket request 1');
+
+		setInputCancellation.cancel();
+		container.querySelector<HTMLButtonElement>('button')!.click();
+		await Promise.resolve();
+		strictEqual(request, 2);
+		strictEqual(container.querySelector('h1')?.textContent, 'Ticket request 2');
 	});
 
 });

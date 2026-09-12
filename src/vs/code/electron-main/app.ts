@@ -65,6 +65,8 @@ import { ILoggerService, ILogService } from '../../platform/log/common/log.js';
 import { IMenubarMainService, MenubarMainService } from '../../platform/menubar/electron-main/menubarMainService.js';
 import { INativeHostMainService, NativeHostMainService } from '../../platform/native/electron-main/nativeHostMainService.js';
 import { VectorGraphRepositoryAccess } from '../../platform/vectorGraph/electron-main/vectorGraphRepositoryAccess.js';
+import { IVectorCodeLibraryService, VECTOR_CODE_LIBRARY_CHANNEL, VectorCodeLibraryChannel } from '../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { VectorCodeLibraryMainService } from '../../platform/vectorCode/electron-main/vectorCodeLibraryMainService.js';
 import { VectorGraphChannel } from '../../platform/vectorGraph/common/vectorGraphIpc.js';
 import { IVectorGraphService, VECTOR_GRAPH_CHANNEL } from '../../platform/vectorGraph/common/vectorGraph.js';
 import { VectorGraphMainService } from '../../platform/vectorGraph/electron-main/vectorGraphMainService.js';
@@ -1054,6 +1056,7 @@ export class CodeApplication extends Disposable {
 
 		// Native Host
 		services.set(INativeHostMainService, new SyncDescriptor(NativeHostMainService, undefined, false /* proxied to other processes */));
+		services.set(IVectorCodeLibraryService, new SyncDescriptor(VectorCodeLibraryMainService));
 		services.set(IVectorGraphService, new SyncDescriptor(VectorGraphMainService));
 		services.set(IVectorCodeMobileRelayBridgeService, new SyncDescriptor(VectorCodeMobileRelayBridgeMainService, undefined, false /* proxied to other processes */));
 
@@ -1231,6 +1234,7 @@ export class CodeApplication extends Disposable {
 		sharedProcessClient.then(client => client.registerChannel('nativeHost', nativeHostChannel));
 
 		const vectorGraphRepositoryAccess = accessor.get(IInstantiationService).createInstance(VectorGraphRepositoryAccess);
+		mainProcessElectronServer.registerChannel(VECTOR_CODE_LIBRARY_CHANNEL, new VectorCodeLibraryChannel(accessor.get(IVectorCodeLibraryService)));
 		mainProcessElectronServer.registerChannel(VECTOR_GRAPH_CHANNEL, new VectorGraphChannel(accessor.get(IVectorGraphService), vectorGraphRepositoryAccess.authorize.bind(vectorGraphRepositoryAccess)));
 
 		const vectorCodeMobileRelayBridgeChannel = ProxyChannel.fromService(accessor.get(IVectorCodeMobileRelayBridgeService), disposables);

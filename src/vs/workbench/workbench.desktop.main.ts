@@ -196,3 +196,6 @@ import './contrib/keybindingsExport/electron-browser/keybindingsExport.contribut
 
 
 export { main } from './electron-browser/desktop.main.js';
+
+import '../platform/vectorCode/electron-browser/vectorCodeLibraryService.js';
+import './contrib/vectorCode/browser/vectorCodeLibrary.contribution.js';

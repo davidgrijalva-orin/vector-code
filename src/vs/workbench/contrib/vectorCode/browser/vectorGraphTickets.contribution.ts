@@ -32,6 +32,7 @@ import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IVectorGraphWorkService, VECTOR_GRAPH_DETAILS_VIEW } from '../common/vectorGraphWork.js';
 import './vectorGraphDetails.contribution.js';
 import './vectorGraphDocuments.contribution.js';
+import { isWeb } from '../../../../base/common/platform.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { VECTOR_GRAPH_BINDING_KEY as BINDING_KEY, readVectorGraphBinding } from '../common/vectorGraphBinding.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
@@ -117,6 +118,7 @@ export class VectorGraphTicketsView extends ViewPane {
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 		this.root = append(container, $('.vector-graph-tickets'));
+		if (!isWeb) { this.button(this.root, localize('openLocalWork', 'Open Local Work'), () => this.instantiationService.invokeFunction(accessor => accessor.get(ICommandService).executeCommand('vectorCode.openLocalWork'))); }
 		this.account = append(this.root, $('.vector-graph-tickets__account'));
 		const accountActions = append(this.root, $('.vector-graph-tickets__toolbar'));
 		this.signInButton = this.button(accountActions, localize('vectorGraphSignInAction', 'Sign in to VectorGraph'), () => this.signIn());

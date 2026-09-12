@@ -105,9 +105,11 @@ bounded contract; they are not implied by opening a remote project.
 The owner accepted a useful account-free core with optional connected context,
 continuity and collaboration. The local API must support core capture/organization/
 recovery without a Graph credential or network dependency. Local service packaging,
-local indexing/capture implementation, speech/model availability, and the account
-identity integration still require concrete design and validation. No new provider, dependency, local
-database, sign-in flow, or synchronization service is selected by this note.
+capture implementation, speech/model availability, and the account identity
+integration still require concrete design and validation. The first implementation
+uses a bounded atomic local journal through a versioned IPC service, with no new
+dependency or provider. See [local library contracts, workflows and limits](local-work-library.md).
+No sign-in flow or synchronization service is selected by this note.
 
 ## Optional assignment and moving captured work
 

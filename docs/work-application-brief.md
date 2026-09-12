@@ -75,8 +75,10 @@ system. A simple account experience should not require learning the Graph websit
 
 Product validation should observe whether people complete useful work before
 signup, return to continue the same project, and voluntarily choose a connected
-benefit. No account-free library, inbox, recorder, model, sync, or retention result
-is claimed as implemented by this decision.
+benefit. The first [local library implementation](local-work-library.md) now covers
+projects, notes, inbox, native editing/recovery, moves, search and Markdown export.
+Recording, model integration, sync, packaged acceptance and retention results are
+not established by these source changes.
 
 ## Implementation sequence and acceptance
 

@@ -886,6 +886,10 @@ export class EncodingOracle extends Disposable implements IResourceEncodings {
 	}
 
 	private getEncodingOverride(resource: URI | undefined): string | undefined {
+		// API documents always carry UTF-8, regardless of local file encoding preferences.
+		if (resource?.scheme === Schemas.vectorGraphDocument) {
+			return UTF8;
+		}
 		if (resource && this.encodingOverrides?.length) {
 			for (const override of this.encodingOverrides) {
 

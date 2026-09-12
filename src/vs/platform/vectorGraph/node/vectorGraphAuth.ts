@@ -144,8 +144,11 @@ export class VectorGraphAuth extends Disposable {
 		if (response.status === 429 || response.status >= 500) {
 			throw new VectorGraphConnectionError('VectorGraph is temporarily unavailable. Retry shortly.');
 		}
+		if (response.status === 409) {
+			throw new Error('VectorGraph rejected a conflicting change. Your edits are preserved. Compare or reload the latest version before saving.');
+		}
 		if (!response.ok) {
-			throw new Error(response.status === 401 || response.status === 403 ? 'VectorGraph access expired or is not authorized. Sign in again and authorize the workspace.' : `VectorGraph could not complete the request (${response.status}). Sign in again.`);
+			throw new Error(response.status === 401 || response.status === 403 ? 'VectorGraph access expired or is not authorized. Sign in again and authorize the workspace.' : `VectorGraph could not complete the request (${response.status}).`);
 		}
 		try { return { status: response.status, body: await response.json() }; }
 		catch { throw new Error('VectorGraph returned an invalid response. Sign in again.'); }

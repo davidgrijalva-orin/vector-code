@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { validateVectorGraphDocumentSave } from './vectorGraphDocuments.js';
 import { Event } from '../../../base/common/event.js';
 import { IServerChannel } from '../../../base/parts/ipc/common/ipc.js';
 import { validateVectorGraphPatch, IVectorGraphIssueDraft } from './vectorGraphWork.js';
@@ -17,7 +18,7 @@ export class VectorGraphChannel implements IServerChannel {
 		throw new Error('Unsupported VectorGraph event.');
 	}
 	async call<T>(context: unknown, command: string, args: unknown): Promise<T> {
-		if (!Array.isArray(args) || args.some((arg, index) => arg !== undefined && typeof arg !== 'string' && !((command === 'createTicket' && index === 1) || (command === 'updateTicket' && index === 2)))) {
+		if (!Array.isArray(args) || args.some((arg, index) => arg !== undefined && typeof arg !== 'string' && !((command === 'createTicket' && index === 1) || (command === 'updateTicket' && index === 2) || (command === 'saveDocument' && index === 2)))) {
 			return Promise.reject(new Error('Invalid VectorGraph arguments.'));
 		}
 		const repositoryIndex = command === 'linkPullRequest' ? 2 : ['getRepositoryState', 'createBranch', 'discoverRepository'].includes(command) ? 0 : undefined;
@@ -28,6 +29,10 @@ export class VectorGraphChannel implements IServerChannel {
 		}
 		let result: Promise<unknown>;
 		switch (command) {
+			case 'listDocuments': result = this.service.listDocuments(args[0]); break;
+			case 'getDocument': result = this.service.getDocument(args[0], args[1]); break;
+			case 'createDocument': result = this.service.createDocument(args[0], args[1], args[2], args[3], args[4]); break;
+			case 'saveDocument': result = this.service.saveDocument(args[0], args[1], validateVectorGraphDocumentSave(args[2]), args[3]); break;
 			case 'getSession': result = this.service.getSession(); break;
 			case 'beginSignIn': result = this.service.beginSignIn(); break;
 			case 'pollSignIn': result = this.service.pollSignIn(); break;

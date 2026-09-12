@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IVectorGraphDocumentSave } from '../common/vectorGraphDocuments.js';
 import { Emitter } from '../../../base/common/event.js';
 import { VectorGraphOperations, getVectorGraphRepositoryState, createVectorGraphBranch } from '../node/vectorGraphOperations.js';
 import { IVectorGraphIssueDraft, IVectorGraphIssuePatch, vectorGraphId } from '../common/vectorGraphWork.js';
@@ -33,6 +34,11 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 		this.onDidChangeSession = this.auth.onDidChangeSession;
 		this.operations = new VectorGraphOperations(this.auth.call.bind(this.auth));
 	}
+	listDocuments(workspace: string) { return this.operations.listDocuments(workspace); }
+	getDocument(workspace: string, document: string) { return this.operations.getDocument(workspace, document); }
+	createDocument(workspace: string, team: string, project: string, title: string, requestId: string) { return this.operations.createDocument(workspace, team, project, title, requestId); }
+	saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) { return this.operations.saveDocument(workspace, document, save, requestId); }
+
 	getSession() { return this.auth.getSession(); }
 	beginSignIn() { return this.auth.beginSignIn(); }
 	pollSignIn() { return this.auth.pollSignIn(); }

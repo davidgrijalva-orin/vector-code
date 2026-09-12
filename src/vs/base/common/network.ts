@@ -11,6 +11,9 @@ import * as paths from './path.js';
 
 export namespace Schemas {
 
+	/** VectorGraph documents use the API's UTF-8 Markdown representation. */
+	export const vectorGraphDocument = 'vectorgraph-document';
+
 	/**
 	 * A schema that is used for models that exist in memory
 	 * only and that have no correspondence on a server or such.

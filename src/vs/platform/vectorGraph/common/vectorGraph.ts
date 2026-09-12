@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IVectorGraphDocument, IVectorGraphDocumentSave } from './vectorGraphDocuments.js';
 import { IVectorGraphProject, IVectorGraphTeamMetadata, IVectorGraphIssueDraft, IVectorGraphIssuePatch, IVectorGraphRepositoryState } from './vectorGraphWork.js';
 import { Event } from '../../../base/common/event.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
@@ -50,6 +51,11 @@ export interface IVectorGraphTicketDetail extends IVectorGraphTicket {
 }
 export interface IVectorGraphService {
 	readonly _serviceBrand: undefined;
+	listDocuments(workspace: string): Promise<readonly IVectorGraphDocument[]>;
+	getDocument(workspace: string, document: string): Promise<IVectorGraphDocument>;
+	createDocument(workspace: string, team: string, project: string, title: string, requestId: string): Promise<IVectorGraphDocument>;
+	saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string): Promise<IVectorGraphDocument>;
+
 	readonly onDidChangeSession: Event<void>;
 	readonly onDidChangeTickets: Event<{ workspace: string; identifier: string }>;
 	getSession(): Promise<IVectorGraphSession>;

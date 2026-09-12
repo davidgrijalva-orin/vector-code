@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { deepStrictEqual, rejects, strictEqual } from 'assert';
-import { CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
+import { ICommandService, CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { isResourceEditorInput } from '../../../../common/editor.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
@@ -17,6 +17,8 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../../pla
 import { IVectorGraphBinding, IVectorGraphService } from '../../../../../platform/vectorGraph/common/vectorGraph.js';
 import { TestStorageService } from '../../../../test/common/workbenchTestServices.js';
 import { IVectorCodeWorkbenchService } from '../../common/vectorCode.js';
+import { readWorkProjectFolders, resolveWorkProjectFolders, workProjectFolderKey, writeWorkProjectFolders } from '../../common/vectorCodeWorkProject.js';
+import { manageWorkProjectFolders, workProjectFolderItems } from '../../browser/vectorCodeWorkProject.js';
 import { VECTOR_GRAPH_BINDING_KEY } from '../../common/vectorGraphBinding.js';
 import { chooseDocumentWorkProject, readDocumentBinding, VectorGraphDocumentContext } from '../../browser/vectorGraphDocumentContext.js';
 
@@ -35,7 +37,8 @@ suite('VectorGraph work projects without local folders', () => {
 		const calls: string[] = [];
 		const projects = {
 			getActiveProjectUri: () => localProject,
-			onDidChangeActiveProject: changedProject.event
+			onDidChangeActiveProject: changedProject.event,
+			getProjectSummaries: () => []
 		} as unknown as IVectorCodeWorkbenchService;
 		const graph = {
 			onDidChangeSession: account.event,
@@ -159,5 +162,123 @@ suite('VectorGraph work projects without local folders', () => {
 		// Selecting one folder does not remove the other folder's association.
 		deepStrictEqual(readDocumentBinding(f.storage, folders[0].toString()), readDocumentBinding(f.storage, folders[1].toString()));
 	});
+
+	test('one stable work project retains multiple folders, including closed resources, and can return to zero folders', () => {
+		const f = fixture();
+		const folders = [URI.file('/research').toString(), URI.file('/assets').toString()];
+		const key = workProjectFolderKey(binding);
+		writeWorkProjectFolders(f.storage, binding, [...folders, folders[0]]);
+		deepStrictEqual(readWorkProjectFolders(f.storage, binding), folders);
+		const items = workProjectFolderItems(f.storage, binding, [{ name: 'Research', uri: URI.parse(folders[0]), uriLabel: '/research' }]);
+		deepStrictEqual(items.map(item => item.open), [true, false]);
+		writeWorkProjectFolders(f.storage, binding, []);
+		strictEqual(workProjectFolderKey(binding), key);
+		deepStrictEqual(readWorkProjectFolders(f.storage, binding), []);
+	});
+
+	test('folder membership is isolated by workspace and team as well as project id', () => {
+		const f = fixture();
+		writeWorkProjectFolders(f.storage, binding, ['file:///research']);
+		strictEqual(readWorkProjectFolders(f.storage, { ...binding, workspace: { ...binding.workspace, id: 'another-workspace' } }), undefined);
+		strictEqual(readWorkProjectFolders(f.storage, { ...binding, team: { ...binding.team, id: 'another-team' } }), undefined);
+	});
+
+	test('legacy associations migrate by project identity and explicit removal stays removed', () => {
+		const f = fixture(); const folder = 'file:///research';
+		f.storage.store(VECTOR_GRAPH_BINDING_KEY + folder, binding, StorageScope.PROFILE, StorageTarget.MACHINE);
+		deepStrictEqual(resolveWorkProjectFolders(f.storage, binding, [folder, 'file:///other']), [folder]);
+		writeWorkProjectFolders(f.storage, binding, []);
+		deepStrictEqual(resolveWorkProjectFolders(f.storage, binding, [folder]), []);
+		// Migration never rewrites the legacy binding or its local execution state.
+		deepStrictEqual(f.storage.getObject(VECTOR_GRAPH_BINDING_KEY + folder, StorageScope.PROFILE), binding);
+	});
+
+	test('folder membership editing keeps closed resources and cancellation leaves membership intact', async () => {
+		const f = fixture(); const first = URI.file('/research'); const second = URI.file('/assets');
+		writeWorkProjectFolders(f.storage, binding, [first.toString()]);
+		const open = [{ name: 'Assets', uri: second, uriLabel: '/assets' }];
+		const quick = {
+			pick: async (items: { uri: string; picked: boolean }[]) => {
+				deepStrictEqual(items.map(item => item.picked), [true, false]); return items;
+			}
+		} as unknown as IQuickInputService;
+		await manageWorkProjectFolders(f.storage, quick, binding, open, () => true);
+		deepStrictEqual(readWorkProjectFolders(f.storage, binding), [first.toString(), second.toString()]);
+		await manageWorkProjectFolders(f.storage, { pick: async () => undefined } as unknown as IQuickInputService, binding, [], () => true);
+		deepStrictEqual(readWorkProjectFolders(f.storage, binding), [first.toString(), second.toString()]);
+		await manageWorkProjectFolders(f.storage, { pick: async () => [] } as unknown as IQuickInputService, binding, [], () => false);
+		deepStrictEqual(readWorkProjectFolders(f.storage, binding), [first.toString(), second.toString()]);
+	});
+
+	test('membership changes invalidate pending document actions even when restored', async () => {
+		const f = fixture();
+		await chooseDocumentWorkProject(f.graph, f.quick, f.storage, () => true);
+		const folder = URI.file('/research'); f.setLocal(folder);
+		writeWorkProjectFolders(f.storage, binding, [folder.toString()]);
+		const selection = store.add(new VectorGraphDocumentContext(f.storage, f.projects, f.graph));
+		deepStrictEqual(selection.binding, binding);
+		writeWorkProjectFolders(f.storage, binding, []);
+		writeWorkProjectFolders(f.storage, binding, [folder.toString()]);
+		strictEqual(selection.isCurrent(), false);
+	});
+
+	test('explicit work-project document action targets the selected project while another local folder is active', async () => {
+		const f = fixture();
+		await chooseDocumentWorkProject(f.graph, f.quick, f.storage, () => true);
+		f.setLocal(URI.file('/unrelated'));
+		strictEqual(readDocumentBinding(f.storage, f.projects.getActiveProjectUri()!.toString()), undefined);
+		let created = 0;
+		f.graph.createDocument = async (workspace, team, project, title) => {
+			deepStrictEqual([workspace, team, project], [binding.workspace.id, binding.team.id, binding.project!.id]); created++;
+			return { id: binding.team.id, title, body: '', teamId: team, projectIds: [project], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
+		};
+		const inst = store.add(new TestInstantiationService());
+		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
+		inst.stub(IQuickInputService, { input: async () => 'Brief' }); inst.stub(IEditorService, { openEditor: async () => undefined });
+		await inst.invokeFunction(accessor => CommandsRegistry.getCommand('vectorCode.newDocument')!.handler(accessor, true));
+		strictEqual(created, 1);
+	});
+
+	test('the grouped project picker routes documents explicitly without switching local folders', async () => {
+		const f = fixture();
+		await chooseDocumentWorkProject(f.graph, f.quick, f.storage, () => true);
+		writeWorkProjectFolders(f.storage, binding, ['file:///research', 'file:///assets']);
+		const inst = store.add(new TestInstantiationService());
+		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
+		inst.stub(IQuickInputService, {
+			pick: async (items, options) => {
+				strictEqual(options!.title, binding.project!.name);
+				strictEqual(options!.placeHolder!.startsWith('2 folders'), true);
+				return (await items)[0];
+			}
+		});
+		let dispatched = false;
+		inst.stub(ICommandService, {
+			executeCommand: async (command, ...args) => {
+				strictEqual(command, 'vectorCode.openDocuments'); deepStrictEqual(args, [true]); dispatched = true; return undefined;
+			}
+		});
+		await inst.invokeFunction(accessor => CommandsRegistry.getCommand('vectorCode.showWorkProject')!.handler(accessor));
+		strictEqual(dispatched, true);
+	});
+
+	for (const available of [true, false]) {
+		test(`grouped folder selection ${available ? 'uses existing switching' : 'refuses a closed resource'}`, async () => {
+			const f = fixture(); const folder = URI.file('/research');
+			await chooseDocumentWorkProject(f.graph, f.quick, f.storage, () => true);
+			writeWorkProjectFolders(f.storage, binding, [folder.toString()]);
+			f.projects.getProjectSummaries = () => available ? [{ name: 'Research', uri: folder, uriLabel: '/research' }] : [];
+			let switched = false;
+			f.projects.switchProject = async uri => { strictEqual(uri!.toString(), folder.toString()); switched = true; };
+			const inst = store.add(new TestInstantiationService());
+			inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
+			inst.stub(IQuickInputService, { pick: async items => (await items).at(-1) });
+			inst.stub(ICommandService, { executeCommand: async () => { throw new Error('No command expected'); } });
+			const run = async () => inst.invokeFunction(accessor => CommandsRegistry.getCommand('vectorCode.showWorkProject')!.handler(accessor));
+			if (available) { await run(); } else { await rejects(run(), /Add it to this window/); }
+			strictEqual(switched, available);
+			deepStrictEqual(readWorkProjectFolders(f.storage, binding), [folder.toString()]);
+		});
+	}
 
 });

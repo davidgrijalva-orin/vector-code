@@ -5,6 +5,7 @@
 
 import { localize, localize2 } from '../../../../nls.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
+import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
@@ -17,6 +18,8 @@ import { IVectorGraphDocument } from '../../../../platform/vectorGraph/common/ve
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
+import { readSelectedWorkProject } from '../common/vectorCodeWorkProject.js';
+import { manageWorkProjectFolders, workProjectFolderItems } from './vectorCodeWorkProject.js';
 import { chooseDocumentWorkProject, VectorGraphDocumentContext } from './vectorGraphDocumentContext.js';
 import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem, vectorGraphDocumentResource } from './vectorGraphDocumentFileSystem.js';
 
@@ -25,14 +28,14 @@ class VectorGraphDocumentsContribution extends Disposable {
 	constructor(@IFileService files: IFileService, @IInstantiationService instantiation: IInstantiationService) { super(); const provider = this._register(instantiation.createInstance(VectorGraphDocumentFileSystem)); this._register(files.registerProvider(VECTOR_GRAPH_DOCUMENT_SCHEME, provider)); }
 }
 registerWorkbenchContribution2(VectorGraphDocumentsContribution.ID, VectorGraphDocumentsContribution, WorkbenchPhase.BlockStartup);
-function context(accessor: ServicesAccessor) {
+function context(accessor: ServicesAccessor, workProject = false) {
 	const projects = accessor.get(IVectorCodeWorkbenchService);
 	const storage = accessor.get(IStorageService); const graph = accessor.get(IVectorGraphService);
-	const selection = new VectorGraphDocumentContext(storage, projects, graph);
+	const selection = new VectorGraphDocumentContext(storage, projects, graph, workProject);
 	const binding = selection.binding;
 	if (!binding) {
 		selection.dispose();
-		throw new Error(localize('documentChooseWorkspace', 'Choose a linked project in Work, or use Open Work Project in an empty window.'));
+		throw new Error(localize('documentChooseWorkspace', 'Choose a linked project in Work, or use Open Work Project.'));
 	}
 	return { selection, storage, binding, graph, quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService) };
 }
@@ -44,17 +47,16 @@ registerAction2(class extends Action2 {
 		const storage = accessor.get(IStorageService); const quick = accessor.get(IQuickInputService); const commands = accessor.get(ICommandService);
 		const selection = new VectorGraphDocumentContext(storage, projects, graph);
 		try {
-			if (selection.localProject) { throw new Error(localize('workProjectEmptyWindow', 'Open an empty window to work without a local folder. Use Work to link an existing local project.')); }
 			const binding = await chooseDocumentWorkProject(graph, quick, storage, () => selection.isCurrent());
-			if (binding) { await commands.executeCommand('vectorCode.openDocuments'); }
+			if (binding) { await commands.executeCommand('vectorCode.showWorkProject'); }
 		} finally { selection.dispose(); }
 	}
 });
 async function openDocument(editors: IEditorService, workspace: string, document: IVectorGraphDocument): Promise<void> { await editors.openEditor({ resource: vectorGraphDocumentResource(workspace, document.id), label: document.title, description: 'VectorGraph', options: { pinned: true } }); }
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.openDocuments', title: localize2('openDocuments', 'VectorGraph: Open Document'), f1: true }); }
-	async run(accessor: ServicesAccessor): Promise<void> {
-		const value = context(accessor);
+	async run(accessor: ServicesAccessor, workProject = false): Promise<void> {
+		const value = context(accessor, workProject);
 		try {
 			const documents = await value.graph.listDocuments(value.binding.workspace.id);
 			if (!unchanged(value)) { return; }
@@ -69,8 +71,8 @@ registerAction2(class extends Action2 {
 });
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.newDocument', title: localize2('newDocument', 'VectorGraph: New Document'), f1: true }); }
-	async run(accessor: ServicesAccessor): Promise<void> {
-		const value = context(accessor);
+	async run(accessor: ServicesAccessor, workProject = false): Promise<void> {
+		const value = context(accessor, workProject);
 		try {
 			const projectId = value.binding.project?.id;
 			if (!projectId) { throw new Error(localize('documentChooseProject', 'Choose a linked project in Work before creating a document.')); }
@@ -83,5 +85,35 @@ registerAction2(class extends Action2 {
 			value.storage.remove(key, StorageScope.PROFILE);
 			if (unchanged(value)) { await openDocument(value.editors, value.binding.workspace.id, document); }
 		} finally { value.selection.dispose(); }
+	}
+});
+
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.showWorkProject', title: localize2('showWorkProject', 'VectorGraph: Show Work Project'), f1: true }); }
+	async run(accessor: ServicesAccessor): Promise<void> {
+		const projects = accessor.get(IVectorCodeWorkbenchService); const storage = accessor.get(IStorageService);
+		const graph = accessor.get(IVectorGraphService); const quick = accessor.get(IQuickInputService); const commands = accessor.get(ICommandService);
+		const binding = readSelectedWorkProject(storage);
+		if (!binding) { await commands.executeCommand('vectorCode.openWorkProject'); return; }
+		const selection = new VectorGraphDocumentContext(storage, projects, graph, true);
+		try {
+			const folders = workProjectFolderItems(storage, binding, projects.getProjectSummaries());
+			const action = await quick.pick([
+				{ label: localize('workProjectOpenDocument', 'Open Document'), command: 'vectorCode.openDocuments', folder: undefined },
+				{ label: localize('workProjectNewDocument', 'New Document'), command: 'vectorCode.newDocument', folder: undefined },
+				{ label: localize('workProjectManageFolders', 'Manage Folders…'), command: 'folders', folder: undefined },
+				{ label: localize('workProjectChange', 'Choose Another Work Project…'), command: 'vectorCode.openWorkProject', folder: undefined },
+				...folders.map(folder => ({ label: folder.label, description: folder.description, command: '', folder }))
+			], { title: binding.project!.name, placeHolder: localize('workProjectResources', '{0} folders • {1} / {2}', folders.length, binding.workspace.name, binding.team.name) });
+			if (!action || !selection.isCurrent()) { return; }
+			if (action.folder) {
+				if (!projects.getProjectSummaries().some(folder => folder.uri.toString() === action.folder!.uri)) {
+					throw new Error(localize('workProjectFolderUnavailable', 'This folder is still associated with the project. Add it to this window to open it.'));
+				}
+				await projects.switchProject(URI.parse(action.folder.uri));
+			} else if (action.command === 'folders') {
+				await manageWorkProjectFolders(storage, quick, binding, projects.getProjectSummaries(), () => selection.isCurrent());
+			} else { await commands.executeCommand(action.command, true); }
+		} finally { selection.dispose(); }
 	}
 });

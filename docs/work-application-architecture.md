@@ -49,16 +49,28 @@ is the shared work identity. Closing one folder must not delete the project, its
 artifacts or other folder associations. An Electron/VS Code workspace and its local folders are client
 execution resources, not tenants or authoritative project identities.
 
-The first slice stores a selected Graph workspace/team/project in the empty
-window's workspace-scoped presentation storage. Existing folder-to-Graph bindings
-retain their profile-scoped owner and take precedence when a folder is active.
-This slice proves shared document context for multiple folder bindings; it does
-not yet group those folders under one native project-navigation entry. That shell
-and persistence migration must preserve existing per-folder editor/terminal state.
-A local folder is not synthesized for a remote project. Never pass that project
-selection to a filesystem, terminal, relay, or device execution API. Account and
-project changes invalidate pending selection/create dialogs, including switching
-away and back. Every server call still enforces its own authorization.
+The client stores the selected Graph workspace/team/project in workspace-scoped
+presentation storage. Optional folder associations use a profile-scoped machine
+record keyed by that full tuple, independent of the first folder URI. A project
+can retain an explicit empty list and closed folder references. Legacy bindings
+for currently open folders are offered as the initial membership without rewriting
+them; a saved empty list does not silently re-import removed folders.
+
+The grouped **Show Work Project** picker exposes documents and associated folders.
+Its document commands explicitly use the selected work project, including when an
+unrelated local folder is active. Ordinary document commands preserve legacy
+folder context unless that active folder belongs to the selected work project.
+Folder membership changes invalidate pending document dialogs, alongside account,
+project and binding changes, including switching away and back. Every server call
+still enforces its own authorization.
+
+This is a command-palette integration, not the completed persistent rail migration.
+The legacy file/terminal/mobile model still identifies individual folder resources
+by URI; this change neither passes Graph IDs to that model nor widens its access.
+Choosing a listed folder delegates to the existing validated folder switcher only
+if it is currently open. Managing associations does not open/close folders, read
+files, change trust, terminate terminals, or delete artifacts. VC-60 rail integration
+must preserve these boundaries and the user's per-folder editor/terminal state.
 
 Graph owns global users and workspace memberships. Voice owns organization/user
 records, WorkOS membership/FGA checks and session/device grants. Sharing WorkOS

@@ -41,8 +41,12 @@ state and separately authorized local access during that migration.
 7. Explain permission denials, generation/save failures, cancellation, uncertain
    completion, and retry without duplicate artifacts or revisions.
 
-The first bounded native slice opens **existing** VectorGraph projects from an
-empty window using **VectorGraph: Open Work Project**, then reuses **New Document**
+The first bounded native slice opens **existing** VectorGraph projects using
+**VectorGraph: Open Work Project**, with or without local folders.
+**VectorGraph: Show Work Project** groups its document actions and folder resources
+in one picker. **Manage Folders** associates zero-to-many folders already open in
+the window and retains previously associated closed folders. Removing an association
+does not close/delete a folder or delete the work project. It reuses **New Document**
 and **Open Document**, native Markdown text editing, Save, and hot-exit recovery.
 New project creation is available in the web client; native project creation is
 not included in this slice. Command-palette entry is an initial integration point,
@@ -55,6 +59,15 @@ design editor. Preserve the useful web rich document client. Choose native/web
 scope by workflow priority rather than reproducing every API surface.
 
 ## Agent and voice boundary
+
+Owner confirmed the combined desktop direction: VectorCode supplies one desktop
+surface, and recording/transcription from VectorVoice becomes a project capability
+inside that surface. The existing Voice application remains functional during
+migration. The first integrated voice flow is record, stop/cancel, transcribe,
+review the transcript, draft/revise a selected document, and save through Graph.
+Live spoken responses and barge-in follow separately; they are not implemented by
+the existing recording/transcription pipeline. Frontends consume versioned Voice
+HTTP contracts rather than importing its services or provider implementations.
 
 Current source removed VectorCode's chat/Codex runtime. Do not restore it or
 reactivate retired profiles by implication. The execution choice must be explicit:

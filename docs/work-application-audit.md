@@ -101,11 +101,16 @@ The current credential returns **403, missing planning:read** for `listApiProjec
 Saved profiles expose only HomePlatform and VectorCode; bindings for Graph, Voice
 and Platform engineering work are not verified. No substitute workspace is used.
 Cross-repository implementation tickets must wait for their verified bindings.
+Read-only browser inspection also reached the authenticated current VectorGraph
+Docs interface in workspace Vector. This proves that interface is accessible in
+that browser session; it does not verify a CLI binding, QA mutation permission,
+release commit, or the new desktop candidate.
 
 ## Smallest implementation sequence
 
-1. **VectorCode / VC-61:** record this brief/ADR; select an existing work project in
-   an empty window; reuse new/open/save document actions. Validate no-folder context,
+1. **VectorCode / VC-61:** record this brief/ADR; select an existing work project
+   independently of local folders; group documents and zero-to-many folder associations
+   in the project picker; reuse new/open/save document actions. Validate no-folder context,
    cancellation/account switches, permission errors, and existing save/retry behavior.
 2. **VectorCode execution owner, Graph contract owner:** choose the bounded text
    execution path; fetch only selected documents/revisions, generate a draft, apply
@@ -121,7 +126,14 @@ Cross-repository implementation tickets must wait for their verified bindings.
    grant. No required Platform extraction unless two consumers demonstrate it.
 5. **Later:** budget/chart, then presentation. Design capability requires separate scope.
 
-Unresolved material decisions: external adapter versus a new built-in text runner;
+Unresolved material decision: extend Voice's existing configured AI service with a
+document-generation operation, or use the installed Codex CLI through a bounded
+local adapter. The first avoids a separate drafting engine for text and voice but
+needs a new Voice contract: its current IntelligenceProvider only analyzes meeting
+transcripts and returns summary/decisions/action items. The second requires an
+explicitly scoped new local adapter and must not restore retired configuration.
+Neither path is supplied by Graph's current authorized API operation dispatcher.
+Other unresolved integration work:
 real grant/account mapping for Voice; final shell integration and non-development
 editing usability. Full offline document sync and universal artifact editors are
 outside this milestone. See the ADR for the proposed action contract and explicit

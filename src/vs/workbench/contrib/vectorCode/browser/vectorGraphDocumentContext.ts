@@ -10,13 +10,15 @@ import { IStorageService, StorageScope, StorageTarget } from '../../../../platfo
 import { IVectorGraphBinding, IVectorGraphService } from '../../../../platform/vectorGraph/common/vectorGraph.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { VECTOR_GRAPH_BINDING_KEY, readVectorGraphBinding } from '../common/vectorGraphBinding.js';
-
-const WORK_PROJECT_KEY = 'vectorGraph.document.workProject';
+import { readSelectedWorkProject, readWorkProjectFolders, VECTOR_CODE_WORK_PROJECT_KEY, workProjectFolderKey } from '../common/vectorCodeWorkProject.js';
 
 /** A selected backend project is presentation state, never a local execution grant. */
 export function readDocumentBinding(storage: IStorageService, localProject: string | undefined): IVectorGraphBinding | undefined {
-	if (localProject) { return readVectorGraphBinding(storage, localProject); }
-	return storage.getObject<IVectorGraphBinding>(WORK_PROJECT_KEY, StorageScope.WORKSPACE);
+	const selected = readSelectedWorkProject(storage);
+	if (localProject) {
+		return selected && readWorkProjectFolders(storage, selected)?.includes(localProject) ? selected : readVectorGraphBinding(storage, localProject);
+	}
+	return selected;
 }
 
 /** Invalidates pending dialogs even when a user switches away and back again. */
@@ -28,16 +30,20 @@ export class VectorGraphDocumentContext extends Disposable {
 		private readonly storage: IStorageService,
 		private readonly projects: IVectorCodeWorkbenchService,
 		graph: IVectorGraphService,
+		private readonly workProject = false,
 	) {
 		super();
 		this.localProject = projects.getActiveProjectUri()?.toString();
-		this.binding = readDocumentBinding(storage, this.localProject);
+		this.binding = workProject ? readSelectedWorkProject(storage) : readDocumentBinding(storage, this.localProject);
 		this._register(projects.onDidChangeActiveProject(() => { this.valid = false; }));
 		this._register(graph.onDidChangeSession(() => { this.valid = false; }));
-		this._register(storage.onDidChangeValue(this.localProject ? StorageScope.PROFILE : StorageScope.WORKSPACE, this.localProject ? VECTOR_GRAPH_BINDING_KEY + this.localProject : WORK_PROJECT_KEY, this._store)(() => { this.valid = false; }));
+		this._register(storage.onDidChangeValue(StorageScope.WORKSPACE, VECTOR_CODE_WORK_PROJECT_KEY, this._store)(() => { this.valid = false; }));
+		if (this.localProject) { this._register(storage.onDidChangeValue(StorageScope.PROFILE, VECTOR_GRAPH_BINDING_KEY + this.localProject, this._store)(() => { this.valid = false; })); }
+		const selected = readSelectedWorkProject(storage);
+		if (selected) { this._register(storage.onDidChangeValue(StorageScope.PROFILE, workProjectFolderKey(selected), this._store)(() => { this.valid = false; })); }
 	}
 	isCurrent(): boolean {
-		const binding = readDocumentBinding(this.storage, this.localProject);
+		const binding = this.workProject ? readSelectedWorkProject(this.storage) : readDocumentBinding(this.storage, this.localProject);
 		return this.valid && this.localProject === this.projects.getActiveProjectUri()?.toString()
 			&& binding?.workspace.id === this.binding?.workspace.id
 			&& binding?.team.id === this.binding?.team.id
@@ -45,7 +51,7 @@ export class VectorGraphDocumentContext extends Disposable {
 	}
 }
 
-/** Select an existing work project in an empty window; no folder, Git or terminal APIs. */
+/** Select an existing work project; no folder, Git or terminal APIs. */
 export async function chooseDocumentWorkProject(
 	graph: IVectorGraphService,
 	quick: IQuickInputService,
@@ -68,6 +74,6 @@ export async function chooseDocumentWorkProject(
 	const project = await quick.pick(projects.map(value => ({ label: value.name, value })), { placeHolder: localize('workProjectChoose', 'Open a work project') });
 	if (!project || !isCurrent()) { return; }
 	const binding = { workspace: workspace.value, team: team.value, project: project.value };
-	storage.store(WORK_PROJECT_KEY, binding, StorageScope.WORKSPACE, StorageTarget.MACHINE);
+	storage.store(VECTOR_CODE_WORK_PROJECT_KEY, binding, StorageScope.WORKSPACE, StorageTarget.MACHINE);
 	return binding;
 }

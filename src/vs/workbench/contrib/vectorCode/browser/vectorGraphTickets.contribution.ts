@@ -115,7 +115,7 @@ export class VectorGraphTicketsView extends ViewPane {
 		});
 		const toolbar = append(this.root, $('.vector-graph-tickets__toolbar'));
 		this.configureButton = this.button(toolbar, localize('vectorGraphConnect', 'Choose Workspace'), () => this.configure());
-		this.refreshButton = this.button(toolbar, localize('vectorGraphRefresh', 'Refresh'), () => this.refresh());
+		this.refreshButton = this.button(toolbar, localize('vectorGraphRefresh', 'Refresh'), () => { this.discoveryProject = undefined; return this.refresh(); });
 		this.status = append(this.root, $('.vector-graph-tickets__status'));
 		this.status.setAttribute('role', 'status');
 		this.search = append(this.root, $<HTMLInputElement>('input.vector-graph-tickets__search'));
@@ -168,7 +168,7 @@ export class VectorGraphTicketsView extends ViewPane {
 			if (this._store.isDisposed) { return; }
 			this.session = session;
 			this.renderAccount();
-			if (session.authorization) { await this.graphOpener.open(session.authorization.url, { openExternal: true }); }
+			if (session.authorization) { await this.graphOpener.open(session.authorization.url, { openExternal: true, skipValidation: true, allowContributedOpeners: false }); }
 		} catch (error) { this.notifications.error(error); }
 		finally { this.signingIn = false; if (!this._store.isDisposed) { this.signInButton.disabled = false; } }
 	}
@@ -299,6 +299,9 @@ export class VectorGraphTicketsView extends ViewPane {
 		clearNode(this.list);
 		this.ticketButtons = [];
 		const binding = this.binding();
+		const connected = !!this.session.workspaces.length;
+		this.search.hidden = !connected || !binding;
+		this.category.hidden = this.search.hidden;
 		const visible = filterVectorGraphTickets(this.tickets, this.search.value, this.category.value);
 		for (const ticket of visible) {
 			const item = append(this.list, $('.vector-graph-tickets__item'));
@@ -315,13 +318,13 @@ export class VectorGraphTicketsView extends ViewPane {
 			this.listDisposables.add(addDisposableListener(button, EventType.CLICK, () => { if (binding) { void this.openTicket(binding, ticket); } }));
 			if (focusedId === ticket.identifier) { button.focus(); }
 		}
-		if (!visible.length && !this.loading && binding) {
+		if (!visible.length && !this.loading && binding && connected) {
 			append(this.list, $('.vector-graph-tickets__empty')).textContent = this.tickets.length ? localize('vectorGraphNoMatch', 'No loaded tickets match these filters.') : localize('vectorGraphNoTickets', 'No tickets to show. Refresh to check again.');
 		}
 		this.list.setAttribute('aria-busy', String(this.loading));
 		this.moreButton.hidden = !this.cursor;
 		this.moreButton.disabled = this.loading;
-		this.refreshButton.disabled = this.loading || !binding;
+		this.refreshButton.disabled = this.loading || !this.projectKey() || !connected;
 	}
 
 	private async openTicket(binding: IVectorGraphBinding, ticket: IVectorGraphTicket): Promise<void> {
@@ -342,7 +345,12 @@ export class VectorGraphTicketsView extends ViewPane {
 		return button;
 	}
 
-	override focus(): void { super.focus(); (this.search ?? this.configureButton)?.focus(); }
+	override focus(): void {
+		super.focus();
+		if (!this.session.workspaces.length) { this.signInButton?.focus(); }
+		else if (this.search?.hidden) { this.configureButton?.focus(); }
+		else { this.search?.focus(); }
+	}
 	override dispose(): void { this.generation++; super.dispose(); }
 }
 

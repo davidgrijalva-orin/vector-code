@@ -45,6 +45,28 @@ suite('MCP registry gallery', () => {
 		await rejects(gallery(async () => response({ wrong: [] })).query(), /serialize/);
 	});
 
+
+	test('rejects partially malformed pages and missing metadata without TypeErrors', async () => {
+		await rejects(gallery(async () => response({ servers: [server, { invalid: true }], metadata: { count: 2 } })).query(), /serialize/);
+		await rejects(gallery(async () => response({ servers: [{ server: server.server }], metadata: { count: 1 } })).query(), /serialize/);
+	});
+
+
+	test('legacy flat responses without registry metadata use the invalid-response path', async () => {
+		const legacy = { ...manifest, getMcpGalleryManifest: async () => ({ ...(await manifest.getMcpGalleryManifest())!, version: 'v0' }) };
+		const service = store.add(new McpGalleryService({ request: async () => response({ servers: [server.server], metadata: { count: 1 } }) } as IRequestService, {} as IFileService, store.add(new NullLogService()), legacy));
+		await rejects(service.query(), /serialize/);
+	});
+
+	test('rejects missing or malformed pagination metadata', async () => {
+		for (const metadata of [undefined, null, { count: 1, nextCursor: [] }]) {
+			await rejects(gallery(async () => response({ servers: [server], metadata })).query(), /serialize/);
+		}
+	});
+	test('does not repeatedly append a page with an unchanged cursor', async () => {
+		const pager = await gallery(async () => response({ servers: [server], metadata: { count: 1, nextCursor: 'same' } })).query();
+		await rejects(pager.getNextPage(CancellationToken.None), /unchanged pagination cursor/);
+	});
 	test('a valid empty page remains empty', async () => {
 		const pager = await gallery(async () => response({ servers: [], metadata: { count: 0 } })).query();
 		deepStrictEqual(pager.firstPage, { items: [], hasMore: false });

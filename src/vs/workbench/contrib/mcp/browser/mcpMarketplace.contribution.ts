@@ -41,7 +41,7 @@ import { ITextFileService } from '../../../services/textfile/common/textfiles.js
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { VIEWLET_ID } from '../../extensions/common/extensions.js';
 import { IVectorCodeWorkbenchService } from '../../vectorCode/common/vectorCode.js';
-import { mcpInstallEdits, mcpInstallOptions, readMcpConfiguration } from '../common/mcpMarketplaceConfiguration.js';
+import { mcpInstallEdits, mcpInstallOptions, mcpRemoveEdits, readMcpConfiguration } from '../common/mcpMarketplaceConfiguration.js';
 import './mcpMarketplace.css';
 
 export const MCP_MARKETPLACE_VIEW_ID = 'vectorCode.mcpMarketplace';
@@ -196,7 +196,7 @@ export class McpMarketplaceView extends ViewPane {
 				throw new Error(localize('mcpRemoveChanged', 'The project or configuration changed. Review it and try again.'));
 			}
 			if (!this.trust.isWorkspaceTrusted()) { throw new Error(localize('mcpRemoveTrust', 'Trust this workspace before changing its MCP configuration.')); }
-			await this.json.write(resource, [{ path: ['servers', name], value: undefined }], true);
+			await this.json.write(resource, mcpRemoveEdits(name, before), true);
 			await this.showInstalled();
 		} finally { this.installing = false; }
 	}

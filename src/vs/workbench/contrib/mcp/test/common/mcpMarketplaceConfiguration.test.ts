@@ -6,7 +6,7 @@
 import { deepStrictEqual, strictEqual, throws } from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { GalleryMcpServerStatus, IGalleryMcpServer, RegistryType, TransportType } from '../../../../../platform/mcp/common/mcpManagement.js';
-import { mcpInstallEdits, mcpInstallOptions, readMcpConfiguration } from '../../common/mcpMarketplaceConfiguration.js';
+import { mcpInstallEdits, mcpInstallOptions, mcpRemoveEdits, readMcpConfiguration } from '../../common/mcpMarketplaceConfiguration.js';
 
 suite('MCP marketplace configuration', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
@@ -16,6 +16,31 @@ suite('MCP marketplace configuration', () => {
 		configuration: { packages: [{ registryType: RegistryType.NODE, identifier: '@example/test', version: '1.2.3', transport: { type: TransportType.STDIO } }] }
 	};
 
+
+	test('replaces repeated variables in headers and both argument forms', () => {
+		const variables = { token: { description: 'Token', isSecret: true } };
+		const remote: IGalleryMcpServer = { ...server, configuration: { remotes: [{ type: TransportType.STREAMABLE_HTTP, url: 'https://example.test/mcp', headers: [{ name: 'Authorization', value: '{token}:{token}', variables }] }] } };
+		const result = mcpInstallEdits(remote, RegistryType.REMOTE, '{}')[0].value as { headers: Record<string, string> };
+		strictEqual(result.headers.Authorization, '${input:io.example%2Ftest:token}:${input:io.example%2Ftest:token}');
+		for (const type of ['positional', 'named'] as const) {
+			const local: IGalleryMcpServer = { ...server, configuration: { packages: [{ ...server.configuration.packages![0], packageArguments: [{ type, name: '--token', value: '{token}:{token}', variables }] }] } };
+			const result = mcpInstallEdits(local, RegistryType.NODE, '{}')[0].value as { args: string[] };
+			strictEqual(result.args.at(-1), '${input:io.example%2Ftest:token}:${input:io.example%2Ftest:token}');
+		}
+	});
+
+	test('removal clears owned prompts so a server can be reinstalled', () => {
+		const edits = mcpRemoveEdits(server.name, JSON.stringify({ servers: { [server.name]: {} }, inputs: [{ id: 'io.example%2Ftest:token' }, { id: 'other' }] }));
+		deepStrictEqual(edits, [{ path: ['servers', server.name], value: undefined }, { path: ['inputs'], value: [{ id: 'other' }] }]);
+		const remaining = JSON.stringify({ servers: {}, inputs: edits[1].value });
+		const withPrompt: IGalleryMcpServer = { ...server, configuration: { remotes: [{ type: TransportType.STREAMABLE_HTTP, url: 'https://example.test/mcp', headers: [{ name: 'token', isSecret: true }] }] } };
+		strictEqual(mcpInstallEdits(withPrompt, RegistryType.REMOTE, remaining).length, 2);
+	});
+
+	test('removal keeps prompts referenced by another server', () => {
+		const text = JSON.stringify({ servers: { [server.name]: {}, other: { env: { TOKEN: '${input:io.example%2Ftest:token}' } } }, inputs: [{ id: 'io.example%2Ftest:token' }] });
+		deepStrictEqual(mcpRemoveEdits(server.name, text), [{ path: ['servers', server.name], value: undefined }]);
+	});
 	test('preserves JSONC and unrelated configuration with targeted edits', () => {
 		const text = '{ // keep comment\n "servers": {"existing": {"command":"test"}}, "inputs": [], "custom": true, }';
 		const edits = mcpInstallEdits(server, RegistryType.NODE, text);

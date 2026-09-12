@@ -52,6 +52,14 @@ interface IRawGalleryMcpServersMetadata {
 	readonly nextCursor?: string;
 }
 
+function isValidRegistryMetadata(value: unknown): boolean {
+	if (!value || typeof value !== 'object') { return false; }
+	const metadata = value as { count?: unknown; nextCursor?: unknown; next_cursor?: unknown };
+	return typeof metadata.count === 'number' && Number.isInteger(metadata.count) && metadata.count >= 0
+		&& (metadata.nextCursor === undefined || typeof metadata.nextCursor === 'string')
+		&& (metadata.next_cursor === undefined || typeof metadata.next_cursor === 'string');
+}
+
 interface IRawGalleryMcpServersResult {
 	readonly metadata: IRawGalleryMcpServersMetadata;
 	readonly servers: readonly IRawGalleryMcpServer[];
@@ -252,6 +260,7 @@ namespace McpServerSchemaVersion_v2025_07_09 {
 			}
 
 			const from = <RawGalleryMcpServersResult>input;
+			if (!isValidRegistryMetadata(from.metadata)) { return undefined; }
 
 			const servers: IRawGalleryMcpServer[] = [];
 			for (const server of from.servers) {
@@ -291,6 +300,7 @@ namespace McpServerSchemaVersion_v2025_07_09 {
 			}
 
 			const registryInfo = from._meta?.['io.modelcontextprotocol.registry/official'];
+			if (!registryInfo) { return undefined; }
 
 			function convertServerInput(input: RawGalleryMcpServerInput): IMcpServerInput {
 				return {
@@ -381,7 +391,7 @@ namespace McpServerSchemaVersion_v2025_07_09 {
 				}
 			}
 
-			const gitHubInfo: RawGitHubInfo | undefined = from._meta['io.modelcontextprotocol.registry/publisher-provided']?.github as RawGitHubInfo | undefined;
+			const gitHubInfo: RawGitHubInfo | undefined = from._meta?.['io.modelcontextprotocol.registry/publisher-provided']?.github as RawGitHubInfo | undefined;
 
 			return {
 				id: registryInfo.id,
@@ -562,16 +572,13 @@ namespace McpServerSchemaVersion_v0_1 {
 			}
 
 			const from = <RawGalleryMcpServersResult>input;
+			if (!isValidRegistryMetadata(from.metadata)) { return undefined; }
 
 			const servers: IRawGalleryMcpServer[] = [];
 			for (const server of from.servers) {
 				const rawServer = this.toRawGalleryMcpServer(server);
 				if (!rawServer) {
-					if (servers.length === 0) {
-						return undefined;
-					} else {
-						continue;
-					}
+					return undefined;
 				}
 				servers.push(rawServer);
 			}
@@ -598,6 +605,7 @@ namespace McpServerSchemaVersion_v0_1 {
 				return undefined;
 			}
 
+			if (!from._meta || !isObject(from._meta)) { return undefined; }
 			const { 'io.modelcontextprotocol.registry/official': registryInfo, ...apicInfo } = from._meta;
 			const githubInfo = from.server._meta?.['io.modelcontextprotocol.registry/publisher-provided']?.github as IGitHubInfo | undefined;
 
@@ -742,6 +750,7 @@ export class McpGalleryService extends Disposable implements IMcpGalleryService 
 					return { items: [], hasMore: false };
 				}
 				const { servers, metadata: nextMetadata } = await this.queryGalleryMcpServers(query.withPage(currentCursor), mcpGalleryManifest, ct);
+				if (nextMetadata.nextCursor === currentCursor) { throw new Error('MCP gallery returned an unchanged pagination cursor.'); }
 				currentCursor = nextMetadata.nextCursor;
 				return { items: servers, hasMore: !!nextMetadata.nextCursor };
 			}
@@ -974,7 +983,7 @@ export class McpGalleryService extends Disposable implements IMcpGalleryService 
 		const result = this.serializeMcpServersResult(data, mcpGalleryManifest);
 
 		if (!result) {
-			throw new Error(`Failed to serialize MCP servers result from ${mcpGalleryUrl}`, data);
+			throw new Error(`Failed to serialize MCP servers result from ${mcpGalleryUrl}`, { cause: data });
 		}
 
 		return result;
@@ -1003,7 +1012,7 @@ export class McpGalleryService extends Disposable implements IMcpGalleryService 
 
 		const server = this.serializeMcpServer(data, mcpGalleryManifest);
 		if (!server) {
-			throw new Error(`Failed to serialize MCP server from ${mcpServerUrl}`, data);
+			throw new Error(`Failed to serialize MCP server from ${mcpServerUrl}`, { cause: data });
 		}
 
 		return this.toGalleryMcpServer(server, mcpGalleryManifest);

@@ -155,7 +155,7 @@ export class McpConfigurationConverter {
 			// If explicit variables exist, use them regardless of value
 			if (inputVariables.length) {
 				for (const variable of inputVariables) {
-					value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+					value = value.replaceAll(`{${variable.id}}`, () => `\${input:${variable.id}}`);
 				}
 				variables.push(...inputVariables);
 			} else if (!value && (input.isRequired || input.isSecret || input.description || input.choices || input.default !== undefined)) {
@@ -188,7 +188,7 @@ export class McpConfigurationConverter {
 				let value = arg.value;
 				if (value) {
 					for (const variable of argVariables) {
-						value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+						value = value.replaceAll(`{${variable.id}}`, () => `\${input:${variable.id}}`);
 					}
 					args.push(value);
 					if (argVariables.length) {
@@ -217,7 +217,7 @@ export class McpConfigurationConverter {
 				if (arg.value) {
 					let value = arg.value;
 					for (const variable of argVariables) {
-						value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+						value = value.replaceAll(`{${variable.id}}`, () => `\${input:${variable.id}}`);
 					}
 					args.push(value);
 					if (argVariables.length) {

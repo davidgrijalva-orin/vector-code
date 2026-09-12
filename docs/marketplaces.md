@@ -14,7 +14,7 @@ Open VSX is a separate catalog from Microsoft's Visual Studio Marketplace. Avail
 
 Expand **MCP Marketplace** inside Extensions, or run **MCP: Browse Marketplace** from the Command Palette. Search the [official MCP Registry](https://registry.modelcontextprotocol.io), inspect the publisher, version, description, and generated configuration, then choose **Install Configuration**.
 
-Installation targets the active project's `.vscode/mcp.json`. It preserves existing JSON comments, server entries, and inputs. An existing server is never silently overwritten. The **Installed** view lists configured entries and provides **Edit Configuration** and **Remove** actions. Removal preserves input definitions because another configuration may reference them.
+Installation targets the active project's `.vscode/mcp.json`. It preserves existing JSON comments, server entries, and inputs. An existing server is never silently overwritten. The **Installed** view lists configured entries and provides **Edit Configuration** and **Remove** actions. Removal cleans up that server's namespaced inputs while preserving inputs referenced by other servers.
 
 Supported install formats are HTTPS streamable HTTP remotes and stdio packages using npm, PyPI, Docker, or NuGet. Package managers must be available on the machine where a compatible MCP client runs the server. Required secrets become namespaced `${input:...}` prompts instead of storing credentials. Save or revert unsaved configuration changes before installing or removing entries. Installation requires a trusted workspace.
 

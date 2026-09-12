@@ -62,3 +62,19 @@ export function mcpInstallEdits(server: IGalleryMcpServer, type: RegistryType, t
 	if (inputs.length) { edits.push({ path: ['inputs'], value: [...(existing.inputs ?? []), ...inputs] }); }
 	return edits;
 }
+
+export function mcpRemoveEdits(name: string, text: string): IJSONValue[] {
+	const existing = readMcpConfiguration(text);
+	const remaining = { ...existing.servers };
+	delete remaining[name];
+	const references = JSON.stringify(remaining);
+	const prefix = encodeURIComponent(name) + ':';
+	const inputs = existing.inputs?.filter(input => {
+		if (!input || typeof input !== 'object') { return true; }
+		const id = (input as { id?: unknown }).id;
+		return typeof id !== 'string' || !id.startsWith(prefix) || references.includes('${input:' + id + '}');
+	});
+	const edits: IJSONValue[] = [{ path: ['servers', name], value: undefined }];
+	if (inputs && inputs.length !== existing.inputs?.length) { edits.push({ path: ['inputs'], value: inputs }); }
+	return edits;
+}

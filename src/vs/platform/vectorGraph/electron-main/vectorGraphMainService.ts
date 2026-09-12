@@ -34,6 +34,8 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 		this.onDidChangeSession = this.auth.onDidChangeSession;
 		this.operations = new VectorGraphOperations(this.auth.call.bind(this.auth));
 	}
+	listCanvases(workspace: string) { return this.operations.listCanvases(workspace); }
+	getCanvas(workspace: string, canvas: string) { return this.operations.getCanvas(workspace, canvas); }
 	listDocuments(workspace: string) { return this.operations.listDocuments(workspace); }
 	getDocument(workspace: string, document: string) { return this.operations.getDocument(workspace, document); }
 	createDocument(workspace: string, team: string, project: string, title: string, requestId: string) { return this.operations.createDocument(workspace, team, project, title, requestId); }

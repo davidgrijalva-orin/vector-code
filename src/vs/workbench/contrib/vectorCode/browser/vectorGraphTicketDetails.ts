@@ -65,12 +65,18 @@ export class VectorGraphTicketDetails extends Disposable {
 			const actions = append(article, $('.vector-graph-ticket-editor__toolbar'));
 			append(actions, $('strong')).textContent = ticket.identifier;
 			this.button(actions, localize('workRefresh', 'Refresh'), () => this.show(selection));
-			this.button(actions, localize('workEditTicket', 'Edit Ticket'), () => this.edit(selection, ticket));
-			append(article, $('h1')).textContent = ticket.title;
-			append(article, $('p')).textContent = [ticket.status, ticket.priority, ticket.project].filter(Boolean).join(' · ');
+			const editable = append(article, $('.vector-graph-ticket-inline')); const description = $('section');
+			this.button(actions, localize('workEditTicket', 'Edit Ticket'), async () => { await this.edit(selection, ticket, editable); if (this.editing) { description.hidden = true; } });
+			append(editable, $('h1')).textContent = ticket.title;
+			const metadata = append(editable, $('.vector-graph-ticket-editor__metadata'));
+			for (const [label, value] of [[localize('ticketStatusLabel', 'Status'), ticket.status], [localize('ticketAssigneeLabel', 'Assignee'), ticket.assigneeName ?? localize('ticketUnassigned', 'Unassigned')], [localize('ticketPriorityLabel', 'Priority'), ticket.priority], [localize('ticketProjectLabel', 'Project'), ticket.project]]) {
+				if (value) { const field = append(metadata, $('div')); append(field, $('small')).textContent = label; append(field, $('strong')).textContent = value; }
+			}
+
+			const workActions = append(article, $('.vector-graph-ticket-work-actions'));
 			const active = this.work.getActive(selection.project);
 			if (selection.project && selection.project === this.projects.getActiveProjectUri()?.toString()) {
-				this.button(actions, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? localize('workStopWork', 'Stop Work') : localize('workStartWork', 'Start Work'), async () => {
+				this.button(workActions, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? localize('workStopWork', 'Stop Work') : localize('workStartWork', 'Start Work'), async () => {
 					this.assertProject(selection);
 					this.work.setActive(selection.project, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? undefined : { workspace: selection.workspace, identifier: ticket.identifier });
 					await this.show(selection);
@@ -78,7 +84,7 @@ export class VectorGraphTicketDetails extends Disposable {
 				if (active?.workspace === selection.workspace && active.identifier === ticket.identifier) { await this.development(article, selection, generation); }
 			}
 			if (generation !== this.generation || this._store.isDisposed) { return; }
-			append(article, $('h2')).textContent = localize('workDescription', 'Description'); this.renderMarkdown(article, ticket.description || localize('workNoDescriptionProvided', 'No description provided.'));
+			append(article, description); append(description, $('h2')).textContent = localize('workDescription', 'Description'); this.renderMarkdown(description, ticket.description || localize('workNoDescriptionProvided', 'No description provided.'));
 			if (ticket.links?.length) {
 				append(article, $('h2')).textContent = localize('workLinkedWork', 'Linked work');
 				for (const link of ticket.links) { if (/^https:\/\//i.test(link.url)) { this.button(article, link.title, async () => { await this.opener.open(link.url, { allowCommands: false, allowContributedOpeners: false, fromUserGesture: true }); }); } }
@@ -94,34 +100,52 @@ export class VectorGraphTicketDetails extends Disposable {
 			}));
 		} catch (error) { if (generation === this.generation && !this._store.isDisposed) { this.status.textContent = toErrorMessage(error); } }
 	}
-	private async edit(selection: IVectorGraphSelection, ticket: IVectorGraphTicketDetail | undefined): Promise<void> {
+	private async edit(selection: IVectorGraphSelection, ticket: IVectorGraphTicketDetail | undefined, inline?: HTMLElement): Promise<void> {
 		const generation = this.generation;
 		const team = ticket?.teamId ?? selection.binding?.team.id;
 		if (!team || (!ticket && !selection.binding?.project)) { throw new Error(localize('workChooseAVectorgraphProjectInWorkBeforeCreatingATicket', 'Choose a VectorGraph project in Work before creating a ticket.')); }
 		const metadata = await this.graph.getTeamMetadata(selection.workspace, team);
 		if (generation !== this.generation || this._store.isDisposed) { return; }
-		this.editing = true; this.content.clear(); this.controls = []; clearNode(this.root);
-		this.status = append(this.root, $('p')); this.status.setAttribute('role', 'status');
-		append(this.root, $('h2')).textContent = ticket ? localize('workEditTicketTitle', 'Edit {0}', ticket.identifier) : localize('workNewTicketTitle', 'New ticket · {0}', selection.binding!.project!.name);
+		this.editing = true; const parent = inline ?? this.root; if (!inline) { this.content.clear(); this.controls = []; } clearNode(parent);
+		this.status = append(parent, $('p')); this.status.setAttribute('role', 'status');
+		append(parent, $('h2')).textContent = ticket ? localize('workEditTicketTitle', 'Edit {0}', ticket.identifier) : localize('workNewTicketTitle', 'New ticket · {0}', selection.binding!.project!.name);
 		const key = this.key(selection, 'draft');
-		let draft = this.storage.getObject<Draft>(key, StorageScope.PROFILE) ?? { title: ticket?.title ?? '', description: ticket?.description ?? '', statusId: ticket?.statusId ?? metadata.statuses.find(status => status.category === 'unstarted')?.id, priority: ticket?.priority ?? 'no_priority', assigneeUserId: ticket?.assigneeUserId ?? null, baseUpdatedAt: ticket?.updatedAt };
-		const title = this.input(this.root, localize('workTitle', 'Title'), draft.title);
-		const description = this.textarea(this.root, localize('workDescription', 'Description'), draft.description);
-		const status = this.select(this.root, localize('workStatus', 'Status'), metadata.statuses.map(value => [value.id, value.name]), draft.statusId ?? '');
-		const priority = this.select(this.root, localize('workPriority', 'Priority'), ['no_priority', 'low', 'medium', 'high', 'urgent'].map(value => [value, value.replace('_', ' ')]), draft.priority ?? 'no_priority');
-		const assignee = this.select(this.root, localize('workAssignee', 'Assignee'), [['', localize('workUnassigned', 'Unassigned')], ...metadata.members.map(value => [value.id, value.name])], draft.assigneeUserId ?? '');
-		const read = (): Draft => ({ title: title.value, description: description.value, statusId: status.value || undefined, priority: priority.value, assigneeUserId: assignee.value || null, baseUpdatedAt: draft.baseUpdatedAt });
-		for (const element of [title, description, status, priority, assignee]) { this.content.add(addDisposableListener(element, EventType.INPUT, () => this.storage.store(key, read(), StorageScope.PROFILE, StorageTarget.MACHINE))); }
+		let draft = this.storage.getObject<Draft>(key, StorageScope.PROFILE) ?? { title: ticket?.title ?? '', description: ticket?.description ?? '', statusId: ticket?.statusId ?? metadata.statuses.find(status => status.category === 'unstarted')?.id, priority: ticket?.priority ?? 'no_priority', assigneeUserId: ticket?.assigneeUserId ?? null, baseUpdatedAt: ticket?.updatedAt, projectId: ticket?.projectId ?? selection.binding?.project?.id ?? null, sprintId: ticket?.sprintId ?? null, projectMilestoneId: ticket?.projectMilestoneId ?? null, targetDate: ticket?.targetDate ?? null, parentIssueIdentifier: ticket?.parentIssueIdentifier ?? null, estimatePoints: ticket?.estimatePoints ?? null, labelIds: ticket?.labelIds ?? [] };
+		const title = this.input(parent, localize('workTitle', 'Title'), draft.title);
+		const description = this.textarea(parent, localize('workDescription', 'Description'), draft.description);
+		const status = this.select(parent, localize('workStatus', 'Status'), metadata.statuses.map(value => [value.id, value.name]), draft.statusId ?? '');
+		const priority = this.select(parent, localize('workPriority', 'Priority'), ['no_priority', 'low', 'medium', 'high', 'urgent'].map(value => [value, value.replace('_', ' ')]), draft.priority ?? 'no_priority');
+		const assignee = this.select(parent, localize('workAssignee', 'Assignee'), [['', localize('workUnassigned', 'Unassigned')], ...metadata.members.map(value => [value.id, value.name])], draft.assigneeUserId ?? '');
+		const planning = metadata.planning;
+		if (metadata.planningError) { append(parent, $('p')).textContent = metadata.planningError; }
+		const fieldChoices = (values: readonly { id: string; name: string }[], current?: string | null): [string, string][] => [['', localize('ticketNoValue', 'None')], ...values.map(value => [value.id, value.name] as [string, string]), ...(current && !values.some(value => value.id === current) ? [[current, localize('ticketRetainValue', 'Current value (unavailable)')] as [string, string]] : [])];
+		const project = this.select(parent, localize('ticketProject', 'Project'), fieldChoices(planning?.projects ?? [], draft.projectId), draft.projectId ?? '');
+		const sprint = this.select(parent, localize('ticketSprint', 'Sprint'), fieldChoices(planning?.sprints ?? [], draft.sprintId), draft.sprintId ?? '');
+		const milestone = this.select(parent, localize('ticketMilestone', 'Milestone'), fieldChoices(planning?.milestones.filter(value => value.projectId === draft.projectId) ?? [], draft.projectMilestoneId), draft.projectMilestoneId ?? '');
+		for (const control of [project, sprint, milestone]) { control.disabled = !planning; }
+		this.content.add(addDisposableListener(project, EventType.CHANGE, () => { clearNode(milestone); for (const [value, label] of fieldChoices(planning?.milestones.filter(value => value.projectId === project.value) ?? [])) { const option = append(milestone, $<HTMLOptionElement>('option')); option.value = value; option.textContent = label; } }));
+		const labels = this.select(parent, localize('ticketLabels', 'Labels'), (planning?.labels ?? []).map(value => [value.id, value.name]), ''); labels.multiple = true; labels.disabled = !planning;
+		for (const option of labels.options) { option.selected = draft.labelIds?.includes(option.value) ?? false; }
+		const estimate = this.input(parent, localize('ticketEstimate', 'Estimate'), draft.estimatePoints?.toString() ?? ''); estimate.type = 'number'; estimate.min = '0'; estimate.max = '1000'; estimate.step = '1';
+		const targetDate = this.input(parent, localize('ticketTargetDate', 'Target date'), draft.targetDate ?? ''); targetDate.type = 'date';
+		const parentTicket = this.input(parent, localize('ticketParent', 'Parent ticket'), draft.parentIssueIdentifier ?? ''); parentTicket.placeholder = 'VC-123';
+		const read = (): Draft => ({
+			title: title.value, description: description.value, statusId: status.value || undefined, priority: priority.value, assigneeUserId: assignee.value || null, baseUpdatedAt: draft.baseUpdatedAt,
+			...(planning ? { projectId: project.value || null, sprintId: sprint.value || null, projectMilestoneId: milestone.value || null, labelIds: [...labels.selectedOptions].map(option => option.value) } : {}),
+			estimatePoints: estimate.value === '' ? null : Number(estimate.value), targetDate: targetDate.value || null, parentIssueIdentifier: parentTicket.value.trim() || null
+		});
+		for (const element of [title, description, status, priority, assignee, project, sprint, milestone, labels, estimate, targetDate, parentTicket]) { this.content.add(addDisposableListener(element, EventType.INPUT, () => this.storage.store(key, read(), StorageScope.PROFILE, StorageTarget.MACHINE))); }
+
 		if (ticket?.updatedAt && draft.baseUpdatedAt !== ticket.updatedAt) {
-			append(this.root, $('p')).textContent = localize('workReviewConflict', 'The saved ticket has changed. Review its latest description and fields before applying your preserved draft.');
-			this.button(this.root, localize('workRebaseDraft', 'Apply Draft to Reviewed Version'), async () => {
+			append(parent, $('p')).textContent = localize('workReviewConflict', 'The saved ticket has changed. Review its latest description and fields before applying your preserved draft.');
+			this.button(parent, localize('workRebaseDraft', 'Apply Draft to Reviewed Version'), async () => {
 				draft = { ...read(), baseUpdatedAt: ticket.updatedAt };
 				this.storage.store(key, draft, StorageScope.PROFILE, StorageTarget.MACHINE);
 				this.storage.remove(this.key(selection, 'request.save'), StorageScope.PROFILE);
-				await this.edit(selection, ticket);
+				await this.edit(selection, ticket, inline);
 			});
 		}
-		this.button(this.root, ticket ? localize('workSaveChanges', 'Save Changes') : localize('workCreateTicket', 'Create Ticket'), async () => {
+		this.button(parent, ticket ? localize('workSaveChanges', 'Save Changes') : localize('workCreateTicket', 'Create Ticket'), async () => {
 			const { baseUpdatedAt, ...patch } = read();
 			this.storage.store(key, read(), StorageScope.PROFILE, StorageTarget.MACHINE);
 			await this.mutate(selection, 'save', patch, async (requestId, dispatched, markDispatched) => {
@@ -132,14 +156,14 @@ export class VectorGraphTicketDetails extends Disposable {
 					await this.graph.updateTicket(selection.workspace, ticket.identifier, patch, requestId);
 				} else {
 					this.assertProject(selection);
-					const identifier = await this.graph.createTicket(selection.workspace, { ...patch, title: patch.title!, teamId: team, projectId: selection.binding!.project!.id }, requestId);
+					const identifier = await this.graph.createTicket(selection.workspace, { ...patch, title: patch.title!, teamId: team, projectId: patch.projectId ?? selection.binding!.project!.id }, requestId);
 					if (generation === this.generation) { this.selection = { ...selection, identifier }; this.work.select(this.selection); }
 				}
 				this.storage.remove(key, StorageScope.PROFILE);
 			});
 		});
-		this.button(this.root, localize('workBackKeepDraft', 'Back (Keep Draft)'), () => this.show(ticket ? selection : undefined));
-		this.button(this.root, localize('workDiscardDraft', 'Discard Draft'), async () => { this.storage.remove(key, StorageScope.PROFILE); await this.show(ticket ? selection : undefined); });
+		this.button(parent, localize('workBackKeepDraft', 'Back (Keep Draft)'), () => this.show(ticket ? selection : undefined));
+		this.button(parent, localize('workDiscardDraft', 'Discard Draft'), async () => { this.storage.remove(key, StorageScope.PROFILE); await this.show(ticket ? selection : undefined); });
 	}
 	private async mutate(selection: IVectorGraphSelection, operation: string, payload: object, action: (key: string, dispatched: boolean, markDispatched: () => void) => Promise<void>): Promise<void> {
 		if (this.busy) { return; }

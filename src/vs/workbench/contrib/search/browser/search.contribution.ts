@@ -53,7 +53,7 @@ const viewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewCo
 	hideIfEmpty: true,
 	icon: searchViewIcon,
 	order: 1,
-}, ViewContainerLocation.Sidebar, { doNotRegisterOpenCommand: true });
+}, ViewContainerLocation.Panel, { doNotRegisterOpenCommand: true });
 
 const viewDescriptor: IViewDescriptor = {
 	id: VIEW_ID,
@@ -74,7 +74,7 @@ const viewDescriptor: IViewDescriptor = {
 	}
 };
 
-// Register search default location to sidebar
+// Keep the optional search view outside the left rail; Find in Files uses a search editor.
 Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([viewDescriptor], viewContainer);
 
 // Register Quick Access Handler
@@ -127,7 +127,7 @@ configurationRegistry.registerConfiguration({
 		[SEARCH_MODE_CONFIG]: {
 			type: 'string',
 			enum: ['view', 'reuseEditor', 'newEditor'],
-			default: 'view',
+			default: 'reuseEditor',
 			markdownDescription: nls.localize('search.mode', "Controls where new `Search: Find in Files` and `Find in Folder` operations occur: either in the Search view, or in a search editor."),
 			enumDescriptions: [
 				nls.localize('search.mode.view', "Search in the Search view, either in the panel or side bars."),

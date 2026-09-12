@@ -54,7 +54,7 @@ suite('MCP registry gallery', () => {
 
 	test('legacy flat responses without registry metadata use the invalid-response path', async () => {
 		const legacy = { ...manifest, getMcpGalleryManifest: async () => ({ ...(await manifest.getMcpGalleryManifest())!, version: 'v0' }) };
-		const service = store.add(new McpGalleryService({ request: async () => response({ servers: [server.server], metadata: { count: 1 } }) } as IRequestService, {} as IFileService, store.add(new NullLogService()), legacy));
+		const service = store.add(new McpGalleryService({ request: async () => response({ servers: [server.server], metadata: { count: 1 } }) } as unknown as IRequestService, {} as IFileService, store.add(new NullLogService()), legacy));
 		await rejects(service.query(), /serialize/);
 	});
 

@@ -10,6 +10,7 @@ import { URI } from '../../../base/common/uri.js';
 import { IEncryptionMainService } from '../../encryption/common/encryptionService.js';
 import { IStateService } from '../../state/node/state.js';
 import { IVectorGraphService, IVectorGraphTeam, IVectorGraphTicketPage, IVectorGraphTicketDetail, IVectorGraphDiscovery, IVectorGraphBinding, parseVectorGraphTicketPage, parseVectorGraphTicketDetail, vectorGraphRecord, vectorGraphText, vectorGraphArray, vectorGraphRepositoryIdentity } from '../common/vectorGraph.js';
+import { isVectorGraphRepositoryUnavailable } from '../node/vectorGraphRepository.js';
 import { VectorGraphAuth } from '../node/vectorGraphAuth.js';
 
 /** Native adapter with an explicit read API and IDE-owned device authorization. */
@@ -51,8 +52,12 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 		const uri = URI.parse(project);
 		if (uri.scheme !== 'file' || uri.authority || !uri.path || uri.query || uri.fragment) { return { bindings: [], incomplete: false }; }
 		const remotes = await new Promise<string[]>((resolve, reject) => {
-			execFile('git', ['-C', uri.fsPath, 'config', '--local', '--no-includes', '--get-regexp', '^remote\\..*\\.url$'], { timeout: 5000, maxBuffer: 65536, windowsHide: true }, (error, stdout) => {
-				if (error && error.code !== 1) { reject(new Error('Cannot read this repository. Choose its workspace manually.')); return; }
+			execFile('git', ['-C', uri.fsPath, 'config', '--local', '--no-includes', '--get-regexp', '^remote\\..*\\.url$'], { timeout: 5000, maxBuffer: 65536, windowsHide: true, env: { ...process.env, LC_ALL: 'C' } }, (error, stdout, stderr) => {
+				if (error) {
+					if (isVectorGraphRepositoryUnavailable(error.code, stderr, error.killed)) { resolve([]); return; }
+					reject(new Error('Cannot read this repository. Choose its workspace manually.'));
+					return;
+				}
 				const lines = stdout.split(/\r?\n/).filter(Boolean);
 				const origins = lines.filter(line => /^remote\.origin\.url\s/.test(line));
 				resolve((origins.length ? origins : lines).map(line => line.replace(/^\S+\s+/, '')));

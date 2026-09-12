@@ -8,7 +8,7 @@ import { Emitter } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { IEncryptionMainService, KnownStorageProvider } from '../../encryption/common/encryptionService.js';
 import { IStateService } from '../../state/node/state.js';
-import { IVectorGraphSession, IVectorGraphWorkspace, vectorGraphArray, vectorGraphRecord, vectorGraphText } from '../common/vectorGraph.js';
+import { IVectorGraphSession, IVectorGraphWorkspace, vectorGraphArray, vectorGraphRecord, vectorGraphText, VectorGraphConnectionError, isVectorGraphConnectionError } from '../common/vectorGraph.js';
 
 const origin = 'https://vectorgraph.app';
 const sessionKey = 'vectorGraph.session.v1';
@@ -38,6 +38,7 @@ export class VectorGraphAuth extends Disposable {
 			try { profiles = encrypted ? this.parseProfiles(JSON.parse(await this.encryption.decrypt(encrypted))) : []; }
 			catch { throw new Error('Cannot unlock the saved VectorGraph account. Sign out and sign in again.'); }
 			if (generation === this.generation) { this.profiles = profiles; }
+			return this.profiles ?? profiles;
 		}
 		return this.profiles ?? [];
 	}
@@ -61,7 +62,16 @@ export class VectorGraphAuth extends Disposable {
 		return this.getSession();
 	}
 	pollSignIn(): Promise<IVectorGraphSession> {
-		if (!this.polling) { this.polling = this.poll().finally(() => { this.polling = undefined; }); }
+		if (!this.polling) {
+			const generation = this.generation;
+			this.polling = this.poll().catch(error => {
+				if (generation === this.generation && this.pending && !isVectorGraphConnectionError(error)) {
+					this.pending = undefined;
+					this.changed.fire();
+				}
+				throw error;
+			}).finally(() => { this.polling = undefined; });
+		}
 		return this.polling;
 	}
 	private async poll(): Promise<IVectorGraphSession> {
@@ -122,19 +132,22 @@ export class VectorGraphAuth extends Disposable {
 		});
 	}
 	private async request(path: string, body: object, token?: string): Promise<{ status: number; body: unknown }> {
+		let response: Response;
 		try {
-			const response = await this.fetcher(origin + path, {
+			response = await this.fetcher(origin + path, {
 				method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
 				body: JSON.stringify(body), redirect: 'error', credentials: 'omit', signal: AbortSignal.timeout(30000)
 			});
-			if (!response.ok) {
-				throw new Error(response.status === 401 || response.status === 403 ? 'VectorGraph access expired or is not authorized. Sign in again and authorize the workspace.' : `VectorGraph is unavailable (${response.status}). Retry shortly.`);
-			}
-			return { status: response.status, body: await response.json() };
-		} catch (error) {
-			// Never expose raw responses, tokens or device codes in logs or IPC errors.
-			if (error instanceof Error && error.message.startsWith('VectorGraph ')) { throw error; }
-			throw new Error('Cannot connect to VectorGraph. Check your connection and retry.');
+		} catch {
+			throw new VectorGraphConnectionError('Cannot connect to VectorGraph. Check your connection and retry.');
 		}
+		if (response.status === 429 || response.status >= 500) {
+			throw new VectorGraphConnectionError('VectorGraph is temporarily unavailable. Retry shortly.');
+		}
+		if (!response.ok) {
+			throw new Error(response.status === 401 || response.status === 403 ? 'VectorGraph access expired or is not authorized. Sign in again and authorize the workspace.' : `VectorGraph could not complete the request (${response.status}). Sign in again.`);
+		}
+		try { return { status: response.status, body: await response.json() }; }
+		catch { throw new Error('VectorGraph returned an invalid response. Sign in again.'); }
 	}
 }

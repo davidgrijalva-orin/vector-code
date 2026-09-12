@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { deepStrictEqual, strictEqual, rejects } from 'assert';
+import { isVectorGraphConnectionError } from '../../common/vectorGraph.js';
+import { isVectorGraphRepositoryUnavailable } from '../../node/vectorGraphRepository.js';
 import { DeferredPromise } from '../../../../base/common/async.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { IEncryptionMainService, KnownStorageProvider } from '../../../encryption/common/encryptionService.js';
@@ -37,6 +39,39 @@ suite('VectorGraph IDE authorization', () => {
 			encrypt: async (value: string) => Buffer.from(value).toString('base64'), decrypt: async (value: string) => Buffer.from(value, 'base64').toString(), setUsePlainTextEncryption: async () => { }
 		};
 		state = { getItem: (key: string) => saved.get(key), setItem: (key: string, value: unknown) => saved.set(key, value), removeItem: (key: string) => saved.delete(key) } as unknown as IStateService;
+	});
+
+	test('classifies expected non-repositories without hiding Git failures', () => {
+		strictEqual(isVectorGraphRepositoryUnavailable(1, '', false), true);
+		strictEqual(isVectorGraphRepositoryUnavailable('ENOENT', '', false), true);
+		strictEqual(isVectorGraphRepositoryUnavailable(128, 'fatal: --local can only be used inside a git repository', false), true);
+		strictEqual(isVectorGraphRepositoryUnavailable(128, 'fatal: bad config line 1', false), false);
+		strictEqual(isVectorGraphRepositoryUnavailable(1, '', true), false);
+	});
+
+	test('transient polling errors retain authorization, terminal errors clear it', async () => {
+		for (const status of [503, 429, 401, 403]) {
+			const auth = create();
+			if (!responses.length) { responses.push(response({ apiUrl: 'https://vectorgraph.app', deviceCode: 'private-device-code', verificationUriComplete: 'https://vectorgraph.app/cli/authorize?code=TEST', userCode: 'TEST', expiresAt: new Date(Date.now() + 60000).toISOString(), intervalSeconds: 5 })); }
+			await auth.beginSignIn(); responses.push(response({}, status));
+			await rejects(auth.pollSignIn(), error => isVectorGraphConnectionError(error) === (status === 503 || status === 429));
+			strictEqual(!!(await auth.getSession()).authorization, status === 503 || status === 429);
+		}
+	});
+
+	test('reconnect during decryption preserves the existing account; sign-out remains authoritative', async () => {
+		saved.set('vectorGraph.session.v1', 'encrypted');
+		const pending = new DeferredPromise<string>();
+		encryption.decrypt = () => pending.p;
+		const auth = create();
+		const session = auth.getSession();
+		const reconnect = auth.beginSignIn();
+		await Promise.resolve(); await Promise.resolve();
+		await pending.complete(JSON.stringify(profiles));
+		deepStrictEqual((await session).workspaces, [workspace]);
+		await reconnect;
+		await auth.signOut();
+		deepStrictEqual((await auth.getSession()).workspaces, []);
 	});
 	test('authorizes, encrypts and restores IDE-only credentials without exporting secrets', async () => {
 		const auth = create();

@@ -56,6 +56,21 @@ suite('VectorGraph IDE authorization', () => {
 		strictEqual(saved.size, 0);
 		await rejects(auth.call(workspace.id, 'listApiTeams'), /Sign in/);
 	});
+	test('canceling reconnect preserves the authorized account', async () => {
+		const auth = create();
+		await auth.beginSignIn(); responses.push(approval()); await auth.pollSignIn();
+		responses.push(response({ apiUrl: 'https://vectorgraph.app', deviceCode: 'new-private-device-code', verificationUriComplete: 'https://vectorgraph.app/cli/authorize?code=NEXT', userCode: 'NEXT', expiresAt: new Date(Date.now() + 60000).toISOString(), intervalSeconds: 5 }));
+		await auth.beginSignIn();
+		await auth.cancelSignIn();
+		deepStrictEqual(await auth.getSession(), { workspaces: [workspace], authorization: undefined });
+		strictEqual(saved.size, 1);
+	});
+
+	test('corrupt stored credentials produce a safe recovery error', async () => {
+		saved.set('vectorGraph.session.v1', Buffer.from('invalid private-secret').toString('base64'));
+		await rejects(create().getSession(), error => error instanceof Error && error.message.includes('Sign out') && !error.message.includes('private-secret'));
+	});
+
 	test('late approval cannot restore a signed-out session', async () => {
 		const auth = create();
 		await auth.beginSignIn();

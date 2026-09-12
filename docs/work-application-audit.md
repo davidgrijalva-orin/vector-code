@@ -113,8 +113,9 @@ The owner subsequently approved account-free personal work as the entry product,
 with optional connected context/continuity/collaboration. The connected implementation
 below remains useful but is not the universal first-run flow. A
 [local project/note/inbox service](local-work-library.md) now implements native
-editing/recovery, assignment, search and export through explicit APIs. Local capture
-and packaged acceptance remain next. Local project identity and service
+editing/recovery, assignment, search and export through explicit APIs.
+[Local capture/playback/export](local-recordings.md) is also implemented through
+explicit service APIs; physical-device and packaged acceptance remain open. Local project identity and service
 persistence must not require a Graph UUID, credential, or network connection.
 
 

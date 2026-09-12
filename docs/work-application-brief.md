@@ -77,8 +77,9 @@ Product validation should observe whether people complete useful work before
 signup, return to continue the same project, and voluntarily choose a connected
 benefit. The first [local library implementation](local-work-library.md) now covers
 projects, notes, inbox, native editing/recovery, moves, search and Markdown export.
-Recording, model integration, sync, packaged acceptance and retention results are
-not established by these source changes.
+[Local audio capture/playback/export](local-recordings.md) also has source and
+automated coverage. Physical-device acceptance, model integration, sync, packaged
+acceptance and retention results are not established by these changes.
 
 ## Implementation sequence and acceptance
 

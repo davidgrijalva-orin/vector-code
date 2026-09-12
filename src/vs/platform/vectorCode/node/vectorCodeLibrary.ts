@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { writeLocalWorkFile } from './vectorCodeLocalFile.js';
 import { promises as fs } from 'fs';
 import { hasKey } from '../../../base/common/types.js';
 import { join } from '../../../base/common/path.js';
@@ -28,23 +29,25 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		result = { id: request.requestId, revision: 1 };
 	} else if (request.kind === 'createNote') {
 		checkProjects(request.projectIds);
-		notes.push({ id: request.requestId, title: request.title, projectIds: request.projectIds, body: '', revision: 1, createdAt: event.at, updatedAt: event.at, history: [] });
+		notes.push({ id: request.requestId, title: request.title, projectIds: request.projectIds, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: event.at, createdAt: event.at, updatedAt: event.at, history: [] });
 		result = { id: request.requestId, revision: 1 };
 	} else {
-		const item = request.kind === 'setFolders' ? projects.find(project => project.id === request.id) : notes.find(note => note.id === request.id);
+		const item = request.kind === 'setFolders' || request.kind === 'renameProject' ? projects.find(project => project.id === request.id) : notes.find(note => note.id === request.id);
 		if (!item) { throw new Error('The local work item does not exist.'); }
-		if (item.revision !== request.expectedRevision) { throw new Error('This item changed in another window. Preserve your draft and reload before retrying.'); }
+		const matches = request.kind === 'saveNote' && request.expectedContentRevision !== undefined && hasKey(item, { contentRevision: true }) ? item.contentRevision === request.expectedContentRevision : item.revision === request.expectedRevision;
+		if (!matches) { throw new Error('This item changed in another window. Preserve your draft and reload before retrying.'); }
 		if (request.kind === 'setFolders' && hasKey(item, { folders: true })) { item.folders = request.folders; }
-		if (request.kind !== 'setFolders' && hasKey(item, { body: true })) {
+		if (request.kind === 'renameNote' || request.kind === 'renameProject') { item.title = request.title; }
+		if (hasKey(item, { body: true })) {
 			if (request.kind === 'assignNote') { checkProjects(request.projectIds); item.projectIds = request.projectIds; }
 			if (request.kind === 'saveNote') {
-				item.history.push({ body: item.body, revision: item.revision, updatedAt: item.updatedAt });
-				item.body = request.body;
+				item.history.push({ body: item.body, revision: item.contentRevision, updatedAt: item.contentUpdatedAt });
+				item.body = request.body; item.contentRevision++; item.contentUpdatedAt = Math.max(event.at, item.contentUpdatedAt + 1);
 			}
 			item.updatedAt = Math.max(event.at, item.updatedAt + 1);
 		}
 		item.revision++;
-		result = { id: item.id, revision: item.revision };
+		result = { id: item.id, revision: item.revision, ...(hasKey(item, { contentRevision: true }) ? { contentRevision: item.contentRevision } : {}) };
 	}
 	state.receipts.set(request.requestId, { fingerprint, result });
 	return result;
@@ -92,18 +95,7 @@ export class VectorCodeLibrary implements IVectorCodeLibraryService {
 			const events = [...this.events!, event];
 			const text = JSON.stringify({ version: 1, events });
 			if (Buffer.byteLength(text) > 64 * 1024 * 1024) { throw new Error('The local library reached its current 64 MB limit. Export your work before adding more.'); }
-			await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
-			const temporary = join(this.directory, 'library-v1.pending');
-			const handle = await fs.open(temporary, 'w', 0o600);
-			try { await handle.writeFile(text, 'utf8'); await handle.sync(); } finally { await handle.close(); }
-			// A crash before rename leaves the previous complete journal; retry IDs survive a lost reply after rename.
-			await fs.rename(temporary, join(this.directory, 'library-v1.json'));
-			this.events = events;
-			this.state = candidate;
-			if (process.platform !== 'win32') {
-				const directory = await fs.open(this.directory, 'r');
-				try { await directory.sync(); } finally { await directory.close(); }
-			}
+			await writeLocalWorkFile(join(this.directory, 'library-v1.json'), text, () => { this.events = events; this.state = candidate; });
 			return { ...result };
 		});
 	}

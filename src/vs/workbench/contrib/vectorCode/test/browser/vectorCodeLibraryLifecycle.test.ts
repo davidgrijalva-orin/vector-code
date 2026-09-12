@@ -22,12 +22,12 @@ suite('VectorCode local note file-model lifecycle', () => {
 	test('edit, save, reopen, conflict and hot-exit recovery use the real file model and provider', async () => {
 		const id = '658d2b51-5118-46d4-8b60-bf1954501284';
 		const resource = localNoteResource(id);
-		let record = { id, title: 'Brief', body: '# Original', projectIds: [], revision: 1, updatedAt: 1, history: [] };
+		let record = { id, title: 'Brief', body: '# Original', projectIds: [], revision: 1, contentRevision: 1, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [] };
 		const graph = {
 			read: async () => ({ version: 1, projects: [], notes: [{ ...record }] }),
-			mutate: async (save: { body: string; expectedRevision: number }) => {
-				if (save.expectedRevision !== record.revision) { throw new Error('Document version conflict'); }
-				record = { ...record, body: save.body, revision: record.revision + 1 };
+			mutate: async (save: { body: string; expectedRevision: number; expectedContentRevision?: number }) => {
+				if ((save.expectedContentRevision ?? save.expectedRevision) !== record.contentRevision) { throw new Error('Document version conflict'); }
+				record = { ...record, body: save.body, revision: record.revision + 1, contentRevision: record.contentRevision + 1, contentUpdatedAt: record.contentUpdatedAt + 1 };
 				return { ...record };
 			}
 		} as unknown as IVectorCodeLibraryService;
@@ -39,14 +39,16 @@ suite('VectorCode local note file-model lifecycle', () => {
 		await model.resolve();
 		strictEqual(model.textEditorModel!.getValue(), '# Original');
 		model.updateTextEditorModel(createTextBufferFactory('# Saved brief'));
+		// Filing or renaming changes metadata, not the text-file etag or body revision.
+		record = { ...record, revision: 2, updatedAt: 2 };
 		strictEqual(await model.save(), true);
-		strictEqual(record.body, '# Saved brief'); strictEqual(record.revision, 2);
+		strictEqual(record.body, '# Saved brief'); strictEqual(record.revision, 3); strictEqual(record.contentRevision, 2);
 		model.dispose();
 		const reopened = store.add(inst.createInstance(TextFileEditorModel, resource, 'utf8', undefined));
 		await reopened.resolve();
 		strictEqual(reopened.textEditorModel!.getValue(), '# Saved brief');
 		reopened.updateTextEditorModel(createTextBufferFactory('# Unsaved local revision'));
-		record = { ...record, body: '# Concurrent local revision', revision: 3 };
+		record = { ...record, body: '# Concurrent local revision', revision: 4, contentRevision: 3, contentUpdatedAt: 3 };
 		strictEqual(await reopened.save(), false);
 		strictEqual(reopened.isDirty(), true);
 		strictEqual(reopened.textEditorModel!.getValue(), '# Unsaved local revision');

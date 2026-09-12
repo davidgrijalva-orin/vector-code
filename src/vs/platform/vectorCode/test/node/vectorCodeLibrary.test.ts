@@ -57,11 +57,11 @@ suite('VectorCode local library', () => {
 	});
 	test('failed commit keeps prior content and leaves the original request retryable', async () => {
 		await service.read();
-		await fs.mkdir(join(directory, 'library-v1.pending'));
+		await fs.mkdir(join(directory, 'library-v1.json.pending'));
 		const request: LibraryMutation = { ...base(), kind: 'createNote', title: 'Idea', projectIds: [] };
 		await rejects(service.mutate(request));
 		strictEqual((await service.read()).notes.length, 0);
-		await fs.rmdir(join(directory, 'library-v1.pending'));
+		await fs.rmdir(join(directory, 'library-v1.json.pending'));
 		await service.mutate(request);
 		strictEqual((await new VectorCodeLibrary(directory).read()).notes.length, 1);
 	});
@@ -81,6 +81,27 @@ suite('VectorCode local library', () => {
 		await rejects(channel.call(undefined, 'mutate', [{ ...base(), kind: 'setFolders', id: generateUuid(), expectedRevision: 1, folders: ['https://example.com'] }]));
 		deepStrictEqual(await service.read(), { version: 1, projects: [], notes: [] });
 	});
+	test('filing a note while editing preserves the body baseline but still rejects concurrent text edits', async () => {
+		const project = await service.mutate({ ...base(), kind: 'createProject', title: 'Project' });
+		const note = await service.mutate({ ...base(), kind: 'createNote', title: 'Draft', projectIds: [] });
+		await service.mutate({ ...base(), kind: 'assignNote', id: note.id, expectedRevision: 1, projectIds: [project.id] });
+		const saved = await service.mutate({ ...base(), kind: 'saveNote', id: note.id, expectedRevision: 1, expectedContentRevision: 1, body: 'Saved after moving' });
+		strictEqual(saved.revision, 3); strictEqual(saved.contentRevision, 2);
+		deepStrictEqual((await service.read()).notes[0].projectIds, [project.id]);
+		await rejects(service.mutate({ ...base(), kind: 'saveNote', id: note.id, expectedRevision: 3, expectedContentRevision: 1, body: 'Stale draft' }));
+		strictEqual((await new VectorCodeLibrary(directory).read()).notes[0].body, 'Saved after moving');
+	});
+
+	test('renaming preserves identity, creation time and saved content and checks concurrent revisions', async () => {
+		const note = await service.mutate({ ...base(), kind: 'createNote', title: 'Recording', projectIds: [] });
+		const original = (await service.read()).notes[0];
+		await service.mutate({ ...base(), kind: 'renameNote', id: note.id, expectedRevision: 1, title: 'Interview' });
+		const renamed = (await service.read()).notes[0];
+		strictEqual(renamed.id, original.id); strictEqual(renamed.createdAt, original.createdAt); strictEqual(renamed.body, original.body);
+		strictEqual(renamed.title, 'Interview');
+		await rejects(service.mutate({ ...base(), kind: 'renameNote', id: note.id, expectedRevision: 1, title: 'Stale' }));
+	});
+
 	test('search includes full saved content and project names without a network dependency', async () => {
 		const project = await service.mutate({ ...base(), kind: 'createProject', title: 'Research' });
 		const note = await service.mutate({ ...base(), kind: 'createNote', title: 'Note', projectIds: [project.id] });

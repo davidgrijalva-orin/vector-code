@@ -45,7 +45,7 @@ suite('VectorCode local note editor API', () => {
 	});
 	test('dirty reads preserve conflict checks and deliberate clean reload permits recovery', async () => {
 		let dirty = false;
-		const note: LocalNote = { id, title: 'Idea', body: 'Original', revision: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [] };
+		const note: LocalNote = { id, title: 'Idea', body: 'Original', revision: 1, contentRevision: 1, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [] };
 		const library = {
 			read: async () => ({ notes: [note] }),
 			mutate: async (request: LibraryMutation) => {
@@ -54,7 +54,7 @@ suite('VectorCode local note editor API', () => {
 			}
 		} as unknown as IVectorCodeLibraryService;
 		const provider = store.add(new VectorCodeLibraryFileSystem(library, store.add(new TestStorageService()), { isDirty: () => dirty } as unknown as IWorkingCopyService));
-		await provider.readFile(resource); dirty = true; note.revision = 2; note.body = 'Other window';
+		await provider.readFile(resource); dirty = true; note.revision = 2; note.contentRevision = 2; note.body = 'Other window';
 		await provider.readFile(resource);
 		await rejects(provider.writeFile(resource, VSBuffer.fromString('My draft').buffer, options), /Conflict/);
 		strictEqual(note.body, 'Other window');

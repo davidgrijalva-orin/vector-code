@@ -34,10 +34,10 @@ export class VectorCodeLibraryFileSystem extends Disposable implements IFileSyst
 		if (!note) { throw createFileSystemProviderError('Local note not found.', FileSystemProviderErrorCode.FileNotFound); }
 		return note;
 	}
-	async stat(resource: URI): Promise<IStat> { const note = await this.fetch(resource); return { type: FileType.File, ctime: 0, mtime: note.updatedAt, size: VSBuffer.fromString(note.body).byteLength }; }
+	async stat(resource: URI): Promise<IStat> { const note = await this.fetch(resource); return { type: FileType.File, ctime: note.createdAt ?? 0, mtime: note.contentUpdatedAt ?? note.updatedAt, size: VSBuffer.fromString(note.body).byteLength }; }
 	async readFile(resource: URI): Promise<Uint8Array> {
 		const note = await this.fetch(resource);
-		if (!this.workingCopies.isDirty(resource)) { this.revisions.set(identity(resource), note.revision); this.storage.store(this.key(resource, 'revision'), note.revision, StorageScope.WORKSPACE, StorageTarget.MACHINE); this.storage.remove(this.key(resource, 'request'), StorageScope.WORKSPACE); }
+		if (!this.workingCopies.isDirty(resource)) { this.revisions.set(identity(resource), note.contentRevision ?? note.revision); this.storage.store(this.key(resource, 'revision'), note.contentRevision ?? note.revision, StorageScope.WORKSPACE, StorageTarget.MACHINE); this.storage.remove(this.key(resource, 'request'), StorageScope.WORKSPACE); }
 		return VSBuffer.fromString(note.body).buffer;
 	}
 	async writeFile(resource: URI, content: Uint8Array, _options: IFileWriteOptions): Promise<void> {
@@ -50,18 +50,21 @@ export class VectorCodeLibraryFileSystem extends Disposable implements IFileSyst
 		// Finish a previously uncertain write before saving subsequent edits. Never silently drop its retry identity.
 		if (pending) {
 			const receipt = await this.library.mutate(pending);
-			this.revisions.set(id, receipt.revision);
-			this.storage.store(this.key(resource, 'revision'), receipt.revision, StorageScope.WORKSPACE, StorageTarget.MACHINE);
+			this.revisions.set(id, (receipt.contentRevision ?? receipt.revision));
+			this.storage.store(this.key(resource, 'revision'), (receipt.contentRevision ?? receipt.revision), StorageScope.WORKSPACE, StorageTarget.MACHINE);
 			this.storage.remove(key, StorageScope.WORKSPACE);
+			await this.storage.flush();
 			if (pending.kind === 'saveNote' && pending.body === body) { return; }
 			return this.writeFile(resource, content, _options);
 		}
-		const request: LibraryMutation = { version: 1, requestId: generateUuid(), kind: 'saveNote', id, expectedRevision, body };
+		const request: LibraryMutation = { version: 1, requestId: generateUuid(), kind: 'saveNote', id, expectedRevision, expectedContentRevision: expectedRevision, body };
 		this.storage.store(key, request, StorageScope.WORKSPACE, StorageTarget.MACHINE);
+		await this.storage.flush();
 		const receipt = await this.library.mutate(request);
-		this.revisions.set(id, receipt.revision);
-		this.storage.store(this.key(resource, 'revision'), receipt.revision, StorageScope.WORKSPACE, StorageTarget.MACHINE);
+		this.revisions.set(id, (receipt.contentRevision ?? receipt.revision));
+		this.storage.store(this.key(resource, 'revision'), (receipt.contentRevision ?? receipt.revision), StorageScope.WORKSPACE, StorageTarget.MACHINE);
 		this.storage.remove(key, StorageScope.WORKSPACE);
+		await this.storage.flush();
 	}
 	watch(): IDisposable { return { dispose() { } }; }
 	private unsupported(): Promise<never> { return Promise.reject(createFileSystemProviderError('Use local work actions for this operation.', FileSystemProviderErrorCode.NoPermissions)); }

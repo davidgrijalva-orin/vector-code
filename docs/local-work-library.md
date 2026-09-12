@@ -2,9 +2,9 @@
 
 The desktop client can create projects and notes without a VectorGraph account.
 Open **Work: Open Local Work** from the command palette, or **Open Local Work** in
-the existing Work view. This is the first account-free implementation; recording,
-transcription, publishing/sync and a unified permanent project rail remain separate
-work. It does not replace the existing connected Graph document actions.
+the existing Work view. [Local recording/playback/export](local-recordings.md) now
+uses the same note identities. Transcription, publishing/sync and a unified permanent
+project rail remain separate work. It does not replace the existing connected Graph document actions.
 
 ## API and storage ownership
 
@@ -27,19 +27,22 @@ state. The application owns one local library per user-data directory.
 The initial implementation deliberately has a 64 MB journal limit and a one-million-
 character note limit. Saved versions count toward the journal limit. It rejects
 further writes without deleting history. This is a bounded initial store, not a
-claim of an unlimited indexed database or an audio storage implementation.
+claim of an unlimited indexed database. Audio has its own bounded storage API.
 
 ## Workflows
 
 - Create a local project with no folders. Store zero-to-many deduplicated folder
   references; adding/removing references does not alter files or grant execution
-  or workspace trust. Existing IDE folder/terminal state remains independently owned.
+  or workspace trust. **Open project folders** asks which references to open and delegates
+  to the existing native workspace/trust controls. Existing IDE folder/terminal state
+  remains independently owned.
 - Create a note directly in Inbox. Its ID, creation time, text and saved history
   remain stable when linking multiple projects, moving between them or clearing
   all assignments to return it to Inbox. Local inbox classification is authoritative
   because this service owns complete local relationships.
 - Edit through the native text-file model and save through a revision-checked API.
-  Local notes always use UTF-8. Dirty drafts retain their original revision through
+  Local notes always use UTF-8. Body revisions and file timestamps are independent
+  of project/title metadata, so organizing a dirty note does not cause a false text conflict. Dirty drafts retain their original revision through
   background reads. A conflicting save preserves both saved content and the dirty
   draft. Use the native editor's recovery/revert actions after preserving the draft;
   a clean reload adopts the saved revision and clears the obsolete pending request.
@@ -48,7 +51,7 @@ claim of an unlimited indexed database or an audio storage implementation.
   retry when reopening Local Work; it can also be explicitly dismissed so the
   user can inspect the actual saved state.
 - Search full saved note text, titles and project names through the service API.
-  Export the current saved body as Markdown using the native Save dialog. Open
+  Export the current saved body as Markdown using the native Save dialog. Rename notes and projects through revision-checked mutations. Open
   earlier text revisions as separate drafts without overwriting the current note.
 
 ## Evidence and limits

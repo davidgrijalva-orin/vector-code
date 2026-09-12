@@ -1,7 +1,8 @@
 # Architecture decision: project document workflow across Vector products
 
 Date: 2026-09-12. Status: product ownership accepted by owner direction;
-first document slice implemented locally; execution and voice integration pending.
+document/local-library/local-audio slices implemented in source; execution and
+VectorVoice service integration pending.
 Authoritative product intent: [work application brief](work-application-brief.md).
 Source evidence and unresolved gaps: [audit](work-application-audit.md).
 
@@ -23,6 +24,8 @@ flowchart LR
   Web["VectorGraph web client — implemented"] --> API
   API --> DB["PostgreSQL projects, documents, revisions, audit — implemented"]
   API --> Objects["Signed object storage for attachments — implemented"]
+  Native --> LocalAPI["Local library and recording IPC APIs — implemented"]
+  LocalAPI --> LocalData["Local note journal and audio chunks — implemented"]
   Native --> Local["Local files, terminals and device permissions — implemented, separate"]
   Text["Selected-context text execution adapter — proposed"] -.-> Native
   Voice["VectorVoice capture, transcription, intelligence — implemented"] -.-> VA["Project voice action adapter — proposed"]
@@ -35,7 +38,7 @@ flowchart LR
 Solid arrows describe implemented source boundaries, not verified live deployments.
 Dashed arrows are proposed. Platform consumption by Graph/Voice is verified for
 connector packages; the diagram does not assert adoption or deployment of Signals.
-Document bodies and derived structured content live in Graph's document model;
+Shared document bodies and derived structured content live in Graph's document model;
 attachment storage does not imply a generalized project file store already exists.
 
 ## Identity and capability separation
@@ -105,8 +108,9 @@ bounded contract; they are not implied by opening a remote project.
 The owner accepted a useful account-free core with optional connected context,
 continuity and collaboration. The local API must support core capture/organization/
 recovery without a Graph credential or network dependency. Local service packaging,
-capture implementation, speech/model availability, and the account identity
-integration still require concrete design and validation. The first implementation
+physical capture acceptance, speech/model availability, and the account identity
+integration still require validation or implementation. [Local audio capture](local-recordings.md)
+now has a bounded service implementation. The first implementation
 uses a bounded atomic local journal through a versioned IPC service, with no new
 dependency or provider. See [local library contracts, workflows and limits](local-work-library.md).
 No sign-in flow or synchronization service is selected by this note.

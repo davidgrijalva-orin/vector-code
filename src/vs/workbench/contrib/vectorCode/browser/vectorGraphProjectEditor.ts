@@ -114,8 +114,10 @@ export class VectorGraphProjectEditor extends EditorPane {
 	}
 	private updateHeading(): void {
 		const project = this.projects.getActiveProjectUri(); const binding = readVectorGraphBinding(this.storage, project?.toString());
-		this.heading.textContent = binding?.project?.name ?? this.projects.getProjectSummaries().find(item => item.uri.toString() === project?.toString())?.name ?? localize('chooseProject', 'Choose a project');
-		this.subtitle.textContent = binding ? `${binding.workspace.name} / ${binding.team.name} · ${project?.fsPath ?? ''}` : project ? localize('localProjectPath', 'Local project · {0}', project.fsPath) : localize('standaloneWelcome', 'Open a folder to start coding. VectorGraph is optional.');
+		const repository = this.projects.getProjectSummaries().find(item => item.uri.toString() === project?.toString());
+		this.heading.textContent = binding?.project?.name ?? repository?.name ?? localize('chooseProject', 'Choose a project');
+		this.subtitle.title = project?.fsPath ?? '';
+		this.subtitle.textContent = binding ? localize('projectRepositoryContext', '{0} · Repository: {1}', binding.workspace.name, repository?.name ?? project?.path ?? '') : project ? localize('localProjectPath', 'Local project · {0}', project.fsPath) : localize('standaloneWelcome', 'Open a folder to start coding. VectorGraph is optional.');
 	}
 	private async selectSection(section: ProjectSection): Promise<void> {
 		this.section = section; if (this.input instanceof VectorGraphProjectInput) { this.input.section = section; }

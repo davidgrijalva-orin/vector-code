@@ -23,3 +23,5 @@ For each native capability, record its API operations and scopes, native entry p
 ## Standalone IDE
 
 VectorCode is also a complete standalone IDE. Local projects, files, editing, Git, terminals, debugging, extensions and MCP must work without a VectorGraph account or service connection. VectorGraph adds shared tickets, documents, planning and relationships. Keep optional connection onboarding separate from local development actions, and validate both disconnected and connected workflows.
+
+Use the same project workspace and navigation in both cases. Connecting VectorGraph enriches the current repository with shared context and native workflows; it must not require switching to a separate application experience. A repository without a VectorGraph association remains a normal, useful project. Losing the service connection must not interrupt local development.

@@ -171,11 +171,14 @@ async function main() {
 	const assetName = typeof args['asset-name'] === 'string' ? args['asset-name'] : defaultAssetName(version, platform, artifactPath);
 	const assetUrl = typeof args.url === 'string' ? args.url : `${trimTrailingSlash(releaseBaseUrl)}/${version}/${assetName}`;
 	const publicRoot = resolvePath(typeof args['public-root'] === 'string' ? args['public-root'] : 'services/update-feed/public/releases');
-	const timestamp = typeof args.timestamp === 'string' ? Number.parseInt(args.timestamp, 10) : Date.now();
+	if (args.timestamp !== undefined && (typeof args.timestamp !== 'string' || !/^\d+$/.test(args.timestamp))) {
+		throw new Error(`Invalid --timestamp: ${args.timestamp}`);
+	}
+	const timestamp = args.timestamp === undefined ? Date.now() : Number(args.timestamp);
 	const dryRun = args['dry-run'] === true;
 	const allowDirty = args['allow-dirty'] === true;
 
-	if (!Number.isFinite(timestamp)) {
+	if (!Number.isSafeInteger(timestamp) || timestamp <= 0) {
 		throw new Error(`Invalid --timestamp: ${args.timestamp}`);
 	}
 

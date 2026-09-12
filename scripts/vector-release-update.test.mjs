@@ -53,3 +53,15 @@ for (const [name, args, message] of [
 		assert.match(result.stderr, message);
 	});
 }
+
+for (const value of ['200junk', '', ' ', '200.5', '9007199254740992', '0', undefined]) {
+	test(`rejects malformed timestamp ${JSON.stringify(value)}`, () => {
+		const args = ['--version', '1.0.1', '--commit', 'new', '--timestamp'];
+		if (value !== undefined) {
+			args.push(value);
+		}
+		const result = prepare(args);
+		assert.notEqual(result.status, 0);
+		assert.match(result.stderr, value === '' ? /Unexpected argument/ : /Invalid --timestamp/);
+	});
+}

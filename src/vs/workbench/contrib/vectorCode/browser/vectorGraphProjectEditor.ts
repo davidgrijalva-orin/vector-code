@@ -167,7 +167,7 @@ export class VectorGraphProjectWidget extends Disposable {
 		}
 	}
 	async openAccount(signIn = false): Promise<void> { if (this.section !== 'tickets' || !this.ticketWidget) { await this.selectSection('tickets'); } await this.ticketWidget?.openAccount(signIn); }
-	layout(dimension: Dimension): void { this.root.style.width = dimension.width + 'px'; this.root.style.height = dimension.height + 'px'; }
+	layout(_dimension: Dimension): void { this.root.style.width = '100%'; this.root.style.height = '100%'; }
 	focus(): void { this.tabButtons.get(this.section)?.focus(); }
 }
 registerAction2(class extends Action2 {

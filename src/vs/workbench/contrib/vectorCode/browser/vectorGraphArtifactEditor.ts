@@ -76,7 +76,7 @@ export class VectorGraphArtifactEditor extends EditorPane {
 		const generation = ++this.generation; this.content.clear(); clearNode(this.root);
 		const actions = append(this.root, $('.vector-graph-ticket-editor__toolbar'));
 		if (input.kind === 'document') {
-			const edit = append(actions, $<HTMLButtonElement>('button', { type: 'button' })); edit.textContent = localize('artifactEditSource', 'Edit source');
+			const edit = append(actions, $<HTMLButtonElement>('button.vector-project__button', { type: 'button' })); edit.textContent = localize('artifactEditSource', 'Edit source');
 			this.content.add(addDisposableListener(edit, EventType.CLICK, () => { void this.editors.openEditor({ resource: vectorGraphDocumentResource(input.workspace, input.identifier), label: input.title, options: { pinned: true } }); }));
 		}
 		const heading = append(this.root, $('h1')); heading.textContent = input.title;
@@ -86,7 +86,7 @@ export class VectorGraphArtifactEditor extends EditorPane {
 			if (token.isCancellationRequested || generation !== this.generation || this.input !== input || this._store.isDisposed) { return; }
 			heading.textContent = value.title; status.remove();
 			if (hasKey(value, { scene: true })) { renderVectorGraphCanvas(this.root, value); }
-			else { const rendered = this.content.add(renderVectorGraphMarkdown(this.markdown, this.opener, value.body)); this.root.appendChild(rendered.element); }
+			else { const rendered = this.content.add(renderVectorGraphMarkdown(this.markdown, this.opener, value.body)); const first = rendered.element.firstElementChild; if (first?.tagName === 'H1' && first.textContent?.trim() === value.title.trim()) { first.remove(); } this.root.appendChild(rendered.element); }
 		} catch (error) { if (generation === this.generation && !this._store.isDisposed) { status.textContent = toErrorMessage(error); } }
 	}
 	override clearInput(): void { this.generation++; this.content.clear(); if (this.root) { clearNode(this.root); } super.clearInput(); }

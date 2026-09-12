@@ -40,7 +40,19 @@ Codex. Use Fable 5.1 for Claude Code sessions; Claude agents inherit that sessio
 model. Do not escalate ordinary work automatically.
 
 
-This file provides instructions for AI coding agents working with the VectorCode workbench codebase.
+This file provides instructions for AI coding agents working with the VectorCode work application codebase.
+
+## Product direction
+
+The authoritative [work application brief](docs/work-application-brief.md) and
+[architecture decision](docs/work-application-architecture.md) guide cross-product
+work. VectorCode is a general-purpose work application containing an IDE; local
+folders and repositories are optional project resources. A desktop work project
+may contain zero, one, or many folders; never make its identity one folder URI.
+The first milestone is the non-development project document workflow. Explicit workflow priorities replace
+blanket non-billing VectorGraph API parity. Preserve local IDE functionality,
+security, tenant isolation, licensing, review and release gates. Do not reactivate
+retired agent integrations or profiles implicitly.
 
 Use the repository source as the authority. Validate TypeScript changes with `npm run compile-check-ts-native` first, then run the narrower extension/client checks that match the files you touched.
 

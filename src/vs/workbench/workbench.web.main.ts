@@ -71,7 +71,6 @@ import '../platform/extensionResourceLoader/browser/extensionResourceLoaderServi
 import './services/auxiliaryWindow/browser/auxiliaryWindowService.js';
 import './services/power/browser/powerService.js';
 import '../platform/sandbox/browser/sandboxHelperService.js';
-import '../platform/vectorCodeCodex/browser/vectorCodeCodexBridgeService.js';
 import '../platform/vectorGraph/browser/vectorGraphService.js';
 
 import { InstantiationType, registerSingleton } from '../platform/instantiation/common/extensions.js';

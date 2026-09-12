@@ -62,6 +62,24 @@ suite('VectorCode local note editor API', () => {
 		await provider.writeFile(resource, VSBuffer.fromString('Resolved').buffer, options);
 		strictEqual(note.body, 'Resolved'); strictEqual(note.revision, 3);
 	});
+	test('additional tab resources retain independent save baselines and uncertain retry identities', async () => {
+		const tabId = 'b2470f8e-e052-4e3a-881d-ab967858f66e';
+		const tabResource = localNoteResource(id, tabId);
+		const note: LocalNote = { id, title: 'Document', body: 'First', revision: 8, contentRevision: 4, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [], additionalTabs: [{ id: tabId, title: 'Second', body: 'Second', revision: 2, contentRevision: 2, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [] }] };
+		let fail = true; const calls: LibraryMutation[] = [];
+		const library = { read: async () => ({ notes: [note] }), mutate: async (request: LibraryMutation) => { calls.push(request); if (fail) { throw new Error('Lost reply'); } return { id, tabId, revision: 9, contentRevision: 3 }; } } as unknown as IVectorCodeLibraryService;
+		const storage = store.add(new TestStorageService());
+		const provider = store.add(new VectorCodeLibraryFileSystem(library, storage, { isDirty: () => false } as unknown as IWorkingCopyService));
+		await provider.readFile(resource); strictEqual(VSBuffer.wrap(await provider.readFile(tabResource)).toString(), 'Second');
+		await rejects(provider.writeFile(tabResource, VSBuffer.fromString('Draft').buffer, options));
+		fail = false;
+		const restored = store.add(new VectorCodeLibraryFileSystem(library, storage, { isDirty: () => true } as unknown as IWorkingCopyService));
+		await restored.writeFile(tabResource, VSBuffer.fromString('Draft').buffer, options);
+		deepStrictEqual(calls[0], calls[1]); strictEqual(calls.length, 2);
+		const request = calls[0]; strictEqual(request.kind, 'saveTab');
+		if (request.kind === 'saveTab') { strictEqual(request.expectedRevision, 2); strictEqual(request.id, id); strictEqual(request.tabId, tabId); }
+		await rejects(provider.readFile(localNoteResource(id, '8e045317-a99b-4517-95ff-b2b7e56f2e69')), /not found/);
+	});
 	test('invalid identities, unsupported operations and invalid UTF-8 fail before writes', async () => {
 		let calls = 0;
 		const library = { read: async () => ({ notes: [] }), mutate: async () => { calls++; } } as unknown as IVectorCodeLibraryService;

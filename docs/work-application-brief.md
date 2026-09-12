@@ -105,10 +105,14 @@ Appending on a new page must preserve existing content and a durable page bounda
 not overwrite the whole document or treat a visual line wrap as a saved page.
 The exact rich-content/page representation must follow the Graph-owned API design.
 
-This is accepted product scope, not current implementation evidence. The initial
-local library has one Markdown body per note, and the current native Graph adapter
-saves a document body. Internal document tabs, page-aware append, capture placement,
-compatible migration and their client controls remain to be implemented.
+The local implementation now exposes internal tabs and the three new-content
+destinations through service APIs and native pickers. Existing notes retain their
+identity as each document's first tab. Recording starts can retain a selected
+document/tab/page reference. Local page boundaries currently use Markdown markers,
+not a rich paginated layout. The native Graph adapter still saves a document body;
+shared Graph tab/page APIs, filing an existing capture into a different destination,
+rich editor navigation and full desktop acceptance remain open. See the
+[local library implementation](local-work-library.md) for exact evidence and limits.
 
 ## Implementation sequence and acceptance
 

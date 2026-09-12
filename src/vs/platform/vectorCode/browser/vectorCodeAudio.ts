@@ -31,7 +31,7 @@ export interface IVectorCodeAudioService {
 	readonly _serviceBrand: undefined;
 	readonly onDidFinish: Event<AudioCaptureFinished>;
 	readonly isRecording: boolean;
-	start(noteId: string): Promise<void>;
+	start(noteId: string, tabId?: string, pageId?: string): Promise<void>;
 	stop(): Promise<LocalRecording | undefined>;
 	play(id: string): Promise<void>;
 	stopPlayback(): void;
@@ -50,7 +50,7 @@ export class LocalAudioCapture extends Disposable implements IVectorCodeAudioSer
 	private playerUrl: string | undefined;
 	get isRecording(): boolean { return this.initializing || !!this.recorder; }
 	constructor(private readonly recordings: IVectorCodeRecordingsService, private readonly device: AudioCaptureEnvironment = environment) { super(); }
-	async start(noteId: string): Promise<void> {
+	async start(noteId: string, tabId?: string, pageId?: string): Promise<void> {
 		if (this.isRecording) { throw new Error('Stop the current recording first.'); }
 		this.stopPlayback();
 		this.initializing = true;
@@ -59,7 +59,7 @@ export class LocalAudioCapture extends Disposable implements IVectorCodeAudioSer
 			stream = await this.device.getStream();
 			if (this._store.isDisposed) { throw new Error('The recording window closed.'); }
 			const recorder = this.device.createRecorder(stream);
-			const request = { version: 1 as const, id: generateUuid(), noteId, mimeType: recorder.mimeType };
+			const request = { version: 1 as const, id: generateUuid(), noteId, mimeType: recorder.mimeType, ...(tabId ? { tabId } : {}), ...(pageId ? { pageId } : {}) };
 			try { await this.recordings.begin(request); } catch { await this.recordings.begin(request); }
 			if (this._store.isDisposed) { throw new Error('The recording window closed.'); }
 			this.recorder = recorder; this.stream = stream;

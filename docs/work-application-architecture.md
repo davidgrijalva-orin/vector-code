@@ -137,9 +137,15 @@ receipt before a separate explicit move. Retain capture data when filing fails.
 Source inspection found existing Graph document content/revision persistence and
 Google Docs connector tab extraction, but no internal Graph document-tab contract
 in the inspected source. Connector extraction is not a native document model.
-A versioned Graph contract and compatible local migration are required before
-claiming this feature. Preserve old document clients and every existing note ID,
-body, history, recording reference and project association during migration.
+A versioned Graph contract is still required for shared tabs. The local API now
+implements tab creation/save and revision-checked page append with retained receipts.
+Legacy note bodies project as first tabs without rewriting existing events; additional
+tabs use separate content revisions and native resources. Local page markers are
+not the future Graph rich-content contract. Recording manifests may retain a tab
+and page destination while existing manifests retain their first-tab meaning.
+Filing an already started capture into another document remains to be implemented.
+Preserve old document clients and every existing note ID, body, history, recording
+reference and project association during further migration.
 
 ## Optional assignment and moving captured work
 

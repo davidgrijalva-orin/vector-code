@@ -7,7 +7,7 @@ import { promises as fs } from 'fs';
 import { createHash } from 'crypto';
 import { join } from '../../../base/common/path.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
-import { IVectorCodeLibraryService, localLibraryId } from '../common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, localLibraryId, localDocumentTabs, localPageBreak } from '../common/vectorCodeLibrary.js';
 import { IVectorCodeRecordingsService, LocalRecording, RecordingStart, recordingSequence, validateRecordingStart } from '../common/vectorCodeRecordings.js';
 import { writeLocalWorkFile } from './vectorCodeLocalFile.js';
 
@@ -33,12 +33,15 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 	begin(input: RecordingStart): Promise<LocalRecording> {
 		const request = validateRecordingStart(input);
 		return this.serial(async () => {
-			if (!(await this.library.read()).notes.some(note => note.id === request.noteId)) { throw new Error('Choose a local note for this recording.'); }
+			const note = (await this.library.read()).notes.find(note => note.id === request.noteId);
+			if (!note) { throw new Error('Choose a local document for this recording.'); }
 			try {
 				const { recording } = await this.manifest(request.id);
-				if (recording.noteId !== request.noteId || recording.mimeType !== request.mimeType) { throw new Error('This recording identity was used for a different capture.'); }
+				if (recording.noteId !== request.noteId || recording.mimeType !== request.mimeType || recording.tabId !== request.tabId || recording.pageId !== request.pageId) { throw new Error('This recording identity was used for a different capture.'); }
 				return recording;
 			} catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; } }
+			const tab = localDocumentTabs(note).find(tab => tab.id === (request.tabId ?? note.id));
+			if (!tab || (request.pageId && !tab.body.includes(localPageBreak(request.pageId)))) { throw new Error('The recording destination tab or page no longer exists.'); }
 			const recording: LocalRecording = { ...request, createdAt: Date.now(), status: 'capturing', chunks: 0, bytes: 0 };
 			await this.save({ recording, parts: [] });
 			return recording;

@@ -6,14 +6,39 @@ the existing Work view. [Local recording/playback/export](local-recordings.md) n
 uses the same note identities. Transcription, publishing/sync and a unified permanent
 project rail remain separate work. It does not replace the existing connected Graph document actions.
 
-## Accepted document-model extension
+## Document tabs and page destinations
 
-The owner clarified that a voice note belongs in a document: append on the next
-page of an existing tab, add a new internal document tab, or create a new document.
-See the [authoritative requirement](work-application-brief.md#document-structure-and-voice-note-destinations).
-The implementation described below still stores one Markdown body per local note;
-it does not yet implement these three destinations. Its stable IDs, history and
-recording references must survive migration to documents with an initial tab.
+**Work: New Local Note** offers **Next page**, **New tab**, or **New document**
+when saved documents exist. Document actions also offer these choices for new
+notes and recordings. The direct **Start Recording in Inbox** command retains its
+immediate capture behavior. Open a document to choose one of its internal tabs;
+each tab uses the existing native Markdown editor. Search covers all tab titles
+and bodies, history is selected per tab, and document export includes every tab.
+
+The local API adds `createTab`, `saveTab` and `appendPage`. Services validate the
+selected document/tab and expected revision, commit atomically, and return stable
+document/tab/page references. Page and tab retries return the original receipt
+without duplication. Saves use independent tab content revisions, so editing a
+different tab or moving the containing document does not invalidate a dirty draft.
+The append action refuses a currently dirty target tab; same-tab concurrent saves
+still fail the service revision check without overwriting either draft.
+
+For compatible replay, the existing note body is the first tab, with the existing
+note ID, content revision, history and editor URI. Additional tabs have their own
+IDs, titles, bodies and histories in `additionalTabs`. `localDocumentTabs` provides
+the ordered tab projection without duplicating the original body in storage.
+Existing journal events are replayed unchanged; simply reading an older library
+does not rewrite it. Older binaries fail closed on unsupported new mutations;
+this is not a downgrade conversion. Limits are 100 tabs per document, one million
+characters per tab and the existing 64 MB journal limit.
+
+A local page boundary is a durable Markdown comment containing its append operation
+UUID. The editor places the cursor after that boundary. This provides explicit
+append/retry identity, not a rich paginated layout or a published Graph content
+format. Direct Markdown editing can intentionally remove the boundary; historical
+content and recording references remain available. A shared rich document/tab API,
+visual page rendering, and filing an already started capture into a different
+document/tab remain open. No local-to-Graph upload or transcription is performed.
 
 ## API and storage ownership
 
@@ -64,6 +89,14 @@ claim of an unlimited indexed database. Audio has its own bounded storage API.
   earlier text revisions as separate drafts without overwriting the current note.
 
 ## Evidence and limits
+
+The tab/destination increment passed the native TypeScript compiler, client
+transpile, changed-file ESLint, architecture layer checks, 29 Node checks and 77
+Chromium checks. These include legacy journal replay without rewriting, tab/page
+retry after restart, independent tab conflicts, recording destination persistence,
+choice cancellation, dirty-target protection, and the real native file-model
+save/reopen/conflict/hot-exit recovery for both first and additional tabs.
+
 
 Automated coverage exercises real filesystem persistence, service reconstruction,
 concurrent stale saves, failed writes, request reuse, corruption, IPC validation,

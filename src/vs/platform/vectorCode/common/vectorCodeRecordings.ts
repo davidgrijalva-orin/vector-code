@@ -11,7 +11,7 @@ import { localLibraryId } from './vectorCodeLibrary.js';
 
 export const VECTOR_CODE_RECORDINGS_CHANNEL = 'vectorCodeRecordingsV1';
 export const IVectorCodeRecordingsService = createDecorator<IVectorCodeRecordingsService>('vectorCodeRecordingsService');
-export interface RecordingStart { version: 1; id: string; noteId: string; mimeType: string }
+export interface RecordingStart { version: 1; id: string; noteId: string; mimeType: string; tabId?: string; pageId?: string }
 export interface LocalRecording extends RecordingStart { createdAt: number; status: 'capturing' | 'stopped'; chunks: number; bytes: number; durationMs?: number }
 export interface IVectorCodeRecordingsService {
 	readonly _serviceBrand: undefined;
@@ -25,7 +25,7 @@ export function validateRecordingStart(value: unknown): RecordingStart {
 	if (!value || typeof value !== 'object') { throw new Error('Invalid recording request.'); }
 	const request = value as RecordingStart;
 	if (request.version !== 1 || !['audio/webm', 'audio/webm;codecs=opus'].includes(request.mimeType)) { throw new Error('Unsupported recording format.'); }
-	return { version: 1, id: localLibraryId(request.id), noteId: localLibraryId(request.noteId), mimeType: request.mimeType };
+	return { version: 1, id: localLibraryId(request.id), noteId: localLibraryId(request.noteId), mimeType: request.mimeType, ...(request.tabId !== undefined ? { tabId: localLibraryId(request.tabId) } : {}), ...(request.pageId !== undefined ? { pageId: localLibraryId(request.pageId) } : {}) };
 }
 export function recordingSequence(value: unknown): number {
 	if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > 86400) { throw new Error('Invalid recording sequence.'); }

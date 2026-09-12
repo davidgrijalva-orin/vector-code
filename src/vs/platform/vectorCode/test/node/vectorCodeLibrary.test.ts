@@ -9,7 +9,7 @@ import { tmpdir } from 'os';
 import { join } from '../../../../base/common/path.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { LibraryMutation, VectorCodeLibraryChannel } from '../../common/vectorCodeLibrary.js';
+import { LibraryMutation, VectorCodeLibraryChannel, localDocumentTabs, localPageBreak } from '../../common/vectorCodeLibrary.js';
 import { VectorCodeLibrary } from '../../node/vectorCodeLibrary.js';
 
 suite('VectorCode local library', () => {
@@ -18,6 +18,46 @@ suite('VectorCode local library', () => {
 	setup(async () => { directory = await fs.mkdtemp(join(tmpdir(), 'vectorcode-library-')); service = new VectorCodeLibrary(directory); });
 	teardown(async () => { await fs.rm(directory, { recursive: true, force: true }); });
 	const base = () => ({ version: 1 as const, requestId: generateUuid() });
+	test('legacy notes become first tabs without changing IDs, history or original journal events', async () => {
+		const create: LibraryMutation = { ...base(), kind: 'createNote', title: 'Existing', projectIds: [] };
+		const save: LibraryMutation = { ...base(), kind: 'saveNote', id: create.requestId, expectedRevision: 1, body: 'Original text' };
+		const journal = JSON.stringify({ version: 1, events: [{ request: create, at: 1 }, { request: save, at: 2 }] });
+		await fs.writeFile(join(directory, 'library-v1.json'), journal);
+		const note = (await service.read()).notes[0];
+		strictEqual(localDocumentTabs(note)[0].id, create.requestId);
+		strictEqual(localDocumentTabs(note)[0].body, 'Original text');
+		strictEqual(localDocumentTabs(note)[0].history.length, 1);
+		strictEqual(await fs.readFile(join(directory, 'library-v1.json'), 'utf8'), journal);
+	});
+	test('tabs and page appends persist and retries do not duplicate content or tabs', async () => {
+		const doc = await service.mutate({ ...base(), kind: 'createNote', title: 'Document', projectIds: [] });
+		const createTab: LibraryMutation = { ...base(), kind: 'createTab', id: doc.id, expectedRevision: 1, title: 'Meetings' };
+		const tab = await service.mutate(createTab);
+		const append: LibraryMutation = { ...base(), kind: 'appendPage', id: doc.id, tabId: tab.tabId!, expectedRevision: 1, body: 'Meeting one' };
+		const receipt = await service.mutate(append);
+		service = new VectorCodeLibrary(directory);
+		deepStrictEqual(await service.mutate(createTab), tab);
+		deepStrictEqual(await service.mutate(append), receipt);
+		const tabs = localDocumentTabs((await service.read()).notes[0]);
+		strictEqual(tabs.length, 2); strictEqual(tabs[0].body, '');
+		strictEqual(tabs[1].body, localPageBreak(append.requestId) + 'Meeting one');
+		strictEqual(receipt.pageId, append.requestId);
+		strictEqual((await service.findNotes('Meeting one'))[0].id, doc.id);
+		strictEqual((await service.findNotes('Meetings'))[0].id, doc.id);
+		await rejects(service.mutate({ ...append, body: 'Different' }), /different change/);
+	});
+	test('independent tab edits and project filing preserve baselines; same-tab stale appends reject', async () => {
+		const doc = await service.mutate({ ...base(), kind: 'createNote', title: 'Document', projectIds: [] });
+		const tab = await service.mutate({ ...base(), kind: 'createTab', id: doc.id, expectedRevision: 1, title: 'Second' });
+		await service.mutate({ ...base(), kind: 'assignNote', id: doc.id, expectedRevision: 2, projectIds: [] });
+		await service.mutate({ ...base(), kind: 'saveNote', id: doc.id, expectedRevision: 1, expectedContentRevision: 1, body: 'First tab' });
+		await service.mutate({ ...base(), kind: 'saveTab', id: doc.id, tabId: tab.tabId!, expectedRevision: 1, body: 'Second tab' });
+		await service.mutate({ ...base(), kind: 'appendPage', id: doc.id, tabId: doc.id, expectedRevision: 2, body: 'Next page' });
+		await rejects(service.mutate({ ...base(), kind: 'appendPage', id: doc.id, tabId: doc.id, expectedRevision: 2, body: 'Stale' }), /changed in another window/);
+		await rejects(service.mutate({ ...base(), kind: 'saveTab', id: doc.id, tabId: generateUuid(), expectedRevision: 1, body: 'Missing' }), /tab does not exist/);
+		const tabs = localDocumentTabs((await new VectorCodeLibrary(directory).read()).notes[0]);
+		strictEqual(tabs[0].history[1].body, 'First tab'); strictEqual(tabs[1].body, 'Second tab');
+	});
 	test('account-free projects, inbox, moves and revision history survive service restart', async () => {
 		const first = await service.mutate({ ...base(), kind: 'createProject', title: 'Writing' });
 		const second = await service.mutate({ ...base(), kind: 'createProject', title: 'Research' });

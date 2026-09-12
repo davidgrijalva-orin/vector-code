@@ -79,3 +79,16 @@ Desktop visual and physical-device acceptance is pending because the Mac is lock
 The independent reviewer cannot run under the skill's required read-only parent
 permission mode in this session. Neither source tests nor the synthetic codec test
 is a claim that the full unified application has been released or accepted.
+
+## Document tab and page destinations
+
+Starting a recording from a local document offers next page, new tab or new document.
+The audio API and persisted manifest retain optional `tabId` and `pageId` values.
+The storage service validates that a new capture target exists before committing
+its manifest; a retry of an existing capture retains the original destination.
+Old manifests without these fields refer to the original first tab. Audio chunks,
+capture identity and timestamps are unchanged by document project membership.
+Page/tab creation is committed before microphone acquisition; if acquisition fails,
+the empty destination remains available and no successful audio capture is claimed.
+This is destination selection at capture start, not transcription or a completed
+move/filing workflow for an already started recording.

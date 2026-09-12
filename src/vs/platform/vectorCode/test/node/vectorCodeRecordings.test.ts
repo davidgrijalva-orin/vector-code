@@ -25,6 +25,21 @@ suite('VectorCode durable local recordings', () => {
 		request = { version: 1, id: generateUuid(), noteId: note.id, mimeType: 'audio/webm;codecs=opus' };
 	});
 	teardown(async () => { await fs.rm(directory, { recursive: true, force: true }); });
+	test('recordings retain their tab and page destination across restart without duplicating capture', async () => {
+		const tab = await library.mutate({ version: 1, requestId: generateUuid(), kind: 'createTab', id: request.noteId, expectedRevision: 1, title: 'Meetings' });
+		const page = await library.mutate({ version: 1, requestId: generateUuid(), kind: 'appendPage', id: request.noteId, tabId: tab.tabId!, expectedRevision: 1, body: '' });
+		request = { ...request, tabId: tab.tabId, pageId: page.pageId };
+		const started = await service.begin(request);
+		await service.append(request.id, 0, VSBuffer.fromString('audio'));
+		service = new VectorCodeRecordings(join(directory, 'audio'), new VectorCodeLibrary(join(directory, 'library')));
+		const restored = await service.read(request.id);
+		strictEqual(restored.recording.tabId, tab.tabId); strictEqual(restored.recording.pageId, page.pageId); strictEqual(restored.data.toString(), 'audio');
+		strictEqual((await service.begin(request)).createdAt, started.createdAt);
+		await rejects(service.begin({ ...request, tabId: request.noteId }), /different capture/);
+		await rejects(service.begin({ ...request, id: generateUuid(), pageId: generateUuid() }), /no longer exists/);
+		await rejects(service.begin({ ...request, id: generateUuid(), tabId: generateUuid() }), /no longer exists/);
+		strictEqual((await service.list(request.noteId)).length, 1);
+	});
 	test('saved and unfinished audio survive restart and filing the note into a project', async () => {
 		await service.begin(request);
 		await service.append(request.id, 0, VSBuffer.fromString('first'));

@@ -8,6 +8,7 @@ import { ICommandService, CommandsRegistry } from '../../../../../platform/comma
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { IWorkspaceEditingService } from '../../../../services/workspaces/common/workspaceEditing.js';
+import { IWorkingCopyService } from '../../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import { IQuickInputService } from '../../../../../platform/quickinput/common/quickInput.js';
 import { IFileDialogService } from '../../../../../platform/dialogs/common/dialogs.js';
@@ -24,20 +25,44 @@ suite('VectorCode local work actions', () => {
 		const inst = store.add(new TestInstantiationService());
 		const storage = store.add(new TestStorageService());
 		const writes: LibraryMutation[] = []; const editors: unknown[] = []; const commands: unknown[][] = []; const folders: string[] = [];
-		let fail = false;
+		let fail = false; let dirty = false;
 		const library: LocalLibrary = { version: 1, projects: [], notes: [] };
 		inst.stub(IStorageService, storage);
+		inst.stub(IWorkingCopyService, { isDirty: () => dirty } as unknown as IWorkingCopyService);
 		inst.stub(IWorkspaceEditingService, { addFolders: async (items: { uri: URI }[]) => { folders.push(...items.map(item => item.uri.toString())); } } as unknown as IWorkspaceEditingService);
 		inst.stub(ICommandService, { executeCommand: async (...args: unknown[]) => { commands.push(args); } } as unknown as ICommandService);
 		inst.stub(IQuickInputService, { pick: async (items: unknown[]) => { const index = choices.shift(); return index === undefined ? undefined : Array.isArray(index) ? index.map(value => items[value]) : items[index]; }, input: async () => title } as unknown as IQuickInputService);
 		inst.stub(IVectorCodeLibraryService, {
 			read: async () => library,
-			mutate: async (request: LibraryMutation) => { writes.push(request); if (fail) { throw new Error('Lost reply'); } return { id: request.requestId, revision: 1 }; }
+			mutate: async (request: LibraryMutation) => { writes.push(request); if (fail) { throw new Error('Lost reply'); } return { id: request.kind === 'createTab' || request.kind === 'appendPage' ? request.id : request.requestId, revision: 1, ...(request.kind === 'createTab' ? { tabId: request.requestId } : {}), ...(request.kind === 'appendPage' ? { pageId: request.requestId } : {}) }; }
 		} as unknown as IVectorCodeLibraryService);
 		inst.stub(IEditorService, { openEditor: async (input: unknown) => { editors.push(input); } } as unknown as IEditorService);
 		inst.stub(IFileService, {} as IFileService); inst.stub(IFileDialogService, {} as IFileDialogService);
-		return { writes, editors, commands, folders, library, choices, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
+		return { writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
 	}
+	const documentId = '658d2b51-5118-46d4-8b60-bf1954501284';
+	function addDocument(f: ReturnType<typeof fixture>) {
+		f.library.notes.push({ id: documentId, title: 'Document', body: 'Original', revision: 4, contentRevision: 2, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [] });
+	}
+	test('new note offers a page, internal tab or separate document and preserves canceled choices', async () => {
+		for (const choices of [[1, undefined], [1, 0, undefined], [1, 0, 0, undefined]]) {
+			const f = fixture(choices, 'Title'); addDocument(f); await f.run(); deepStrictEqual(f.writes, []);
+		}
+		const f = fixture([1, 2], 'Separate'); addDocument(f); await f.run(); strictEqual(f.writes[0].kind, 'createNote');
+	});
+	test('next page targets the selected tab revision and refuses an unsaved local draft', async () => {
+		const f = fixture([1, 0, 0, 0], ''); addDocument(f); await f.run();
+		const request = f.writes[0]; strictEqual(request.kind, 'appendPage');
+		if (request.kind === 'appendPage') { strictEqual(request.id, documentId); strictEqual(request.tabId, documentId); strictEqual(request.expectedRevision, 2); }
+		const dirty = fixture([1, 0, 0, 0], ''); addDocument(dirty); dirty.setDirty(true);
+		await rejects(dirty.run(), /preserve the open draft/); deepStrictEqual(dirty.writes, []);
+	});
+	test('new tab opens its own resource and does not create another document', async () => {
+		const f = fixture([1, 1, 0], 'Meetings'); addDocument(f); await f.run();
+		const request = f.writes[0]; strictEqual(request.kind, 'createTab');
+		if (request.kind === 'createTab') { strictEqual(request.id, documentId); strictEqual(request.expectedRevision, 4); }
+		strictEqual((f.editors[0] as { resource: URI }).resource.path, '/' + documentId + '/' + request.requestId + '.md');
+	});
 	test('creates a note in Inbox with no Graph, account or folder services registered', async () => {
 		const f = fixture([1], 'Idea'); await f.run();
 		strictEqual(f.writes.length, 1);

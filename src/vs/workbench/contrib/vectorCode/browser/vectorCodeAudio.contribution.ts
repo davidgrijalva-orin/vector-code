@@ -18,11 +18,11 @@ import { IVectorCodeRecordingsService } from '../../../../platform/vectorCode/co
 /** UI actions use only capability APIs. Microphone access starts only after the explicit recording action. */
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.recordLocalNote', title: localize2('recordLocalNote', 'Work: Record Audio in a Local Note'), f1: false }); }
-	async run(accessor: ServicesAccessor, noteId: string): Promise<void> {
+	async run(accessor: ServicesAccessor, noteId: string, tabId?: string, pageId?: string): Promise<void> {
 		const audio = accessor.get(IVectorCodeAudioService); const notifications = accessor.get(INotificationService);
 		const listeners = new DisposableStore(); let notification: INotificationHandle | undefined;
 		listeners.add(Event.once(audio.onDidFinish)(result => { listeners.dispose(); notification?.close(); notification = undefined; if (result.error) { notifications.error(result.error); } }));
-		try { await audio.start(noteId); } catch (error) { listeners.dispose(); throw error; }
+		try { await audio.start(noteId, tabId, pageId); } catch (error) { listeners.dispose(); throw error; }
 		if (!audio.isRecording) { listeners.dispose(); return; }
 		notification = notifications.prompt(Severity.Info, 'Recording audio on this computer. Close this notice or choose Stop to finish.', [{ label: 'Stop recording', run: () => { void audio.stop().catch(() => undefined); } }], { sticky: true });
 		listeners.add(Event.once(notification.onDidClose)(() => { void audio.stop().catch(() => undefined); }));

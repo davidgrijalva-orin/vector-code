@@ -7,11 +7,16 @@ import { writeLocalWorkFile } from './vectorCodeLocalFile.js';
 import { promises as fs } from 'fs';
 import { hasKey } from '../../../base/common/types.js';
 import { join } from '../../../base/common/path.js';
-import { IVectorCodeLibraryService, LibraryMutation, LibraryReceipt, LocalLibrary, LocalNote, validateLibraryMutation } from '../common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LibraryReceipt, LocalLibrary, LocalNote, localDocumentTabs, localPageBreak, validateLibraryMutation } from '../common/vectorCodeLibrary.js';
 
 interface LibraryEvent { request: LibraryMutation; at: number }
 interface LibraryState { library: LocalLibrary; receipts: Map<string, { fingerprint: string; result: LibraryReceipt }> }
 function empty(): LibraryState { return { library: { version: 1, projects: [], notes: [] }, receipts: new Map() }; }
+function saveContent(tab: Pick<LocalNote, 'body' | 'contentRevision' | 'contentUpdatedAt' | 'history'>, body: string, at: number): void {
+	if (body.length > 1024 * 1024) { throw new Error('Tabs support up to one million characters.'); }
+	tab.history.push({ body: tab.body, revision: tab.contentRevision, updatedAt: tab.contentUpdatedAt });
+	tab.body = body; tab.contentRevision++; tab.contentUpdatedAt = Math.max(at, tab.contentUpdatedAt + 1);
+}
 function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 	const request = validateLibraryMutation(event.request);
 	if (!Number.isSafeInteger(event.at) || event.at < 0) { throw new Error('Invalid local work timestamp.'); }
@@ -31,6 +36,24 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		checkProjects(request.projectIds);
 		notes.push({ id: request.requestId, title: request.title, projectIds: request.projectIds, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: event.at, createdAt: event.at, updatedAt: event.at, history: [] });
 		result = { id: request.requestId, revision: 1 };
+	} else if (request.kind === 'createTab' || request.kind === 'saveTab' || request.kind === 'appendPage') {
+		const note = notes.find(note => note.id === request.id);
+		if (!note) { throw new Error('The local document does not exist.'); }
+		if (request.kind === 'createTab') {
+			if (note.revision !== request.expectedRevision) { throw new Error('This document changed in another window. Reload before adding a tab.'); }
+			if ((note.additionalTabs?.length ?? 0) >= 99) { throw new Error('Documents support up to 100 tabs.'); }
+			(note.additionalTabs ??= []).push({ id: request.requestId, title: request.title, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: event.at, createdAt: event.at, updatedAt: event.at, history: [] });
+			result = { id: note.id, tabId: request.requestId, revision: note.revision + 1, contentRevision: 1 };
+		} else {
+			const tab = request.tabId === note.id ? note : note.additionalTabs?.find(tab => tab.id === request.tabId);
+			if (!tab) { throw new Error('The document tab does not exist.'); }
+			if (tab.contentRevision !== request.expectedRevision) { throw new Error('This tab changed in another window. Preserve your draft and reload before retrying.'); }
+			const body = request.kind === 'appendPage' ? tab.body + localPageBreak(request.requestId) + request.body : request.body;
+			saveContent(tab, body, event.at);
+			if (tab !== note) { tab.revision = tab.contentRevision; tab.updatedAt = tab.contentUpdatedAt; }
+			result = { id: note.id, tabId: request.tabId, revision: note.revision + 1, contentRevision: tab.contentRevision, ...(request.kind === 'appendPage' ? { pageId: request.requestId } : {}) };
+		}
+		note.revision++; note.updatedAt = Math.max(event.at, note.updatedAt + 1);
 	} else {
 		const item = request.kind === 'setFolders' || request.kind === 'renameProject' ? projects.find(project => project.id === request.id) : notes.find(note => note.id === request.id);
 		if (!item) { throw new Error('The local work item does not exist.'); }
@@ -41,8 +64,7 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		if (hasKey(item, { body: true })) {
 			if (request.kind === 'assignNote') { checkProjects(request.projectIds); item.projectIds = request.projectIds; }
 			if (request.kind === 'saveNote') {
-				item.history.push({ body: item.body, revision: item.contentRevision, updatedAt: item.contentUpdatedAt });
-				item.body = request.body; item.contentRevision++; item.contentUpdatedAt = Math.max(event.at, item.contentUpdatedAt + 1);
+				saveContent(item, request.body, event.at);
 			}
 			item.updatedAt = Math.max(event.at, item.updatedAt + 1);
 		}
@@ -81,7 +103,7 @@ export class VectorCodeLibrary implements IVectorCodeLibraryService {
 		if (typeof query !== 'string' || query.length > 1000) { throw new Error('Enter a search of at most 1000 characters.'); }
 		const library = await this.read();
 		const search = query.trim().toLocaleLowerCase();
-		return library.notes.filter(note => [note.title, note.body, ...note.projectIds.map(id => library.projects.find(project => project.id === id)?.title ?? '')].some(text => text.toLocaleLowerCase().includes(search)));
+		return library.notes.filter(note => [note.title, ...localDocumentTabs(note).flatMap(tab => [tab.title, tab.body]), ...note.projectIds.map(id => library.projects.find(project => project.id === id)?.title ?? '')].some(text => text.toLocaleLowerCase().includes(search)));
 	}
 	mutate(input: LibraryMutation): Promise<LibraryReceipt> {
 		// Copy before queueing so callers cannot change an in-flight request.

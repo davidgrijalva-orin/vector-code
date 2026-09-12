@@ -16,8 +16,9 @@ import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject, localDocumentTabs, localPageBreak } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
 import { IWorkspaceEditingService } from '../../../services/workspaces/common/workspaceEditing.js';
+import { IWorkingCopyService } from '../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { LOCAL_NOTE_SCHEME, localNoteResource, VectorCodeLibraryFileSystem } from './vectorCodeLibraryFileSystem.js';
@@ -29,7 +30,7 @@ class LocalLibraryContribution extends Disposable {
 registerWorkbenchContribution2(LocalLibraryContribution.ID, LocalLibraryContribution, WorkbenchPhase.BlockStartup);
 const pendingKey = 'vectorCode.localLibrary.pending';
 function context(accessor: ServicesAccessor) {
-	return { workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
+	return { workingCopies: accessor.get(IWorkingCopyService), workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
 }
 type LocalWorkContext = ReturnType<typeof context>;
 
@@ -50,6 +51,41 @@ async function create(value: LocalWorkContext, kind: 'createProject' | 'createNo
 	const result = await mutate(value, kind === 'createProject' ? { ...request, kind } : { ...request, kind, projectIds });
 	if (kind === 'createNote') { await value.editors.openEditor({ resource: localNoteResource(result.id), label: title, options: { pinned: true } }); if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', result.id); } }
 }
+async function addDocumentContent(value: LocalWorkContext, note?: LocalNote, projectIds: string[] = [], record = false) {
+	const documents = (await value.library.read()).notes;
+	if (!note && !documents.length) { return create(value, 'createNote', projectIds, record); }
+	const destination = await value.quick.pick([
+		{ label: 'Next page in an existing document tab', kind: 'appendPage' as const },
+		{ label: 'New tab in an existing document', kind: 'createTab' as const },
+		{ label: 'New document', kind: 'createNote' as const }
+	], { title: record ? 'Where should this recording go?' : 'Where should the new note go?' });
+	if (!destination) { return; }
+	if (destination.kind === 'createNote') { return create(value, 'createNote', projectIds, record); }
+	if (!note) {
+		const selected = await value.quick.pick(documents.map(note => ({ label: note.title, note })), { placeHolder: 'Choose the document.' });
+		if (!selected) { return; } note = selected.note;
+	}
+	if (destination.kind === 'createTab') {
+		const title = await value.quick.input({ prompt: 'Name the new document tab.', validateInput: async text => !text.trim() || text.length > 1000 ? 'Enter a title of at most 1000 characters.' : undefined });
+		if (!title) { return; }
+		const receipt = await mutate(value, { version: 1, requestId: generateUuid(), kind: 'createTab', id: note.id, expectedRevision: note.revision, title });
+		await value.editors.openEditor({ resource: localNoteResource(note.id, receipt.tabId), label: note.title + ' · ' + title, options: { pinned: true } });
+		if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', note.id, receipt.tabId); }
+	} else {
+		const selected = await value.quick.pick(localDocumentTabs(note).map(tab => ({ label: tab.title, tab })), { placeHolder: 'Choose the tab to append to.' });
+		if (!selected) { return; }
+		const resource = localNoteResource(note.id, selected.tab.id);
+		if (value.workingCopies.isDirty(resource)) { throw new Error('Save or preserve the open draft in this tab before adding a page.'); }
+		const receipt = await mutate(value, { version: 1, requestId: generateUuid(), kind: 'appendPage', id: note.id, tabId: selected.tab.id, expectedRevision: selected.tab.contentRevision, body: '' });
+		await value.editors.openEditor({ resource, label: note.title + ' · ' + selected.tab.title, options: { pinned: true, forceReload: true, selection: { startLineNumber: (selected.tab.body + localPageBreak(receipt.pageId!)).split('\n').length, startColumn: 1 } } });
+		if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', note.id, selected.tab.id, receipt.pageId); }
+	}
+}
+async function openDocument(value: LocalWorkContext, note: LocalNote) {
+	const tabs = localDocumentTabs(note);
+	const tab = tabs.length === 1 ? tabs[0] : (await value.quick.pick(tabs.map(tab => ({ label: tab.title, tab })), { title: note.title, placeHolder: 'Open a document tab.' }))?.tab;
+	if (tab) { await value.editors.openEditor({ resource: localNoteResource(note.id, tab.id), label: note.title + ' · ' + tab.title, options: { pinned: true } }); }
+}
 async function rename(value: LocalWorkContext, item: LocalNote | LocalProject, kind: 'renameNote' | 'renameProject') {
 	const title = await value.quick.input({ value: item.title, prompt: 'Rename this local work item.', validateInput: async text => !text.trim() || text.length > 1000 ? 'Enter a title of at most 1000 characters.' : undefined });
 	if (title && title !== item.title) { await mutate(value, { version: 1, requestId: generateUuid(), kind, id: item.id, expectedRevision: item.revision, title }); }
@@ -57,25 +93,28 @@ async function rename(value: LocalWorkContext, item: LocalNote | LocalProject, k
 async function noteActions(value: LocalWorkContext, note: LocalNote) {
 	const quick = value.quick; const editors = value.editors;
 	const action = await quick.pick([
-		{ label: 'Open note', kind: 'open' }, { label: 'Rename note…', kind: 'rename' }, { label: 'Start recording in this note', kind: 'record' }, { label: 'Play or export recordings…', kind: 'recordings' }, { label: 'Move or link to projects…', kind: 'assign' },
-		{ label: 'Export saved note as Markdown…', kind: 'export' }, { label: 'Open a previous revision as a draft…', kind: 'history' }
+		{ label: 'Open document tab…', kind: 'open' }, { label: 'Rename document…', kind: 'rename' }, { label: 'Start recording in this document…', kind: 'record' }, { label: 'Play or export recordings…', kind: 'recordings' }, { label: 'Move or link to projects…', kind: 'assign' },
+		{ label: 'Export saved document as Markdown…', kind: 'export' }, { label: 'Open a previous revision as a draft…', kind: 'history' }, { label: 'Add note: next page, new tab, or new document…', kind: 'addContent' }
 	], { title: note.title });
 	if (!action) { return; }
 	if (action.kind === 'rename') { await rename(value, note, 'renameNote'); }
-	if (action.kind === 'record') { await value.commands.executeCommand('vectorCode.recordLocalNote', note.id); }
+	if (action.kind === 'record') { await addDocumentContent(value, note, note.projectIds, true); }
 	if (action.kind === 'recordings') { await value.commands.executeCommand('vectorCode.localNoteRecordings', note.id); }
-	if (action.kind === 'open') { await editors.openEditor({ resource: localNoteResource(note.id), label: note.title, options: { pinned: true } }); }
+	if (action.kind === 'open') { await openDocument(value, note); }
+	if (action.kind === 'addContent') { await addDocumentContent(value, note, note.projectIds); }
 	if (action.kind === 'assign') {
 		const library = await value.library.read();
 		const selected = await quick.pick(library.projects.map(project => ({ label: project.title, id: project.id, picked: note.projectIds.includes(project.id) })), { canPickMany: true, placeHolder: 'Choose projects; clear all to return this note to Inbox.' });
 		if (selected) { await mutate(value, { version: 1, requestId: generateUuid(), kind: 'assignNote', id: note.id, expectedRevision: note.revision, projectIds: selected.map(project => project.id) }); }
 	}
 	if (action.kind === 'export') {
-		const target = await value.dialogs.showSaveDialog({ title: 'Export saved note', filters: [{ name: 'Markdown', extensions: ['md'] }] });
-		if (target) { const current = (await value.library.read()).notes.find(value => value.id === note.id); if (current) { await value.files.writeFile(target, VSBuffer.fromString(current.body)); } }
+		const target = await value.dialogs.showSaveDialog({ title: 'Export saved document', filters: [{ name: 'Markdown', extensions: ['md'] }] });
+		if (target) { const current = (await value.library.read()).notes.find(value => value.id === note.id); if (current) { const tabs = localDocumentTabs(current); await value.files.writeFile(target, VSBuffer.fromString(tabs.length === 1 ? tabs[0].body : tabs.map(tab => '# ' + tab.title + '\n\n' + tab.body).join('\n\n'))); } }
 	}
 	if (action.kind === 'history') {
-		const revision = await quick.pick([...note.history].reverse().map(revision => ({ label: 'Revision ' + revision.revision, description: new Date(revision.updatedAt).toLocaleString(), revision })), { placeHolder: 'Open a copy without overwriting the saved note.' });
+		const selected = await quick.pick(localDocumentTabs(note).map(tab => ({ label: tab.title, tab })), { placeHolder: 'Choose a document tab.' });
+		if (!selected) { return; }
+		const revision = await quick.pick([...selected.tab.history].reverse().map(revision => ({ label: 'Revision ' + revision.revision, description: new Date(revision.updatedAt).toLocaleString(), revision })), { placeHolder: 'Open a copy without overwriting the saved note.' });
 		if (revision) { await editors.openEditor({ contents: revision.revision.body, languageId: 'markdown', options: { pinned: true } }); }
 	}
 }
@@ -96,7 +135,7 @@ async function projectActions(value: LocalWorkContext, project: LocalProject) {
 		if (selected?.length) { await value.workspaces.addFolders(selected.map(item => ({ uri: URI.parse(item.folder) }))); }
 	}
 	if (action.kind === 'rename') { await rename(value, project, 'renameProject'); }
-	if (action.kind === 'create') { await create(value, 'createNote', [project.id]); }
+	if (action.kind === 'create') { await addDocumentContent(value, undefined, [project.id]); }
 	if (action.note) { await noteActions(value, action.note); }
 	let folders: string[] | undefined;
 	if (action.kind === 'add') {
@@ -124,7 +163,7 @@ registerAction2(class extends Action2 {
 		const library = await service.read();
 		const choice = await quick.pick([
 			{ label: 'New local project', kind: 'project', project: undefined },
-			{ label: 'New note in Inbox', kind: 'note', project: undefined },
+			{ label: 'New note…', kind: 'note', project: undefined },
 			{ label: 'Inbox', description: String(library.notes.filter(note => !note.projectIds.length).length) + ' notes', kind: 'inbox', project: undefined },
 			{ label: 'Find a note…', kind: 'find', project: undefined },
 			{ label: 'Start a recording in Inbox…', kind: 'record', project: undefined },
@@ -133,7 +172,7 @@ registerAction2(class extends Action2 {
 		if (!choice) { return; }
 		if (choice.kind === 'project') { await create(value, 'createProject'); }
 		if (choice.kind === 'record') { await create(value, 'createNote', [], true); }
-		if (choice.kind === 'note') { await create(value, 'createNote'); }
+		if (choice.kind === 'note') { await addDocumentContent(value); }
 		if (choice.project) { await projectActions(value, choice.project); }
 		if (choice.kind === 'inbox' || choice.kind === 'find') {
 			const query = choice.kind === 'find' ? await quick.input({ prompt: 'Search the full text of local notes, titles, and project names.' }) : '';
@@ -152,6 +191,6 @@ for (const action of [
 ]) {
 	registerAction2(class extends Action2 {
 		constructor() { super({ id: action.id, title: action.title, f1: true }); }
-		async run(accessor: ServicesAccessor): Promise<void> { const value = context(accessor); await create(value, action.kind, [], action.record); }
+		async run(accessor: ServicesAccessor): Promise<void> { const value = context(accessor); if (action.kind === 'createNote' && !action.record) { await addDocumentContent(value); } else { await create(value, action.kind, [], action.record); } }
 	});
 }

@@ -3,6 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { OPEN_VSX_GALLERY_URL } from '../common/openVsx.js';
+import { IProductService } from '../../product/common/productService.js';
+import { readOpenVsxSignature } from './openVsxSignatureVerifier.js';
 import { Promises } from '../../../base/common/async.js';
 import { getErrorMessage } from '../../../base/common/errors.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
@@ -53,6 +56,7 @@ export class ExtensionsDownloader extends Disposable {
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService,
 		@ILogService private readonly logService: ILogService,
+		@IProductService private readonly productService: IProductService,
 	) {
 		super();
 		this.extensionsDownloadDir = environmentService.extensionsDownloadLocation;
@@ -77,7 +81,7 @@ export class ExtensionsDownloader extends Disposable {
 		let signatureArchiveLocation;
 		try {
 			signatureArchiveLocation = await this.downloadSignatureArchive(extension);
-			const verificationStatus = (await this.extensionSignatureVerificationService.verify(extension.identifier.id, extension.version, location.fsPath, signatureArchiveLocation.fsPath, clientTargetPlatform))?.code;
+			const verificationStatus = (await this.extensionSignatureVerificationService.verify(extension.identifier.id, extension.version, location.fsPath, signatureArchiveLocation.fsPath, clientTargetPlatform, extension.properties.targetPlatform))?.code;
 			if (verificationStatus === ExtensionSignatureVerificationCode.PackageIsInvalidZip || verificationStatus === ExtensionSignatureVerificationCode.SignatureArchiveIsInvalidZip) {
 				try {
 					// Delete the downloaded vsix if VSIX or signature archive is invalid
@@ -144,7 +148,11 @@ export class ExtensionsDownloader extends Disposable {
 			const attempts = await this.doDownload(extension, 'sigzip', async () => {
 				await this.extensionGalleryService.downloadSignatureArchive(extension, location);
 				try {
-					await this.validate(location.fsPath, '.signature.p7s');
+					if (this.productService.extensionsGallery?.serviceUrl === OPEN_VSX_GALLERY_URL) {
+						await readOpenVsxSignature(location.fsPath);
+					} else {
+						await this.validate(location.fsPath, '.signature.p7s');
+					}
 				} catch (error) {
 					try {
 						await this.fileService.del(location);

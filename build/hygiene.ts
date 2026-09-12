@@ -37,8 +37,11 @@ export function hygiene(some: NodeJS.ReadWriteStream | string[] | undefined, run
 	const productJson = es.through(function (file: VinylFile) {
 		const product = JSON.parse(file.contents!.toString('utf8'));
 
-		if (product.extensionsGallery) {
-			console.error(`product.json: Contains 'extensionsGallery'`);
+		// VectorCode ships Open VSX. Keep proprietary gallery endpoints out of this fork.
+		if (product.extensionsGallery && Object.values(product.extensionsGallery).some(value => {
+			try { return typeof value !== 'string' || new URL(value).origin !== 'https://open-vsx.org'; } catch { return true; }
+		})) {
+			console.error(`product.json: Extension gallery URLs must use https://open-vsx.org`);
 			errorCount++;
 		}
 

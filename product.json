@@ -174,5 +174,15 @@
 		}
 	],
 	"builtInExtensionsEnabledWithAutoUpdates": [],
-	"sessionsWindowAllowedExtensions": []
+	"sessionsWindowAllowedExtensions": [],
+	"extensionsGallery": {
+		"serviceUrl": "https://open-vsx.org/vscode/gallery",
+		"itemUrl": "https://open-vsx.org/vscode/item",
+		"resourceUrlTemplate": "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+		"extensionUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest"
+	},
+	"mcpGallery": {
+		"serviceUrl": "https://registry.modelcontextprotocol.io",
+		"itemWebUrl": "https://registry.modelcontextprotocol.io/?q={name}"
+	}
 }

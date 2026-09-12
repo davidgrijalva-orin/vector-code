@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
+import { IProductService } from '../../../product/common/productService.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { platform } from '../../../../base/common/platform.js';
 import { arch } from '../../../../base/common/process.js';
@@ -61,6 +62,7 @@ suite('ExtensionDownloader Tests', () => {
 
 	setup(() => {
 		instantiationService = disposables.add(new TestInstantiationService());
+		instantiationService.stub(IProductService, { extensionsGallery: undefined });
 
 		const logService = new NullLogService();
 		const fileService = disposables.add(new FileService(logService));

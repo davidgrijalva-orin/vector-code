@@ -31,7 +31,8 @@ import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContaine
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions, ViewContainerLocation } from '../../../common/views.js';
-import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
+import { VectorGraphProjectInput } from './vectorGraphProjectEditor.js';
 import {
 	IVectorCodeMobileConnectionStatus,
 	IVectorCodeMobileRelayService,
@@ -91,16 +92,28 @@ abstract class VectorCodeViewPane extends ViewPane {
 
 class VectorCodeProjectsView extends VectorCodeViewPane {
 
-	protected static override readonly viewOptions = { minimumBodySize: 96, maximumBodySize: 220 };
+	protected static override readonly viewOptions = { minimumBodySize: 180 };
 	protected static override readonly collapsible = false;
 
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 		container.classList.add('vector-code-projects-view');
+		const addNavigation = (items: readonly (readonly [string, string])[]) => {
+			const navigation = append(container, $('.vector-workspace-navigation'));
+			for (const [label, command] of items) {
+				const button = append(navigation, $<HTMLButtonElement>('button')); button.type = 'button'; button.textContent = label;
+				this._register(addDisposableListener(button, EventType.CLICK, () => { void this.commandService.executeCommand(command).catch(error => this.notificationService.error(error)); }));
+			}
+		};
+		const brand = append(container, $('h2.vector-workspace-brand')); brand.textContent = 'VectorCode';
+		addNavigation([
+			[localize('workspaceHome', 'Project workspace'), 'vectorCode.openProjectWorkspace'],
+			[localize('workspaceFind', 'Search files'), 'workbench.action.findInFiles']
+		]);
 
 		const switcher = this._register(new VectorCodeProjectSwitcher(container, {
 			add: () => this.commandService.executeCommand(VECTOR_CODE_ADD_PROJECT_COMMAND_ID),
-			select: project => this.vectorCodeWorkbenchService.switchProject(project.uri),
+			select: async project => { await this.vectorCodeWorkbenchService.switchProject(project.uri); await this.commandService.executeCommand('vectorCode.openProjectWorkspace'); },
 			close: project => this.vectorCodeWorkbenchService.closeProject(project.uri),
 			onError: error => this.notificationService.error(error)
 		}));
@@ -112,6 +125,11 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 		updateProjects();
 		this._register(this.workspaceContextService.onDidChangeWorkspaceFolders(updateProjects));
 		this._register(this.vectorCodeWorkbenchService.onDidChangeActiveProject(updateProjects));
+		addNavigation([
+			[localize('workspaceExtensions', 'Extensions'), 'workbench.view.extensions'],
+			[localize('workspaceMcp', 'MCP marketplace'), 'workbench.mcp.browseMarketplace'],
+			[localize('workspaceSettings', 'Settings'), 'workbench.action.openSettings']
+		]);
 	}
 }
 
@@ -155,8 +173,9 @@ class VectorCodeProjectContribution implements IWorkbenchContribution {
 
 	static readonly ID = 'workbench.contrib.vectorCodeProject';
 
-	constructor(@IVectorCodeWorkbenchService vectorCodeWorkbenchService: IVectorCodeWorkbenchService) {
+	constructor(@IVectorCodeWorkbenchService vectorCodeWorkbenchService: IVectorCodeWorkbenchService, @IEditorService editors: IEditorService, @INotificationService notifications: INotificationService) {
 		vectorCodeWorkbenchService.getProjectStatusLabel();
+		if (!editors.activeEditor) { void editors.openEditor(new VectorGraphProjectInput(), { pinned: true }).catch(error => notifications.error(error)); }
 	}
 }
 
@@ -346,7 +365,11 @@ const vectorCodeViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensi
 
 const viewContainersRegistry = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry);
 const viewsRegistry = Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry);
-const explorerViewContainer = viewContainersRegistry.get(EXPLORER_VIEWLET_ID);
+const explorerViewContainer = viewContainersRegistry.registerViewContainer({
+	id: 'vectorCode.workspace', title: localize2('workspaceNavigation', 'Workspace'), icon: Codicon.home,
+	ctorDescriptor: new SyncDescriptor(ViewPaneContainer, ['vectorCode.workspace', { mergeViewWithContainerWhenSingleView: true }]),
+	storageId: 'vectorCode.workspace', order: 0
+}, ViewContainerLocation.Sidebar, { isDefault: true });
 
 viewsRegistry.registerViews([{
 	id: VECTOR_CODE_CONTROL_VIEW_ID,

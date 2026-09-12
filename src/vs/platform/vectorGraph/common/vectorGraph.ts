@@ -44,6 +44,7 @@ export interface IVectorGraphTicketDetail extends IVectorGraphTicket {
 	readonly teamId?: string;
 	readonly statusId?: string;
 	readonly assigneeUserId?: string;
+	readonly assigneeName?: string;
 	readonly projectId?: string;
 	readonly updatedAt?: string;
 	readonly links?: readonly { readonly title: string; readonly url: string }[];
@@ -117,6 +118,7 @@ export function parseVectorGraphTicketDetail(value: unknown): IVectorGraphTicket
 		statusId: typeof issue.statusId === 'string' ? issue.statusId : undefined,
 		projectId: typeof issue.projectId === 'string' ? issue.projectId : undefined,
 		assigneeUserId: typeof issue.assigneeUserId === 'string' ? issue.assigneeUserId : undefined,
+		assigneeName: typeof issue.assigneeName === 'string' ? issue.assigneeName : undefined,
 		updatedAt: typeof issue.updatedAt === 'string' ? issue.updatedAt : undefined,
 		links: result.links === undefined ? [] : vectorGraphArray(result.links).map(value => {
 			const link = vectorGraphRecord(value); return { title: typeof link.title === 'string' ? link.title : vectorGraphText(link.url), url: vectorGraphText(link.url) };

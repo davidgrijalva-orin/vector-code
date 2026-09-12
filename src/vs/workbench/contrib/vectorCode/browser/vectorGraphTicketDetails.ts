@@ -67,10 +67,14 @@ export class VectorGraphTicketDetails extends Disposable {
 			this.button(actions, localize('workRefresh', 'Refresh'), () => this.show(selection));
 			this.button(actions, localize('workEditTicket', 'Edit Ticket'), () => this.edit(selection, ticket));
 			append(article, $('h1')).textContent = ticket.title;
-			append(article, $('p')).textContent = [ticket.status, ticket.priority, ticket.project].filter(Boolean).join(' · ');
+			const metadata = append(article, $('.vector-graph-ticket-editor__metadata'));
+			for (const [label, value] of [[localize('ticketStatusLabel', 'Status'), ticket.status], [localize('ticketAssigneeLabel', 'Assignee'), ticket.assigneeName ?? localize('ticketUnassigned', 'Unassigned')], [localize('ticketPriorityLabel', 'Priority'), ticket.priority], [localize('ticketProjectLabel', 'Project'), ticket.project]]) {
+				if (value) { const field = append(metadata, $('div')); append(field, $('small')).textContent = label; append(field, $('strong')).textContent = value; }
+			}
+			const workActions = append(article, $('.vector-graph-ticket-work-actions'));
 			const active = this.work.getActive(selection.project);
 			if (selection.project && selection.project === this.projects.getActiveProjectUri()?.toString()) {
-				this.button(actions, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? localize('workStopWork', 'Stop Work') : localize('workStartWork', 'Start Work'), async () => {
+				this.button(workActions, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? localize('workStopWork', 'Stop Work') : localize('workStartWork', 'Start Work'), async () => {
 					this.assertProject(selection);
 					this.work.setActive(selection.project, active?.workspace === selection.workspace && active.identifier === ticket.identifier ? undefined : { workspace: selection.workspace, identifier: ticket.identifier });
 					await this.show(selection);

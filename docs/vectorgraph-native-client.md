@@ -19,3 +19,7 @@ Verified foundations: IDE-owned device sign-in, main-process authenticated API t
 ## Acceptance
 
 For each native capability, record its API operations and scopes, native entry points, workspace/project behavior, write and conflict semantics, offline/permission handling, deterministic checks, and visible installed-app proof. Preserve backend rich content and relationships. Never silently convert away unsupported data. Merged source, packaged builds and authenticated runtime acceptance are separate evidence requirements.
+
+## Standalone IDE
+
+VectorCode is also a complete standalone IDE. Local projects, files, editing, Git, terminals, debugging, extensions and MCP must work without a VectorGraph account or service connection. VectorGraph adds shared tickets, documents, planning and relationships. Keep optional connection onboarding separate from local development actions, and validate both disconnected and connected workflows.

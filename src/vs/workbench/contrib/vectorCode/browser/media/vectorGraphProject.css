@@ -1,0 +1,36 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+.vector-project { box-sizing: border-box; display: flex; flex-direction: column; padding: 30px clamp(20px, 4vw, 52px); color: var(--vectorcode-editor-foreground); background: var(--vectorcode-editor-background); font-size: 14px; line-height: 1.6; overflow: auto; }
+.vector-project__header h1 { margin: 10px 0; font-size: 30px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
+.vector-project__eyebrow, .vector-project__subtitle { color: var(--vectorcode-descriptionForeground); margin: 0 0 16px; overflow-wrap: anywhere; }
+.vector-project__tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--vectorcode-panel-border); flex-shrink: 0; overflow-x: auto; margin: 8px 0 24px; }
+.vector-project__tabs button { display: flex; align-items: center; gap: 8px; padding: 12px 2px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--vectorcode-foreground); font: inherit; white-space: nowrap; cursor: pointer; }
+.vector-project__tabs button[aria-selected="true"] { border-bottom-color: var(--vectorcode-focusBorder); color: var(--vectorcode-textLink-foreground); font-weight: 600; }
+.vector-project__content { flex: 1; min-height: 200px; display: flex; flex-direction: column; }
+.vector-project__content h2 { font-size: 21px; margin: 0 0 12px; }
+.vector-project__section-heading { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.vector-project__section-heading h2 { flex: 1; margin: 0; }
+.vector-project__button { font: inherit; text-align: left; border: 1px solid var(--vectorcode-panel-border); border-radius: 6px; padding: 9px 14px; color: var(--vectorcode-button-secondaryForeground); background: var(--vectorcode-button-secondaryBackground); cursor: pointer; margin: 4px 6px 4px 0; }
+.vector-project__button.primary { background: var(--vectorcode-button-background); color: var(--vectorcode-button-foreground); }
+.vector-project__button:hover { background: var(--vectorcode-button-secondaryHoverBackground); }
+.vector-project__button.primary:hover { background: var(--vectorcode-button-hoverBackground); }
+.vector-project :focus-visible { outline: 2px solid var(--vectorcode-focusBorder); outline-offset: 2px; }
+.vector-project__tickets { flex: 1; min-height: 280px; }
+.vector-project__document { background: transparent; border: 0; border-bottom: 1px solid var(--vectorcode-panel-border); border-radius: 0; padding: 20px 0; margin: 0; }
+.vector-workspace-navigation { padding: 16px 10px; display: flex; flex-direction: column; gap: 8px; }
+.vector-workspace-navigation button { text-align: left; font: inherit; font-size: 14px; background: transparent; border: 0; border-radius: 6px; color: var(--vectorcode-foreground); padding: 10px 12px; cursor: pointer; }
+.vector-workspace-navigation button:hover { background: var(--vectorcode-list-hoverBackground); }
+.vector-workspace-navigation button:focus-visible { outline: 2px solid var(--vectorcode-focusBorder); }
+
+.vector-workspace-brand { font-size: 23px; font-weight: 600; margin: 22px 20px 6px; color: var(--vectorcode-textLink-foreground); }
+
+.vector-project { container-type: inline-size; }
+@container (max-width: 460px) {
+	.vector-project__tabs { gap: 12px; }
+	.vector-project__tabs button { font-size: 13px; gap: 5px; }
+	.vector-project__header h1 { font-size: 24px; }
+	.vector-graph-tickets__ticket { grid-template-columns: 64px minmax(0, 1fr); gap: 6px 12px; }
+	.vector-graph-tickets__meta { grid-column: 2; }
+}

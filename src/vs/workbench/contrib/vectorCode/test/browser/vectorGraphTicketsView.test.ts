@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { getWindow } from '../../../../../base/browser/dom.js';
 import { deepStrictEqual, strictEqual } from 'assert';
 import { DeferredPromise, timeout } from '../../../../../base/common/async.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
@@ -15,6 +16,7 @@ import { IVectorGraphService, IVectorGraphTicket, IVectorGraphTicketPage, IVecto
 import { ViewPane } from '../../../../browser/parts/views/viewPane.js';
 import { IViewContainerModel, IViewDescriptorService, ViewContainerLocation } from '../../../../common/views.js';
 import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { IVectorGraphWorkService } from '../../common/vectorGraphWork.js';
 import { IVectorCodeWorkbenchService } from '../../common/vectorCode.js';
 import { VectorGraphTicketsView } from '../../browser/vectorGraphTickets.contribution.js';
 
@@ -30,7 +32,7 @@ suite('VectorGraph tickets view pagination', () => {
 	let sessionChanged: Emitter<void>;
 	let changed: Emitter<URI | undefined>;
 	let root: HTMLElement;
-	let requests: { workspace: string; team: string; cursor: string | undefined; response: DeferredPromise<IVectorGraphTicketPage> }[];
+	let requests: { workspace: string; team: string; cursor: string | undefined; project?: string; assignee?: string; response: DeferredPromise<IVectorGraphTicketPage> }[];
 
 	function ticket(identifier: string, title = identifier): IVectorGraphTicket {
 		return { identifier, title, status: 'Todo', category: 'unstarted', priority: 'high', project: '' };
@@ -54,6 +56,7 @@ suite('VectorGraph tickets view pagination', () => {
 		requests = [];
 		changed = store.add(new Emitter<URI | undefined>());
 		const instantiation = workbenchInstantiationService({}, store);
+		instantiation.stub(IVectorGraphWorkService, { onDidChange: Event.None, getActive: () => undefined });
 		instantiation.stub(IVectorCodeWorkbenchService, {
 			onDidChangeActiveProject: changed.event,
 			getActiveProjectUri: () => active,
@@ -61,12 +64,13 @@ suite('VectorGraph tickets view pagination', () => {
 			getProjectStatusLabel: () => ''
 		});
 		instantiation.stub(IVectorGraphService, {
-			onDidChangeSession: sessionChanged.event,
+			onDidChangeSession: sessionChanged.event, onDidChangeTickets: Event.None,
+			getTeamMetadata: async () => ({ statuses: [], members: [] }),
 			getSession: async () => ({ workspaces }),
 			discoverRepository: async () => discovery,
-			listTickets: (workspace: string, team: string, cursor?: string) => {
+			listTickets: (workspace: string, team: string, cursor?: string, project?: string, assignee?: string) => {
 				const response = new DeferredPromise<IVectorGraphTicketPage>();
-				requests.push({ workspace, team, cursor, response });
+				requests.push({ workspace, team, cursor, project, assignee, response });
 				return response.p;
 			}
 		});
@@ -83,7 +87,7 @@ suite('VectorGraph tickets view pagination', () => {
 		storage = instantiation.get(IStorageService);
 		for (const project of [alpha, beta]) {
 			storage.store('vectorCode.vectorGraph.binding.' + project.toString(), {
-				workspace: { id: project.path, name: project.path }, team: { id: 'team', name: 'Team', identifier: 'VC' }
+				workspace: { id: project.path, name: project.path }, team: { id: 'team', name: 'Team', identifier: 'VC' }, project: { id: 'project', name: 'Project' }
 			}, StorageScope.PROFILE, StorageTarget.MACHINE);
 		}
 		const view = store.add(instantiation.createInstance(descriptor.ctorDescriptor.ctor, { id: descriptor.id, title: 'Tickets' })) as ViewPane;
@@ -94,11 +98,22 @@ suite('VectorGraph tickets view pagination', () => {
 		strictEqual(requests.length, 1);
 	});
 
+	test('defaults to the linked project and makes whole-team scope explicit', async () => {
+		strictEqual(requests[0].project, 'project');
+		await requests[0].response.complete({ tickets: [] });
+		const scope = root.querySelector<HTMLSelectElement>('select[aria-label="Ticket scope"]')!; scope.value = 'team'; scope.dispatchEvent(new (getWindow(root).Event)('change'));
+		await timeout(0); strictEqual(requests[1].project, undefined); await requests[1].response.complete({ tickets: [] });
+	});
+
 	test('selects and remembers the single complete repository mapping', async () => {
 		await requests[0].response.complete({ tickets: [] });
 		storage.remove('vectorCode.vectorGraph.binding.' + alpha.toString(), StorageScope.PROFILE);
 		discovery = { incomplete: false, bindings: [{ workspace: { id: '/alpha', name: 'Alpha' }, team: { id: 'mapped-team', name: 'Mapped', identifier: 'MAP' } }] };
 		changed.fire(active);
+		await timeout(0);
+		strictEqual(requests.length, 1);
+		strictEqual(root.textContent?.includes('Choose Project'), true);
+		const scope = root.querySelector<HTMLSelectElement>('select[aria-label="Ticket scope"]')!; scope.value = 'team'; scope.dispatchEvent(new (getWindow(root).Event)('change'));
 		await timeout(0);
 		strictEqual(requests[1].team, 'mapped-team');
 		strictEqual(storage.getObject<{ team: { id: string } }>('vectorCode.vectorGraph.binding.' + alpha.toString(), StorageScope.PROFILE)?.team.id, 'mapped-team');
@@ -147,7 +162,7 @@ suite('VectorGraph tickets view pagination', () => {
 		deepStrictEqual(identifiers(), ['VC-1', 'VC-2']);
 		strictEqual(root.querySelector('.vector-graph-tickets__title')?.textContent, 'Updated title');
 		strictEqual(more.hidden, true);
-		strictEqual(root.querySelector('[role="status"]')?.textContent, '/alpha / Team · 2 tickets loaded');
+		strictEqual(root.querySelector('[role="status"]')?.textContent, '/alpha / Project · 2 tickets loaded');
 	});
 
 	test('preserves the first page after failure and retries the same cursor', async () => {
@@ -179,6 +194,6 @@ suite('VectorGraph tickets view pagination', () => {
 		await requests[1].response.complete({ tickets: [ticket('VC-2')], nextCursor: 'page-3' });
 		deepStrictEqual(identifiers(), ['B-1']);
 		strictEqual(button('Load more tickets').hidden, true);
-		strictEqual(root.querySelector('[role="status"]')?.textContent, '/beta / Team · 1 tickets loaded');
+		strictEqual(root.querySelector('[role="status"]')?.textContent, '/beta / Project · 1 tickets loaded');
 	});
 });

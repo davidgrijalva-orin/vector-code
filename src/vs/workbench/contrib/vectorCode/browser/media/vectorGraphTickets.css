@@ -61,3 +61,16 @@
 .vector-graph-tickets__ticket.selected { background: var(--vscode-list-inactiveSelectionBackground); color: var(--vscode-list-inactiveSelectionForeground); border-color: var(--vscode-focusBorder); }
 
 .vector-graph-tickets__account { font-size: 11px; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
+
+.vector-graph-details-pane { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+.vector-graph-details-pane > .vector-graph-ticket-editor { flex: 1; min-height: 0; padding: 16px; }
+.vector-graph-details-pane > button { margin: 8px; padding: 6px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 1px solid var(--vscode-button-border, transparent); }
+.vector-graph-ticket-editor label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.vector-graph-ticket-editor input, .vector-graph-ticket-editor textarea, .vector-graph-ticket-editor select, .vector-graph-tickets > select { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px; font: inherit; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
+.vector-graph-ticket-editor textarea { resize: vertical; }
+.vector-graph-ticket-editor button { margin: 3px; }
+.vector-graph-ticket-editor button:disabled { opacity: 0.5; cursor: default; }
+.vector-graph-ticket-editor__toolbar { flex-wrap: wrap; gap: 6px; }
+.vector-graph-development { border: 1px solid var(--vscode-panel-border); padding: 10px; margin: 12px 0; }
+.vector-graph-development li { overflow-wrap: anywhere; }
+.vector-graph-active-work button { width: 100%; padding: 8px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 1px solid var(--vscode-button-border, transparent); }

@@ -5,17 +5,19 @@
 
 import { Event } from '../../../base/common/event.js';
 import { IServerChannel } from '../../../base/parts/ipc/common/ipc.js';
+import { validateVectorGraphPatch, IVectorGraphIssueDraft } from './vectorGraphWork.js';
 import { IVectorGraphService } from './vectorGraph.js';
 
 /** Explicit operations only; credentials and arbitrary API/process calls stay in the main process. */
 export class VectorGraphChannel implements IServerChannel {
 	constructor(private readonly service: IVectorGraphService) { }
 	listen<T>(_context: unknown, event: string): Event<T> {
+		if (event === 'onDidChangeTickets') { return this.service.onDidChangeTickets as Event<T>; }
 		if (event === 'onDidChangeSession') { return this.service.onDidChangeSession as Event<T>; }
 		throw new Error('Unsupported VectorGraph event.');
 	}
 	call<T>(_context: unknown, command: string, args: unknown): Promise<T> {
-		if (!Array.isArray(args) || args.some(arg => arg !== undefined && typeof arg !== 'string')) {
+		if (!Array.isArray(args) || args.some((arg, index) => arg !== undefined && typeof arg !== 'string' && !((command === 'createTicket' && index === 1) || (command === 'updateTicket' && index === 2)))) {
 			return Promise.reject(new Error('Invalid VectorGraph arguments.'));
 		}
 		let result: Promise<unknown>;
@@ -28,7 +30,15 @@ export class VectorGraphChannel implements IServerChannel {
 			case 'discoverRepository': result = this.service.discoverRepository(args[0]); break;
 			case 'listWorkspaces': result = this.service.listWorkspaces(); break;
 			case 'listTeams': result = this.service.listTeams(args[0]); break;
-			case 'listTickets': result = this.service.listTickets(args[0], args[1], args[2]); break;
+			case 'listTickets': result = this.service.listTickets(args[0], args[1], args[2], args[3], args[4]); break;
+			case 'listProjects': result = this.service.listProjects(args[0], args[1]); break;
+			case 'getTeamMetadata': result = this.service.getTeamMetadata(args[0], args[1]); break;
+			case 'createTicket': result = this.service.createTicket(args[0], validateVectorGraphPatch(args[1], true) as IVectorGraphIssueDraft, args[2]); break;
+			case 'updateTicket': result = this.service.updateTicket(args[0], args[1], validateVectorGraphPatch(args[2]), args[3]); break;
+			case 'addComment': result = this.service.addComment(args[0], args[1], args[2], args[3]); break;
+			case 'linkPullRequest': result = this.service.linkPullRequest(args[0], args[1], args[2], args[3], args[4]); break;
+			case 'getRepositoryState': result = this.service.getRepositoryState(args[0]); break;
+			case 'createBranch': result = this.service.createBranch(args[0], args[1], args[2]); break;
 			case 'getTicket': result = this.service.getTicket(args[0], args[1]); break;
 			default: return Promise.reject(new Error('Unsupported VectorGraph operation.'));
 		}

@@ -54,6 +54,10 @@ suite('VectorGraph ticket contracts', () => {
 		const service: IVectorGraphService = {
 			_serviceBrand: undefined,
 			onDidChangeSession: Event.None,
+			onDidChangeTickets: Event.None,
+			listProjects: async () => [], getTeamMetadata: async () => ({ statuses: [], members: [] }),
+			createTicket: async () => 'VC-57', updateTicket: async () => { }, addComment: async () => { }, linkPullRequest: async () => { },
+			getRepositoryState: async () => ({ head: '', branch: '', changes: [] }), createBranch: async () => { },
 			getSession: async () => ({ workspaces: [] }),
 			beginSignIn: async () => ({ workspaces: [] }),
 			pollSignIn: async () => ({ workspaces: [] }),

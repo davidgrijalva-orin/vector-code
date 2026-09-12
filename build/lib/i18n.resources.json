@@ -605,6 +605,10 @@
 		{
 			"name": "vs/workbench/services/request",
 			"project": "vscode-workbench"
+		},
+		{
+			"name": "vs/workbench/contrib/mcp",
+			"project": "vscode-workbench"
 		}
 	]
 }

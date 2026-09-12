@@ -78,6 +78,34 @@ does not prove shared subjects, audience, sessions, or authorization. Unified si
 and cross-product grants need an explicit account/workspace mapping and revocation
 contract; no token interchange is introduced here.
 
+## Optional assignment and moving captured work
+
+Notes and transcripts have a stable artifact identity independent of project
+membership. A recording may begin in the account's permitted capture scope with
+no project; the desktop inbox presents unassigned items until the user files them.
+Assignment state must not govern the lifetime of capture/transcription processing.
+Changing a project neither restarts a job nor silently changes the context or
+write destination of an in-flight document-generation action.
+
+Graph's existing document create schema accepts an empty `links` array. Its update
+schema accepts a links-only patch with expected revision and versioned save.
+`artifact-document-mutations.ts` checks link access and performs the document CAS,
+link replacement, and version insertion in one transaction. This supports keeping
+one canonical note/document while changing its project relationships. A client
+must preserve non-project links and all unrelated project links when moving one
+association. The existing native parser only retains project IDs, so implementing
+moves requires extending that contract before writing link replacements; it must
+not reconstruct a partial link list and discard relationships.
+
+The first move operation stays in the same tenant and preserves existing team
+visibility. Clearing project membership must not clear team scope. Default the
+inbox UI to the actual audience, not an unsupported claim of personal privacy.
+The Voice service's current transcript remains tied to its meeting/upload record;
+its Graph artifact association is a new integration contract, not permission to
+copy transcript business rules or create a second authoritative transcript store.
+Source recordings, transcript timestamps/speakers, and document revision history
+must remain accessible through their original identities.
+
 ## First slice contracts and compatibility
 
 Reuse existing `listApiProjects`, team/workspace discovery,

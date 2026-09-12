@@ -31,7 +31,8 @@ state and separately authorized local access during that migration.
 
 ## First milestone
 
-1. Create or open a work project without a repository.
+1. Create or open a work project without a repository, or start an unassigned note
+   in the inbox and choose its project later.
 2. Add a brief or other source document.
 3. Select context and ask an agent to draft a document.
 4. Save it as a project-linked artifact and open it in an editor.
@@ -61,10 +62,11 @@ scope by workflow priority rather than reproducing every API surface.
 ## Agent and voice boundary
 
 Owner confirmed the combined desktop direction: VectorCode supplies one desktop
-surface, and recording/transcription from VectorVoice becomes a project capability
+surface, and recording/transcription from VectorVoice becomes a work capability
 inside that surface. The existing Voice application remains functional during
-migration. The first integrated voice flow is record, stop/cancel, transcribe,
-review the transcript, draft/revise a selected document, and save through Graph.
+migration. The first integrated voice flow is record with an optional project, stop/cancel,
+transcribe, review the transcript, and file it now or later. A later draft/revision
+uses explicitly selected context and saves through Graph.
 Live spoken responses and barge-in follow separately; they are not implemented by
 the existing recording/transcription pipeline. Frontends consume versioned Voice
 HTTP contracts rather than importing its services or provider implementations.
@@ -75,8 +77,9 @@ a bounded adapter to a configured external agent, or a newly scoped built-in tex
 surface. A configuration catalogue is not an executing agent. Preserve this
 boundary while implementing project selection and persistence independently.
 
-Voice follows the completed text workflow. Associate capture/conversation with the
-active project, explicitly select the document, and submit the same authorized
+Voice follows the completed text workflow. Capture may start without a project;
+when applying a document action, explicitly select its destination and context,
+and submit the same authorized
 document action as text. Report the returned artifact/revision. Interruption must
 stop generation before dispatch, and an interrupted in-flight write must be shown
 as uncertain until reconciled using the original operation identity. Never claim
@@ -85,6 +88,34 @@ cancellation rolled back an already committed document.
 The audit found batch/chunked transcription and meeting intelligence in
 VectorVoice, not a small reusable realtime conversation/action runtime. Voice is
 therefore the immediate follow-up rather than a prerequisite for this milestone.
+
+## Capture first, organize later
+
+Owner clarification: notes and recordings/transcripts must not require choosing a
+project before capture. An **Inbox / Unassigned** area keeps saved items available
+until the user files them. Assignment can happen during a recording, during
+transcription, or after completion without restarting capture or processing.
+Unassigned means no project relationship; it does not mean unauthenticated,
+public, or automatically private. Use the item's actual workspace/team visibility
+and show that audience. Do not widen visibility by clearing its team scope.
+
+A user can move a note or transcript from one project to another, return it to
+unassigned, or explicitly link the same item to another project. **Move** replaces
+the chosen source-project relationship; **Add to project** retains existing
+relationships. Neither operation duplicates content, reprocesses audio, changes
+stable item identity, discards edits/history, or replaces unrelated links.
+
+The initial move flow stays within an authorized workspace and preserves the
+item's existing visibility. Cross-workspace or visibility-changing transfers need
+an explicit transfer design; ordinary project organization is not permission to
+copy data across tenants. Recheck source/destination access and current revision,
+retain one operation identity on retries, and preserve the previous assignment
+when permission, conflict, or cancellation prevents the move. Reconcile uncertain
+completion before offering another mutation.
+
+Inbox capture, note creation without a project, and move/link controls are required
+follow-up implementation. The current desktop draft implements work-project
+selection and folder grouping; it does not yet provide those controls.
 
 ## Later sequence and delivery limits
 

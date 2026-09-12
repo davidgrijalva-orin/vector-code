@@ -65,6 +65,8 @@ backup recovery. Mocked editor tests do not prove a complete application restart
 
 A development app was launched from the branch with separate user-data, shared-data
 and extension directories. Desktop visual acceptance is blocked while the Mac is
-locked. Development extension activation issues and packaged acceptance remain
-open; source tests and startup logs are not a packaged release result. No production
+locked. Initial extension activation issues were resolved by linking the existing
+extension dependencies and compiling GitHub with its NodeNext configuration; the
+subsequent isolated startup log is clean. Packaged acceptance remains open, and
+source tests and startup logs are not a packaged release result. No production
 workspace has been used for mutation QA, and no local material is uploaded on sign-in.

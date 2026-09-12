@@ -155,7 +155,7 @@ export class VectorGraphTicketsWidget extends Disposable {
 		this.signInButton.textContent = this.session.authorization ? localize('vectorGraphContinueSignIn', 'Open Sign-in Page') : this.session.workspaces.length ? localize('vectorGraphReconnect', 'Reconnect') : localize('vectorGraphSignInAction', 'Sign in to VectorGraph');
 		this.signOutButton.hidden = !this.session.workspaces.length && !this.session.authorization;
 		this.signOutButton.textContent = this.session.authorization ? localize('vectorGraphCancelSignIn', 'Cancel Sign-in') : localize('vectorGraphSignOutAction', 'Sign Out');
-		this.configureButton.disabled = !this.projectKey() || this.configuring || !this.session.workspaces.length;
+		this.configureButton.disabled = !this.projectKey() || this.configuring || !!this.session.authorization || !this.session.workspaces.length;
 		if (this.session.authorization) { this.schedulePoll(); }
 	}
 	async openAccount(signIn = false): Promise<void> {
@@ -220,7 +220,7 @@ export class VectorGraphTicketsWidget extends Disposable {
 			if (project === this.projectKey() && projectGeneration === this.projectGeneration && !this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
 		} finally {
 			this.configuring = false;
-			if (!this._store.isDisposed) { this.configureButton.disabled = !this.projectKey(); }
+			if (!this._store.isDisposed) { this.renderAccount(); }
 		}
 	}
 
@@ -262,7 +262,7 @@ export class VectorGraphTicketsWidget extends Disposable {
 		this.loading = true;
 		let binding = this.binding();
 		if (!more) { this.tickets = []; this.cursor = undefined; this.renderTickets(); }
-		this.configureButton.disabled = !this.projectKey() || this.configuring || !this.session.workspaces.length;
+		this.configureButton.disabled = !this.projectKey() || this.configuring || !!this.session.authorization || !this.session.workspaces.length;
 		try {
 			const session = await this.graph.getSession();
 			if (generation !== this.generation || this._store.isDisposed) { return; }

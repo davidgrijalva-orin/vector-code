@@ -65,14 +65,14 @@ export class VectorGraphTicketDetails extends Disposable {
 			const actions = append(article, $('.vector-graph-ticket-editor__toolbar'));
 			append(actions, $('strong')).textContent = ticket.identifier;
 			this.button(actions, localize('workRefresh', 'Refresh'), () => this.show(selection));
-			const editable = append(article, $('.vector-graph-ticket-inline'));
-			this.button(actions, localize('workEditTicket', 'Edit Ticket'), () => this.edit(selection, ticket, editable));
+			const editable = append(article, $('.vector-graph-ticket-inline')); const description = $('section');
+			this.button(actions, localize('workEditTicket', 'Edit Ticket'), async () => { await this.edit(selection, ticket, editable); if (this.editing) { description.hidden = true; } });
 			append(editable, $('h1')).textContent = ticket.title;
 			const metadata = append(editable, $('.vector-graph-ticket-editor__metadata'));
 			for (const [label, value] of [[localize('ticketStatusLabel', 'Status'), ticket.status], [localize('ticketAssigneeLabel', 'Assignee'), ticket.assigneeName ?? localize('ticketUnassigned', 'Unassigned')], [localize('ticketPriorityLabel', 'Priority'), ticket.priority], [localize('ticketProjectLabel', 'Project'), ticket.project]]) {
 				if (value) { const field = append(metadata, $('div')); append(field, $('small')).textContent = label; append(field, $('strong')).textContent = value; }
 			}
-			append(editable, $('h2')).textContent = localize('workDescription', 'Description'); this.renderMarkdown(editable, ticket.description || localize('workNoDescriptionProvided', 'No description provided.'));
+
 			const workActions = append(article, $('.vector-graph-ticket-work-actions'));
 			const active = this.work.getActive(selection.project);
 			if (selection.project && selection.project === this.projects.getActiveProjectUri()?.toString()) {
@@ -84,6 +84,7 @@ export class VectorGraphTicketDetails extends Disposable {
 				if (active?.workspace === selection.workspace && active.identifier === ticket.identifier) { await this.development(article, selection, generation); }
 			}
 			if (generation !== this.generation || this._store.isDisposed) { return; }
+			append(article, description); append(description, $('h2')).textContent = localize('workDescription', 'Description'); this.renderMarkdown(description, ticket.description || localize('workNoDescriptionProvided', 'No description provided.'));
 			if (ticket.links?.length) {
 				append(article, $('h2')).textContent = localize('workLinkedWork', 'Linked work');
 				for (const link of ticket.links) { if (/^https:\/\//i.test(link.url)) { this.button(article, link.title, async () => { await this.opener.open(link.url, { allowCommands: false, allowContributedOpeners: false, fromUserGesture: true }); }); } }

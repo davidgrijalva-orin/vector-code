@@ -53,7 +53,6 @@
     "smoke-vector-relay": "node scripts/smoke-vector-code-relay.mjs",
     "smoke-vector-relay:dry-run": "node scripts/smoke-vector-code-relay.mjs --dry-run",
     "smoke-vector-relay:self-test": "node scripts/smoke-vector-code-relay.mjs --self-test",
-    "smoke-vector-codex": "node scripts/smoke-vector-code-codex.mjs",
     "mixin-telemetry-docs": "node build/npm/mixin-telemetry-docs.ts",
     "smoketest": "node build/lib/preLaunch.ts && cd test/smoke && npm run compile && node test/index.js",
     "smoketest-no-compile": "cd test/smoke && node test/index.js",

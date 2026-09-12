@@ -11,6 +11,7 @@ import { promisify } from 'util';
 import { join } from '../../../../base/common/path.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
+import { authorizeVectorGraphRepository } from '../../node/vectorGraphRepositoryAccess.js';
 import { VectorGraphOperations, getVectorGraphRepositoryState, createVectorGraphBranch } from '../../node/vectorGraphOperations.js';
 import { validateVectorGraphPatch, vectorGraphPullRequest } from '../../common/vectorGraphWork.js';
 
@@ -20,6 +21,20 @@ suite('VectorGraph work operations', () => {
 	const team = '658d2b51-5118-46d4-8b60-bf1954501284';
 	const project = '1c084781-df5b-46d4-81b5-e3b8100c93e6';
 	const key = '01a09380-3fca-76d3-948c-aa88fe512a27';
+	test('repository access rejects outside roots, missing trust, and symlink escapes', async () => {
+		const directory = await fs.mkdtemp(join(tmpdir(), 'vg-access-'));
+		try {
+			const first = URI.file(join(directory, 'first')); const second = URI.file(join(directory, 'second'));
+			await fs.mkdir(first.fsPath); await fs.mkdir(second.fsPath);
+			strictEqual(await authorizeVectorGraphRepository(second.toString(), [first, second], [URI.file(directory)]), URI.file(await fs.realpath(second.fsPath)).toString());
+			await rejects(authorizeVectorGraphRepository(second.toString(), [first]), /not an open/);
+			await rejects(authorizeVectorGraphRepository(first.toString(), [first, second], [first]), /Trust every/);
+			await rejects(authorizeVectorGraphRepository(first.toString(), [first], []), /Trust every/);
+			await fs.symlink(second.fsPath, join(first.fsPath, 'escape'), 'junction');
+			await rejects(authorizeVectorGraphRepository(URI.file(join(first.fsPath, 'escape')).toString(), [first], [first]), /not an open/);
+			await rejects(authorizeVectorGraphRepository('https://example.com/repo', [first]), /local workspace/);
+		} finally { await fs.rm(directory, { recursive: true, force: true }); }
+	});
 	test('projects are filtered by explicit team membership', async () => {
 		const service = new VectorGraphOperations(async () => ({ projects: [{ id: project, name: 'Selected', teams: [{ id: team }] }, { id: workspace, name: 'Other', teams: [] }] }));
 		deepStrictEqual(await service.listProjects(workspace, team), [{ id: project, name: 'Selected' }]);

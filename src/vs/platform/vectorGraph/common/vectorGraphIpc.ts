@@ -10,15 +10,21 @@ import { IVectorGraphService } from './vectorGraph.js';
 
 /** Explicit operations only; credentials and arbitrary API/process calls stay in the main process. */
 export class VectorGraphChannel implements IServerChannel {
-	constructor(private readonly service: IVectorGraphService) { }
+	constructor(private readonly service: IVectorGraphService, private readonly authorizeRepository?: (context: unknown, project: string, write: boolean) => Promise<string>) { }
 	listen<T>(_context: unknown, event: string): Event<T> {
 		if (event === 'onDidChangeTickets') { return this.service.onDidChangeTickets as Event<T>; }
 		if (event === 'onDidChangeSession') { return this.service.onDidChangeSession as Event<T>; }
 		throw new Error('Unsupported VectorGraph event.');
 	}
-	call<T>(_context: unknown, command: string, args: unknown): Promise<T> {
+	async call<T>(context: unknown, command: string, args: unknown): Promise<T> {
 		if (!Array.isArray(args) || args.some((arg, index) => arg !== undefined && typeof arg !== 'string' && !((command === 'createTicket' && index === 1) || (command === 'updateTicket' && index === 2)))) {
 			return Promise.reject(new Error('Invalid VectorGraph arguments.'));
+		}
+		const repositoryIndex = command === 'linkPullRequest' ? 2 : ['getRepositoryState', 'createBranch', 'discoverRepository'].includes(command) ? 0 : undefined;
+		if (repositoryIndex !== undefined) {
+			if (!this.authorizeRepository) { throw new Error('Repository access is unavailable.'); }
+			// Canonicalize only after main-process workspace authorization.
+			args[repositoryIndex] = await this.authorizeRepository(context, args[repositoryIndex], command === 'createBranch');
 		}
 		let result: Promise<unknown>;
 		switch (command) {

@@ -28,6 +28,9 @@ suite('VectorGraph ticket editor', () => {
 		strictEqual(input.matches(store.add(new VectorGraphTicketInput(workspace, 'VC-52'))), true);
 		strictEqual(input.matches(store.add(new VectorGraphTicketInput('658d2b51-5118-46d4-8b60-bf1954501284', 'VC-52'))), false);
 		strictEqual(input.matches(store.add(new VectorGraphTicketInput(workspace, 'VC-20'))), false);
+		const otherProject = store.add(new VectorGraphTicketInput(workspace, 'VC-52', 'file:///other'));
+		strictEqual(input.matches(otherProject), false);
+		strictEqual(input.resource.toString() === otherProject.resource.toString(), false);
 		strictEqual(Boolean(input.capabilities & EditorInputCapabilities.Readonly), true);
 		strictEqual(input.isDirty(), false);
 	});

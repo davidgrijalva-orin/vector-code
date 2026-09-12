@@ -231,6 +231,8 @@ export class VectorGraphTicketsView extends ViewPane {
 			if (!team || project !== this.projectKey() || projectGeneration !== this.projectGeneration || this._store.isDisposed) { return; }
 			this.selectedIdentifier = undefined;
 			this.storage.store(BINDING_KEY + project, { workspace: workspace.value, team: team.value }, StorageScope.PROFILE, StorageTarget.MACHINE);
+			this.invalidateBinding(project);
+			await this.refresh();
 			await this.chooseProject();
 		} catch (error) {
 			if (project === this.projectKey() && projectGeneration === this.projectGeneration && !this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
@@ -240,6 +242,12 @@ export class VectorGraphTicketsView extends ViewPane {
 		}
 	}
 
+	private invalidateBinding(project: string): void {
+		this.generation++; this.tickets = []; this.cursor = undefined; this.selectedIdentifier = undefined;
+		this.work.select(undefined); this.work.setActive(project, undefined);
+		this.metadataKey = undefined; this.assignee.value = ''; this.scope.value = 'project';
+		this.renderTickets(); this.renderActiveWork();
+	}
 	private async chooseProject(): Promise<void> {
 		const project = this.projectKey(); const generation = this.projectGeneration; const binding = this.binding();
 		if (!project || !binding) { throw new Error('Choose a workspace and team first.'); }
@@ -248,7 +256,7 @@ export class VectorGraphTicketsView extends ViewPane {
 		const selected = await this.quickInput.pick(projects.map(value => ({ label: value.name, description: value.id, value })), { placeHolder: 'Link this repository to a VectorGraph project' });
 		if (!selected || project !== this.projectKey() || generation !== this.projectGeneration || binding.workspace.id !== this.binding()?.workspace.id || binding.team.id !== this.binding()?.team.id || this._store.isDisposed) { return; }
 		this.storage.store(BINDING_KEY + project, { ...binding, project: selected.value }, StorageScope.PROFILE, StorageTarget.MACHINE);
-		this.scope.value = 'project'; this.assignee.value = ''; this.metadataKey = undefined;
+		this.invalidateBinding(project);
 		await this.refresh();
 	}
 	private async newTicket(): Promise<void> {

@@ -104,7 +104,7 @@ export class VectorGraphTicketDetails extends Disposable {
 		this.status = append(this.root, $('p')); this.status.setAttribute('role', 'status');
 		append(this.root, $('h2')).textContent = ticket ? localize('workEditTicketTitle', 'Edit {0}', ticket.identifier) : localize('workNewTicketTitle', 'New ticket · {0}', selection.binding!.project!.name);
 		const key = this.key(selection, 'draft');
-		const draft = this.storage.getObject<Draft>(key, StorageScope.PROFILE) ?? { title: ticket?.title ?? '', description: ticket?.description ?? '', statusId: ticket?.statusId ?? metadata.statuses.find(status => status.category === 'unstarted')?.id, priority: ticket?.priority ?? 'no_priority', assigneeUserId: ticket?.assigneeUserId ?? null, baseUpdatedAt: ticket?.updatedAt };
+		let draft = this.storage.getObject<Draft>(key, StorageScope.PROFILE) ?? { title: ticket?.title ?? '', description: ticket?.description ?? '', statusId: ticket?.statusId ?? metadata.statuses.find(status => status.category === 'unstarted')?.id, priority: ticket?.priority ?? 'no_priority', assigneeUserId: ticket?.assigneeUserId ?? null, baseUpdatedAt: ticket?.updatedAt };
 		const title = this.input(this.root, localize('workTitle', 'Title'), draft.title);
 		const description = this.textarea(this.root, localize('workDescription', 'Description'), draft.description);
 		const status = this.select(this.root, localize('workStatus', 'Status'), metadata.statuses.map(value => [value.id, value.name]), draft.statusId ?? '');
@@ -112,6 +112,15 @@ export class VectorGraphTicketDetails extends Disposable {
 		const assignee = this.select(this.root, localize('workAssignee', 'Assignee'), [['', localize('workUnassigned', 'Unassigned')], ...metadata.members.map(value => [value.id, value.name])], draft.assigneeUserId ?? '');
 		const read = (): Draft => ({ title: title.value, description: description.value, statusId: status.value || undefined, priority: priority.value, assigneeUserId: assignee.value || null, baseUpdatedAt: draft.baseUpdatedAt });
 		for (const element of [title, description, status, priority, assignee]) { this.content.add(addDisposableListener(element, EventType.INPUT, () => this.storage.store(key, read(), StorageScope.PROFILE, StorageTarget.MACHINE))); }
+		if (ticket?.updatedAt && draft.baseUpdatedAt !== ticket.updatedAt) {
+			append(this.root, $('p')).textContent = localize('workReviewConflict', 'The saved ticket has changed. Review its latest description and fields before applying your preserved draft.');
+			this.button(this.root, localize('workRebaseDraft', 'Apply Draft to Reviewed Version'), async () => {
+				draft = { ...read(), baseUpdatedAt: ticket.updatedAt };
+				this.storage.store(key, draft, StorageScope.PROFILE, StorageTarget.MACHINE);
+				this.storage.remove(this.key(selection, 'request.save'), StorageScope.PROFILE);
+				await this.edit(selection, ticket);
+			});
+		}
 		this.button(this.root, ticket ? localize('workSaveChanges', 'Save Changes') : localize('workCreateTicket', 'Create Ticket'), async () => {
 			const { baseUpdatedAt, ...patch } = read();
 			this.storage.store(key, read(), StorageScope.PROFILE, StorageTarget.MACHINE);

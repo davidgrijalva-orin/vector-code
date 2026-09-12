@@ -68,5 +68,5 @@ export async function createVectorGraphBranch(project: string, branch: string, e
 	await git(project, ['check-ref-format', '--branch', branch]);
 	const state = await getVectorGraphRepositoryState(project);
 	if (state.head !== expectedHead || state.changes.length) { throw new Error('The repository changed or has uncommitted files. Save and commit your work before creating a branch.'); }
-	await git(project, ['switch', '-c', branch]);
+	await git(project, ['switch', '-c', branch, expectedHead]);
 }

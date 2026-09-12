@@ -62,6 +62,9 @@ suite('VectorGraph editable ticket details', () => {
 		await details.show(selection); await click('Edit Ticket'); field('Title', 'My draft'); ticket = { ...ticket, updatedAt: 'someone-else' };
 		await click('Save Changes'); strictEqual(writes.length, 0); strictEqual(root.textContent?.includes('changed on VectorGraph'), true);
 		strictEqual(storage.getObject<{ title: string }>('vectorGraph.draft.' + workspace + '.VC-57', StorageScope.PROFILE)?.title, 'My draft');
+		await click('Back (Keep Draft)'); await click('Edit Ticket'); await click('Apply Draft to Reviewed Version');
+		strictEqual(root.querySelector<HTMLInputElement>('[aria-label="Title"]')!.value, 'My draft');
+		await click('Save Changes'); strictEqual(writes.length, 1);
 	});
 	test('creates tickets in the explicitly linked project', async () => {
 		await details.show({ ...selection, identifier: undefined, binding: { workspace: { id: workspace, name: 'Workspace' }, team: { id: team, name: 'Team', identifier: 'VC' }, project: { id: projectId, name: 'Project' } } });

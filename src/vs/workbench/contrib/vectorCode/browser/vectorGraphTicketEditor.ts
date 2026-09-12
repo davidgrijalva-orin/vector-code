@@ -25,11 +25,11 @@ export class VectorGraphTicketInput extends EditorInput {
 	static readonly ID = 'workbench.input.vectorGraphTicket';
 	constructor(readonly workspace: string, readonly identifier: string, readonly project = '') { super(); }
 	override get typeId(): string { return VectorGraphTicketInput.ID; }
-	override get resource(): URI { return URI.from({ scheme: 'vectorgraph-ticket', authority: this.workspace, path: '/' + this.identifier }); }
+	override get resource(): URI { return URI.from({ scheme: 'vectorgraph-ticket', authority: this.workspace, path: '/' + this.identifier, query: this.project }); }
 	override get capabilities(): EditorInputCapabilities { return super.capabilities | EditorInputCapabilities.Readonly; }
 	override getName(): string { return localize('ticketTab', '{0} · Ticket', this.identifier); }
 	override matches(other: EditorInput | IUntypedEditorInput): boolean {
-		return other instanceof VectorGraphTicketInput && other.workspace === this.workspace && other.identifier === this.identifier;
+		return other instanceof VectorGraphTicketInput && other.workspace === this.workspace && other.identifier === this.identifier && other.project === this.project;
 	}
 }
 

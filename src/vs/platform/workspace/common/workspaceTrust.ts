@@ -8,6 +8,8 @@ import { IDisposable } from '../../../base/common/lifecycle.js';
 import { URI } from '../../../base/common/uri.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 
+export const WORKSPACE_TRUST_STORAGE_KEY = 'content.trust.model.key';
+
 export enum WorkspaceTrustScope {
 	Local = 0,
 	Remote = 1

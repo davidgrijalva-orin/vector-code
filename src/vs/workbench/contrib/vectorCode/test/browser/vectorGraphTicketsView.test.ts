@@ -11,6 +11,7 @@ import { URI } from '../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { localize2 } from '../../../../../nls.js';
 import { SyncDescriptor } from '../../../../../platform/instantiation/common/descriptors.js';
+import { IQuickInputService } from '../../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { IVectorGraphService, IVectorGraphTicket, IVectorGraphTicketPage, IVectorGraphDiscovery, IVectorGraphWorkspace } from '../../../../../platform/vectorGraph/common/vectorGraph.js';
 import { ViewPane } from '../../../../browser/parts/views/viewPane.js';
@@ -26,6 +27,7 @@ suite('VectorGraph tickets view pagination', () => {
 	const alpha = URI.file('/alpha');
 	const beta = URI.file('/beta');
 	let active: URI;
+	let selectionClears: number; let activeClears: number;
 	let storage: IStorageService;
 	let discovery: IVectorGraphDiscovery;
 	let workspaces: readonly IVectorGraphWorkspace[];
@@ -49,14 +51,16 @@ suite('VectorGraph tickets view pagination', () => {
 	}
 
 	setup(async () => {
-		active = alpha;
+		active = alpha; selectionClears = 0; activeClears = 0;
 		discovery = { bindings: [], incomplete: false };
 		workspaces = [alpha, beta].map(project => ({ id: project.path, name: project.path }));
 		sessionChanged = store.add(new Emitter<void>());
 		requests = [];
 		changed = store.add(new Emitter<URI | undefined>());
 		const instantiation = workbenchInstantiationService({}, store);
-		instantiation.stub(IVectorGraphWorkService, { onDidChange: Event.None, getActive: () => undefined });
+		instantiation.stub(IVectorGraphWorkService, { onDidChange: Event.None, getActive: () => undefined, select: () => { selectionClears++; }, setActive: () => { activeClears++; } });
+		const picks = [{ label: 'Alpha', value: { id: '/alpha', name: 'Alpha' } }, { label: 'New team', value: { id: 'new-team', name: 'New team', identifier: 'VC' } }, undefined];
+		instantiation.stub(IQuickInputService, 'pick', async () => picks.shift());
 		instantiation.stub(IVectorCodeWorkbenchService, {
 			onDidChangeActiveProject: changed.event,
 			getActiveProjectUri: () => active,
@@ -67,6 +71,7 @@ suite('VectorGraph tickets view pagination', () => {
 			onDidChangeSession: sessionChanged.event, onDidChangeTickets: Event.None,
 			getTeamMetadata: async () => ({ statuses: [], members: [] }),
 			getSession: async () => ({ workspaces }),
+			listWorkspaces: async () => workspaces, listTeams: async () => [{ id: 'new-team', name: 'New team', identifier: 'VC' }], listProjects: async () => [{ id: 'new-project', name: 'New project' }],
 			discoverRepository: async () => discovery,
 			listTickets: (workspace: string, team: string, cursor?: string, project?: string, assignee?: string) => {
 				const response = new DeferredPromise<IVectorGraphTicketPage>();
@@ -96,6 +101,14 @@ suite('VectorGraph tickets view pagination', () => {
 		root = view.element;
 		await timeout(0);
 		strictEqual(requests.length, 1);
+	});
+
+	test('canceling project selection after a team change clears stale tickets and active work', async () => {
+		await requests[0].response.complete({ tickets: [ticket('VC-1')] }); await timeout(0);
+		button('Choose Workspace').click(); await timeout(0); await timeout(0);
+		deepStrictEqual(identifiers(), []); strictEqual(selectionClears > 0, true); strictEqual(activeClears > 0, true);
+		strictEqual(root.textContent?.includes('Choose Project'), true);
+		strictEqual(storage.getObject<{ team: { id: string } }>('vectorCode.vectorGraph.binding.' + alpha.toString(), StorageScope.PROFILE)?.team.id, 'new-team');
 	});
 
 	test('defaults to the linked project and makes whole-team scope explicit', async () => {

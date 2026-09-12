@@ -77,5 +77,11 @@ suite('VectorGraph ticket contracts', () => {
 			await rejects(channel.call(undefined, command, []), /Unsupported/);
 		}
 		await rejects(channel.call(undefined, 'listTickets', [{ operation: 'write' }]), /Invalid/);
+		for (const operation of ['getRepositoryState', 'createBranch', 'discoverRepository']) { await rejects(channel.call('window:1', operation, ['file:///outside']), /access is unavailable/); }
+		const authorizations: unknown[][] = [];
+		const scoped = new VectorGraphChannel(service, async (...args) => { authorizations.push(args); throw new Error('Denied'); });
+		await rejects(scoped.call('window:1', 'createBranch', ['file:///outside', 'branch', 'head']), /Denied/);
+		await rejects(scoped.call('window:1', 'linkPullRequest', ['workspace', 'VC-57', 'file:///outside', 'url', 'key']), /Denied/);
+		deepStrictEqual(authorizations, [['window:1', 'file:///outside', true], ['window:1', 'file:///outside', false]]);
 	});
 });

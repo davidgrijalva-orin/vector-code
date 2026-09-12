@@ -7,7 +7,7 @@ import { deepStrictEqual, rejects, strictEqual } from 'assert';
 import { ICommandService, CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { URI } from '../../../../../base/common/uri.js';
-import { IVectorCodeRecordingsService } from '../../../../../platform/vectorCode/common/vectorCodeRecordings.js';
+import { IVectorCodeRecordingsService, LocalRecording } from '../../../../../platform/vectorCode/common/vectorCodeRecordings.js';
 import { IWorkspaceEditingService } from '../../../../services/workspaces/common/workspaceEditing.js';
 import { IWorkingCopyService } from '../../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
@@ -15,7 +15,7 @@ import { IQuickInputService } from '../../../../../platform/quickinput/common/qu
 import { IFileDialogService } from '../../../../../platform/dialogs/common/dialogs.js';
 import { IFileService } from '../../../../../platform/files/common/files.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { IVectorCodeLibraryService, LibraryMutation, LocalLibrary, FileRecordingRequest } from '../../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LocalLibrary, FileRecordingRequest, localDocumentPages, localDocumentTabs, localPageBreak } from '../../../../../platform/vectorCode/common/vectorCodeLibrary.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { TestStorageService } from '../../../../test/common/workbenchTestServices.js';
 import '../../browser/vectorCodeLibrary.contribution.js';
@@ -25,27 +25,61 @@ suite('VectorCode local work actions', () => {
 	function fixture(choices: (number | number[] | undefined)[], title: string | undefined) {
 		const inst = store.add(new TestInstantiationService());
 		const storage = store.add(new TestStorageService());
-		const filings: FileRecordingRequest[] = []; const writes: LibraryMutation[] = []; const editors: unknown[] = []; const commands: unknown[][] = []; const folders: string[] = [];
-		let fail = false; let dirty = false;
+		const recordings: LocalRecording[] = []; const filings: FileRecordingRequest[] = []; const writes: LibraryMutation[] = []; const editors: unknown[] = []; const commands: unknown[][] = []; const folders: string[] = [];
+		let fail = false; let dirty = false; let beforePick: (() => void) | undefined;
 		const library: LocalLibrary = { version: 1, projects: [], notes: [] };
 		inst.stub(IStorageService, storage);
-		inst.stub(IVectorCodeRecordingsService, { file: async (request: FileRecordingRequest) => { filings.push(request); if (fail) { throw new Error('Lost reply'); } const id = request.destination.kind === 'createNote' ? request.requestId : request.destination.id; return { recordingId: request.recordingId, noteId: id, tabId: id, revision: request.expectedPlacementRevision + 1 }; } } as unknown as IVectorCodeRecordingsService);
+		inst.stub(IVectorCodeRecordingsService, { list: async () => { if (fail) { throw new Error('Recording storage unavailable'); } return recordings; }, file: async (request: FileRecordingRequest) => { filings.push(request); if (fail) { throw new Error('Lost reply'); } const id = request.destination.kind === 'createNote' ? request.requestId : request.destination.id; return { recordingId: request.recordingId, noteId: id, tabId: id, revision: request.expectedPlacementRevision + 1 }; } } as unknown as IVectorCodeRecordingsService);
 		inst.stub(IWorkingCopyService, { isDirty: () => dirty } as unknown as IWorkingCopyService);
 		inst.stub(IWorkspaceEditingService, { addFolders: async (items: { uri: URI }[]) => { folders.push(...items.map(item => item.uri.toString())); } } as unknown as IWorkspaceEditingService);
 		inst.stub(ICommandService, { executeCommand: async (...args: unknown[]) => { commands.push(args); } } as unknown as ICommandService);
-		inst.stub(IQuickInputService, { pick: async (items: unknown[]) => { const index = choices.shift(); return index === undefined ? undefined : Array.isArray(index) ? index.map(value => items[value]) : items[index]; }, input: async () => title } as unknown as IQuickInputService);
+		inst.stub(IQuickInputService, { pick: async (items: unknown[]) => { beforePick?.(); beforePick = undefined; const index = choices.shift(); return index === undefined ? undefined : Array.isArray(index) ? index.map(value => items[value]) : items[index]; }, input: async () => title } as unknown as IQuickInputService);
 		inst.stub(IVectorCodeLibraryService, {
 			read: async () => library,
 			mutate: async (request: LibraryMutation) => { writes.push(request); if (fail) { throw new Error('Lost reply'); } return { id: request.kind === 'createTab' || request.kind === 'appendPage' ? request.id : request.requestId, revision: 1, ...(request.kind === 'createTab' ? { tabId: request.requestId } : {}), ...(request.kind === 'appendPage' ? { pageId: request.requestId } : {}) }; }
 		} as unknown as IVectorCodeLibraryService);
 		inst.stub(IEditorService, { openEditor: async (input: unknown) => { editors.push(input); } } as unknown as IEditorService);
 		inst.stub(IFileService, {} as IFileService); inst.stub(IFileDialogService, {} as IFileDialogService);
-		return { filings, runFile: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.fileLocalRecording')!.handler, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId }), writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
+		return { onPick: (callback: () => void) => { beforePick = callback; }, recordings, runContents: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.localDocumentContents')!.handler, documentId), filings, runFile: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.fileLocalRecording')!.handler, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId }), writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
 	}
 	const documentId = '658d2b51-5118-46d4-8b60-bf1954501284';
 	function addDocument(f: ReturnType<typeof fixture>) {
 		f.library.notes.push({ id: documentId, title: 'Document', body: 'Original', revision: 4, contentRevision: 2, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [] });
 	}
+	test('contents jumps to an additional tab page without reloading or altering a dirty draft', async () => {
+		for (const dirty of [false, true]) {
+			const f = fixture([4], undefined); addDocument(f);
+			f.library.notes[0].additionalTabs = [{ ...localDocumentTabs(f.library.notes[0])[0], id: 'b2470f8e-e052-4e3a-881d-ab967858f66e', title: 'Meetings', body: '# First meeting' + localPageBreak('8e045317-a99b-4517-95ff-b2b7e56f2e69') + '# Second meeting' }];
+			f.setDirty(dirty); await f.runContents();
+			const input = f.editors[0] as { resource: URI; options: { selection?: { startLineNumber: number }; forceReload?: boolean } };
+			strictEqual(input.resource.path, '/' + documentId + '/b2470f8e-e052-4e3a-881d-ab967858f66e.md');
+			strictEqual(input.options.selection?.startLineNumber, dirty ? undefined : 4);
+			strictEqual(input.options.forceReload, !dirty); deepStrictEqual(f.writes, []);
+		}
+	});
+	test('contents resolves the selected page again after a concurrent saved edit', async () => {
+		const f = fixture([3], undefined); addDocument(f);
+		f.library.notes[0].body = '# First' + localPageBreak('8e045317-a99b-4517-95ff-b2b7e56f2e69') + '# Second';
+		f.onPick(() => { f.library.notes[0].body = 'Inserted\n\n' + f.library.notes[0].body; });
+		await f.runContents();
+		strictEqual((f.editors[0] as { options: { selection: { startLineNumber: number } } }).options.selection.startLineNumber, 6);
+	});
+	test('contents opens the selected recording directly without starting capture', async () => {
+		const f = fixture([3], undefined); addDocument(f);
+		f.recordings.push({ version: 1, id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId, mimeType: 'audio/webm', status: 'capturing', chunks: 1, bytes: 1, createdAt: 1 });
+		await f.runContents(); deepStrictEqual(f.commands, [['vectorCode.localNoteRecordings', documentId, f.recordings[0].id]]); deepStrictEqual(f.writes, []);
+	});
+	test('recording errors do not block page navigation and canceling contents makes no changes', async () => {
+		const f = fixture([2], undefined); addDocument(f); f.setFail(true); await f.runContents(); strictEqual(f.editors.length, 1);
+		const canceled = fixture([undefined], undefined); addDocument(canceled); await canceled.runContents(); deepStrictEqual(canceled.editors, []); deepStrictEqual(canceled.commands, []);
+	});
+	test('page navigation handles CRLF and empty pages, and headings alone do not create pages', () => {
+		const f = fixture([], undefined); addDocument(f);
+		const tab = localDocumentTabs(f.library.notes[0])[0];
+		tab.body = '# One\r\n## Still one\r\n<!-- vector-page:8e045317-a99b-4517-95ff-b2b7e56f2e69 -->\r\n';
+		deepStrictEqual(localDocumentPages(tab), [{ id: documentId, title: 'One', line: 1 }, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', title: 'Page 2', line: 4 }]);
+		tab.body = '<!-- vector-page:not-an-id -->'; strictEqual(localDocumentPages(tab).length, 1);
+	});
 	test('filing a recording uses the capture API and resumes uncertain completion with the original request', async () => {
 		const f = fixture([2], 'Filed audio'); addDocument(f); f.setFail(true);
 		await rejects(f.runFile(), /Lost reply/); strictEqual(f.filings.length, 1); deepStrictEqual(f.writes, []);

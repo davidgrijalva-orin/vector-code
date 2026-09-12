@@ -41,6 +41,24 @@ visual page rendering remain open. Local recordings can now be filed during or
 after capture through the recording API, which commits the destination and its
 placement together in the library journal. No local-to-Graph upload or transcription is performed.
 
+## Navigate document contents
+
+An open local document exposes **Work: Document Contents** in its editor title
+controls and command palette. The same action is available from local document
+actions. It lists saved pages with their tab names and headings, plus recordings,
+and offers adding a note or starting a recording using the shared destination flow.
+A selected recording opens its existing play/export/file actions directly.
+
+Navigation resolves a page's stable marker again after the picker closes, so a
+concurrent saved edit does not leave it using an outdated line number. Clean tabs
+refresh from saved content; dirty tabs keep their drafts and receive neither a
+forced reload nor a saved-content cursor position. A recordings error is shown
+with Retry while pages remain available. The picker describes saved content;
+unsaved headings are not treated as saved document structure.
+
+This is document-scoped editor navigation. It does not merge or replace the
+separately owned VC-60 permanent project rail, nor implement a rich paginated editor.
+
 ## API and storage ownership
 
 `IVectorCodeLibraryService` is the client contract. The `vectorCodeLibraryV1` IPC
@@ -119,3 +137,10 @@ logic and a recording-placement revision in one commit. It is reachable through 
 validated recording service, not the public library IPC mutation channel. Source
 capture provenance remains in the unchanged recording manifest; current placements
 are separate library relationships, so ongoing chunk saves cannot undo a filing.
+
+The document-contents increment passes 84 Chromium and 34 Node checks, native
+TypeScript, client transpile, changed-file ESLint and architecture layers. Navigation
+coverage includes additional tabs, dirty draft preservation, concurrent saved edits,
+direct recording selection, canceled choices, recording failures, CRLF and empty
+pages. The isolated development app starts; a fresh CUA check still finds the Mac
+locked, so editor-title visual acceptance remains unverified.

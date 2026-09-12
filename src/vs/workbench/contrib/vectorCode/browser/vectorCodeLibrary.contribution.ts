@@ -4,25 +4,29 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize2 } from '../../../../nls.js';
+import { hasKey } from '../../../../base/common/types.js';
+import { toErrorMessage } from '../../../../base/common/errorMessage.js';
+import { Codicon } from '../../../../base/common/codicons.js';
+import { ResourceContextKey } from '../../../common/contextkeys.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { URI } from '../../../../base/common/uri.js';
 import { basename } from '../../../../base/common/resources.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
+import { Action2, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject, localDocumentTabs, FileRecordingRequest, RecordingDestination, LibraryReceipt, validateLibraryMutation, localPageBreak } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject, localDocumentTabs, FileRecordingRequest, RecordingDestination, LibraryReceipt, validateLibraryMutation, localDocumentPages } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
 import { IVectorCodeRecordingsService, LocalRecording } from '../../../../platform/vectorCode/common/vectorCodeRecordings.js';
 import { IWorkspaceEditingService } from '../../../services/workspaces/common/workspaceEditing.js';
 import { IWorkingCopyService } from '../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
-import { LOCAL_NOTE_SCHEME, localNoteResource, VectorCodeLibraryFileSystem } from './vectorCodeLibraryFileSystem.js';
+import { LOCAL_NOTE_SCHEME, localDocumentIdentity, localNoteResource, VectorCodeLibraryFileSystem } from './vectorCodeLibraryFileSystem.js';
 
 class LocalLibraryContribution extends Disposable {
 	static readonly ID = 'workbench.contrib.vectorCodeLocalLibrary';
@@ -86,9 +90,8 @@ async function chooseDocumentDestination(value: LocalWorkContext, note?: LocalNo
 async function openDestination(value: LocalWorkContext, receipt: LibraryReceipt): Promise<void> {
 	const note = (await value.library.read()).notes.find(note => note.id === receipt.id);
 	const tab = note && localDocumentTabs(note).find(tab => tab.id === (receipt.tabId ?? note.id));
-	const marker = receipt.pageId ? localPageBreak(receipt.pageId) : undefined;
-	const offset = marker && tab ? tab.body.indexOf(marker) : -1;
-	const selection = offset >= 0 && marker && tab ? { startLineNumber: tab.body.slice(0, offset + marker.length).split('\n').length, startColumn: 1 } : undefined;
+	const page = receipt.pageId && tab ? localDocumentPages(tab).find(page => page.id === receipt.pageId) : undefined;
+	const selection = page ? { startLineNumber: page.line, startColumn: 1 } : undefined;
 	await value.editors.openEditor({ resource: localNoteResource(receipt.id, receipt.tabId), label: note ? note.title + ' · ' + (tab?.title ?? 'Notes') : undefined, options: { pinned: true, forceReload: !!receipt.pageId, selection } });
 }
 async function addDocumentContent(value: LocalWorkContext, note?: LocalNote, projectIds: string[] = [], record = false) {
@@ -109,6 +112,39 @@ registerAction2(class extends Action2 {
 		await openDestination(value, receipt);
 	}
 });
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.localDocumentContents', title: localize2('localDocumentContents', 'Work: Document Contents'), icon: Codicon.listTree, f1: true, precondition: ResourceContextKey.Scheme.isEqualTo(LOCAL_NOTE_SCHEME), menu: { id: MenuId.EditorTitle, group: 'navigation', order: 1, when: ResourceContextKey.Scheme.isEqualTo(LOCAL_NOTE_SCHEME) } }); }
+	async run(accessor: ServicesAccessor, documentId?: string): Promise<void> {
+		const value = context(accessor);
+		const resource = value.editors.activeEditor?.resource;
+		const id = typeof documentId === 'string' ? documentId : resource?.scheme === LOCAL_NOTE_SCHEME ? localDocumentIdentity(resource).id : undefined;
+		if (!id) { return; }
+		const note = (await value.library.read()).notes.find(note => note.id === id);
+		if (!note) { return; }
+		const tabs = localDocumentTabs(note);
+		let recordings: LocalRecording[] = []; let recordingError: string | undefined;
+		try { recordings = await value.recordings.list(note.id); } catch (error) { recordingError = toErrorMessage(error); }
+		const choice = await value.quick.pick([
+			{ label: 'Add note: next page, new tab, or new document…', action: 'add' },
+			{ label: 'Record in this document…', action: 'record' },
+			...tabs.flatMap(tab => localDocumentPages(tab).map((page, index) => ({ label: page.title, description: tab.title + ' · Page ' + (index + 1), tab, page }))),
+			...(recordingError ? [{ label: 'Recordings unavailable · retry', description: recordingError, action: 'retry' }] : []),
+			...recordings.map(recording => ({ label: 'Recording · ' + new Date(recording.createdAt).toLocaleString(), description: (tabs.find(tab => tab.id === (recording.placement?.tabId ?? recording.tabId ?? note.id))?.title ?? 'Original tab') + ' · ' + (recording.status === 'capturing' ? 'Capturing or unfinished' : 'Saved audio'), recording }))
+		], { title: note.title, placeHolder: 'Saved document contents · tabs, pages, and recordings', matchOnDescription: true });
+		if (!choice) { return; }
+		if (hasKey(choice, { action: true })) { if (choice.action === 'retry') { await value.commands.executeCommand('vectorCode.localDocumentContents', note.id); } else { await addDocumentContent(value, note, note.projectIds, choice.action === 'record'); } }
+		else if (hasKey(choice, { recording: true })) { await value.commands.executeCommand('vectorCode.localNoteRecordings', note.id, choice.recording.id); }
+		else {
+			const target = localNoteResource(note.id, choice.tab.id);
+			const current = (await value.library.read()).notes.find(item => item.id === note.id);
+			const tab = current && localDocumentTabs(current).find(tab => tab.id === choice.tab.id);
+			const page = tab && localDocumentPages(tab).find(page => page.id === choice.page.id);
+			const dirty = value.workingCopies.isDirty(target);
+			// Navigation must not reload a dirty buffer or apply saved line positions to an unsaved draft.
+			await value.editors.openEditor({ resource: target, label: note.title + ' · ' + choice.tab.title, options: { pinned: true, forceReload: !dirty, selection: dirty || !page ? undefined : { startLineNumber: page.line, startColumn: 1 } } });
+		}
+	}
+});
 async function openDocument(value: LocalWorkContext, note: LocalNote) {
 	const tabs = localDocumentTabs(note);
 	const tab = tabs.length === 1 ? tabs[0] : (await value.quick.pick(tabs.map(tab => ({ label: tab.title, tab })), { title: note.title, placeHolder: 'Open a document tab.' }))?.tab;
@@ -122,13 +158,14 @@ async function noteActions(value: LocalWorkContext, note: LocalNote) {
 	const quick = value.quick; const editors = value.editors;
 	const action = await quick.pick([
 		{ label: 'Open document tab…', kind: 'open' }, { label: 'Rename document…', kind: 'rename' }, { label: 'Start recording in this document…', kind: 'record' }, { label: 'Play or export recordings…', kind: 'recordings' }, { label: 'Move or link to projects…', kind: 'assign' },
-		{ label: 'Export saved document as Markdown…', kind: 'export' }, { label: 'Open a previous revision as a draft…', kind: 'history' }, { label: 'Add note: next page, new tab, or new document…', kind: 'addContent' }
+		{ label: 'Export saved document as Markdown…', kind: 'export' }, { label: 'Open a previous revision as a draft…', kind: 'history' }, { label: 'Add note: next page, new tab, or new document…', kind: 'addContent' }, { label: 'Document contents: tabs, pages, recordings…', kind: 'contents' }
 	], { title: note.title });
 	if (!action) { return; }
 	if (action.kind === 'rename') { await rename(value, note, 'renameNote'); }
 	if (action.kind === 'record') { await addDocumentContent(value, note, note.projectIds, true); }
 	if (action.kind === 'recordings') { await value.commands.executeCommand('vectorCode.localNoteRecordings', note.id); }
 	if (action.kind === 'open') { await openDocument(value, note); }
+	if (action.kind === 'contents') { await value.commands.executeCommand('vectorCode.localDocumentContents', note.id); }
 	if (action.kind === 'addContent') { await addDocumentContent(value, note, note.projectIds); }
 	if (action.kind === 'assign') {
 		const library = await value.library.read();

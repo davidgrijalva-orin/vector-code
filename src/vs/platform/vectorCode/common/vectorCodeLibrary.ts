@@ -55,6 +55,19 @@ export function validateFileRecordingRequest(value: unknown): FileRecordingReque
 export function localDocumentTabs(note: LocalNote): LocalDocumentTab[] {
 	return [{ id: note.id, title: 'Notes', body: note.body, revision: note.contentRevision, contentRevision: note.contentRevision, contentUpdatedAt: note.contentUpdatedAt, createdAt: note.createdAt, updatedAt: note.contentUpdatedAt, history: note.history }, ...(note.additionalTabs ?? [])];
 }
+export interface LocalDocumentPage { id: string; title: string; line: number }
+/** A linear projection of saved page markers; ordinary Markdown headings never create pages. */
+export function localDocumentPages(tab: LocalDocumentTab): LocalDocumentPage[] {
+	const pages: LocalDocumentPage[] = [];
+	let page: LocalDocumentPage = { id: tab.id, title: '', line: 1 };
+	const finish = () => { if (!page.title) { page.title = 'Page ' + (pages.length + 1); } pages.push(page); };
+	for (const [index, line] of tab.body.split(/\r?\n/).entries()) {
+		const marker = /^<!-- vector-page:([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}) -->$/.exec(line);
+		if (marker) { finish(); page = { id: marker[1], title: '', line: index + 2 }; }
+		else if (!page.title && line.trim()) { page.title = line.trim().replace(/^#{1,6}\s+/, '').slice(0, 120); }
+	}
+	finish(); return pages;
+}
 /** A durable local Markdown boundary. Its identity survives export and identifies an append receipt. */
 export function localPageBreak(id: string): string { return '\n\n<!-- vector-page:' + localLibraryId(id) + ' -->\n\n'; }
 export function localLibraryId(value: unknown): string {

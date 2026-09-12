@@ -22,6 +22,9 @@ function identity(resource: URI): string {
 	if (parts.length > 2 || (parts.length === 2 && parts[0] === parts[1])) { throw new Error('Invalid local document tab resource.'); }
 	return parts.map(localLibraryId).join('/');
 }
+export function localDocumentIdentity(resource: URI): { id: string; tabId: string } {
+	const [id, tabId] = identity(resource).split('/'); return { id, tabId: tabId ?? id };
+}
 /** An API adapter. Native text-file models retain dirty drafts, hot-exit backups, encoding and Save. */
 export class VectorCodeLibraryFileSystem extends Disposable implements IFileSystemProviderWithFileReadWriteCapability {
 	private readonly revisions = new Map<string, number>();

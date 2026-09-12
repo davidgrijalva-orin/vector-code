@@ -39,10 +39,10 @@ registerAction2(class extends Action2 {
 });
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.localNoteRecordings', title: localize2('localNoteRecordings', 'Work: Open Recordings in a Local Note'), f1: false }); }
-	async run(accessor: ServicesAccessor, noteId: string): Promise<void> {
+	async run(accessor: ServicesAccessor, noteId: string, recordingId?: string): Promise<void> {
 		const commands = accessor.get(ICommandService); const recordings = accessor.get(IVectorCodeRecordingsService); const audio = accessor.get(IVectorCodeAudioService); const quick = accessor.get(IQuickInputService); const dialogs = accessor.get(IFileDialogService); const files = accessor.get(IFileService);
 		const items = await recordings.list(noteId);
-		const selected = await quick.pick(items.map(recording => ({ label: new Date(recording.createdAt).toLocaleString(), description: recording.status === 'stopped' ? 'Saved recording' : 'Unfinished recording · saved audio can be recovered', recording })), { placeHolder: 'Audio attached to this note' });
+		const selected = recordingId ? items.filter(recording => recording.id === recordingId).map(recording => ({ recording }))[0] : await quick.pick(items.map(recording => ({ label: new Date(recording.createdAt).toLocaleString(), description: recording.status === 'stopped' ? 'Saved recording' : 'Unfinished recording · saved audio can be recovered', recording })), { placeHolder: 'Audio attached to this note' });
 		if (!selected) { return; }
 		const action = await quick.pick([{ label: 'Play saved audio', kind: 'play' }, { label: 'Export saved audio as WebM…', kind: 'export' }, { label: 'File in another document or tab…', kind: 'file' }], { placeHolder: 'An interrupted recording may contain only the successfully saved audio.' });
 		if (!action) { return; }

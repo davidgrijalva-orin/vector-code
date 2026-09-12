@@ -40,9 +40,39 @@ Codex. Use Fable 5.1 for Claude Code sessions; Claude agents inherit that sessio
 model. Do not escalate ordinary work automatically.
 
 
-This file provides instructions for AI coding agents working with the VectorCode workbench codebase.
+This file provides instructions for AI coding agents working with the VectorCode work application codebase.
+
+## Product direction
+
+The authoritative [work application brief](docs/work-application-brief.md) and
+[architecture decision](docs/work-application-architecture.md) guide cross-product
+work. VectorCode is a general-purpose work application containing an IDE; local
+folders and repositories are optional project resources. A desktop work project
+may contain zero, one, or many folders; never make its identity one folder URI.
+The first milestone is the non-development project document workflow. Explicit workflow priorities replace
+blanket non-billing VectorGraph API parity. Preserve local IDE functionality,
+security, tenant isolation, licensing, review and release gates. Do not reactivate
+retired agent integrations or profiles implicitly.
 
 Use the repository source as the authority. Validate TypeScript changes with `npm run compile-check-ts-native` first, then run the narrower extension/client checks that match the files you touched.
+
+## API client boundary
+
+Owner clarification: the desktop application is a client of Graph and Voice APIs.
+Core local work must remain useful without a VectorGraph account; the connected
+Graph workflow is optional, not the universal project-creation prerequisite.
+The accepted entry experience is durable account-free personal work. An optional
+account adds connected context, cross-device continuity and collaboration. Do not
+gate basic local capture, editing, organization, recovery or export behind signup;
+do not silently upload local materials when an account is connected.
+Use explicit, versioned HTTP contracts for shared work and voice capabilities.
+Frontend/native presentation code must not import backend services, repositories,
+SQL, queues, provider implementations, or backend configuration. Server APIs own
+authorization, domain invariants, persistence, processing, relationship mutations,
+and authoritative inbox classification. Do not recreate those rules in the UI.
+The client owns presentation, editor drafts, explicit context selection, and retry
+receipts. Local files, microphones, terminals, and devices use their separately
+scoped native service/IPC APIs; artifact or voice access does not grant local access.
 
 Keep the whole codebase DRY. Treat duplicated logic or configuration as a defect: prefer shared helpers, schema/config sources, and thin adapters over copying behavior between desktop, iOS, services, docs, and tests.
 

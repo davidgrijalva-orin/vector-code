@@ -15,9 +15,9 @@ export class VectorGraphOperations {
 	constructor(private readonly call: Call) { }
 	async listDocuments(workspace: string) { const result = vectorGraphRecord(await this.call(workspace, 'listApiWorkspaceDocuments')); return vectorGraphArray(result.documents).map(parseVectorGraphDocument); }
 	async getDocument(workspace: string, document: string) { const result = vectorGraphRecord(await this.call(workspace, 'getApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) })); return parseVectorGraphDocument(result.document); }
-	async createDocument(workspace: string, team: string, project: string, title: string, requestId: string) {
+	async createDocument(workspace: string, team: string, project: string | undefined, title: string, requestId: string) {
 		if (!title.trim() || title.length > 1000) { throw new Error('Enter a document title of at most 1000 characters.'); }
-		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
+		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: project === undefined ? [] : [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
 		return parseVectorGraphDocument(result.document);
 	}
 	async saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) {

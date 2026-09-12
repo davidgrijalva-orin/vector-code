@@ -36,7 +36,7 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 	}
 	listDocuments(workspace: string) { return this.operations.listDocuments(workspace); }
 	getDocument(workspace: string, document: string) { return this.operations.getDocument(workspace, document); }
-	createDocument(workspace: string, team: string, project: string, title: string, requestId: string) { return this.operations.createDocument(workspace, team, project, title, requestId); }
+	createDocument(workspace: string, team: string, project: string | undefined, title: string, requestId: string) { return this.operations.createDocument(workspace, team, project, title, requestId); }
 	saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) { return this.operations.saveDocument(workspace, document, save, requestId); }
 
 	getSession() { return this.auth.getSession(); }

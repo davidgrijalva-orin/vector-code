@@ -53,7 +53,7 @@ export interface IVectorGraphService {
 	readonly _serviceBrand: undefined;
 	listDocuments(workspace: string): Promise<readonly IVectorGraphDocument[]>;
 	getDocument(workspace: string, document: string): Promise<IVectorGraphDocument>;
-	createDocument(workspace: string, team: string, project: string, title: string, requestId: string): Promise<IVectorGraphDocument>;
+	createDocument(workspace: string, team: string, project: string | undefined, title: string, requestId: string): Promise<IVectorGraphDocument>;
 	saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string): Promise<IVectorGraphDocument>;
 
 	readonly onDidChangeSession: Event<void>;

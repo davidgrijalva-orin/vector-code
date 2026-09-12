@@ -3,6 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Emitter } from '../../../base/common/event.js';
+import { VectorGraphOperations, getVectorGraphRepositoryState, createVectorGraphBranch } from '../node/vectorGraphOperations.js';
+import { IVectorGraphIssueDraft, IVectorGraphIssuePatch, vectorGraphId } from '../common/vectorGraphWork.js';
 import { net } from 'electron';
 import { execFile } from 'child_process';
 import { Disposable } from '../../../base/common/lifecycle.js';
@@ -13,10 +16,13 @@ import { IVectorGraphService, IVectorGraphTeam, IVectorGraphTicketPage, IVectorG
 import { isVectorGraphRepositoryUnavailable } from '../node/vectorGraphRepository.js';
 import { VectorGraphAuth } from '../node/vectorGraphAuth.js';
 
-/** Native adapter with an explicit read API and IDE-owned device authorization. */
+/** Native adapter with an explicit ticket API and IDE-owned device authorization. */
 export class VectorGraphMainService extends Disposable implements IVectorGraphService {
 	declare readonly _serviceBrand: undefined;
 	private readonly auth: VectorGraphAuth;
+	private readonly operations: VectorGraphOperations;
+	private readonly ticketsChanged = this._register(new Emitter<{ workspace: string; identifier: string }>());
+	readonly onDidChangeTickets = this.ticketsChanged.event;
 	readonly onDidChangeSession;
 	constructor(
 		@IEncryptionMainService encryption: IEncryptionMainService,
@@ -25,6 +31,7 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 		super();
 		this.auth = this._register(new VectorGraphAuth(encryption, state, net.fetch));
 		this.onDidChangeSession = this.auth.onDidChangeSession;
+		this.operations = new VectorGraphOperations(this.auth.call.bind(this.auth));
 	}
 	getSession() { return this.auth.getSession(); }
 	beginSignIn() { return this.auth.beginSignIn(); }
@@ -39,11 +46,19 @@ export class VectorGraphMainService extends Disposable implements IVectorGraphSe
 			return { id: vectorGraphText(row.id), name: vectorGraphText(row.name), identifier: vectorGraphText(row.identifier) };
 		});
 	}
-	async listTickets(workspace: string, team: string, cursor?: string): Promise<IVectorGraphTicketPage> {
+	async listTickets(workspace: string, team: string, cursor?: string, project?: string, assignee?: string): Promise<IVectorGraphTicketPage> {
 		if (typeof team !== 'string' || !/^[a-f0-9-]{36}$/i.test(team)) { throw new Error('Choose a VectorGraph team.'); }
 		if (cursor !== undefined && (typeof cursor !== 'string' || cursor.length > 4096)) { throw new Error('Invalid ticket cursor.'); }
-		return parseVectorGraphTicketPage(await this.auth.call(workspace, 'listApiIssues', { teamId: team, limit: 100, cursor }));
+		return parseVectorGraphTicketPage(await this.auth.call(workspace, 'listApiIssues', { teamId: team, limit: 100, cursor, projectId: project === undefined ? undefined : vectorGraphId(project), assigneeUserId: assignee === undefined ? undefined : vectorGraphId(assignee) }));
 	}
+	listProjects(workspace: string, team: string) { return this.operations.listProjects(workspace, team); }
+	getTeamMetadata(workspace: string, team: string) { return this.operations.getTeamMetadata(workspace, team); }
+	async createTicket(workspace: string, draft: IVectorGraphIssueDraft, requestId: string) { const identifier = await this.operations.createTicket(workspace, draft, requestId); this.ticketsChanged.fire({ workspace, identifier }); return identifier; }
+	async updateTicket(workspace: string, identifier: string, patch: IVectorGraphIssuePatch, requestId: string) { await this.operations.updateTicket(workspace, identifier, patch, requestId); this.ticketsChanged.fire({ workspace, identifier }); }
+	async addComment(workspace: string, identifier: string, body: string, requestId: string) { await this.operations.addComment(workspace, identifier, body, requestId); this.ticketsChanged.fire({ workspace, identifier }); }
+	async linkPullRequest(workspace: string, identifier: string, project: string, url: string, requestId: string) { await this.operations.linkPullRequest(workspace, identifier, project, url, requestId); this.ticketsChanged.fire({ workspace, identifier }); }
+	getRepositoryState(project: string) { return getVectorGraphRepositoryState(project); }
+	createBranch(project: string, branch: string, expectedHead: string) { return createVectorGraphBranch(project, branch, expectedHead); }
 	async getTicket(workspace: string, identifier: string): Promise<IVectorGraphTicketDetail> {
 		if (typeof identifier !== 'string' || !/^[A-Za-z][A-Za-z0-9]*-[1-9][0-9]*$/.test(identifier) || identifier.length > 100) { throw new Error('Invalid ticket identifier.'); }
 		return parseVectorGraphTicketDetail(await this.auth.call(workspace, 'getApiIssue', {}, { issueIdentifier: identifier }));

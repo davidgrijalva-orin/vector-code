@@ -27,9 +27,10 @@ import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, IVectorGr
 import { ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions } from '../../../common/views.js';
-import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
-import { VectorGraphTicketInput } from './vectorGraphTicketEditor.js';
+import { IViewsService } from '../../../services/views/common/viewsService.js';
+import { IVectorGraphWorkService, VECTOR_GRAPH_DETAILS_VIEW } from '../common/vectorGraphWork.js';
+import './vectorGraphDetails.contribution.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import './media/vectorGraphTickets.css';
 
@@ -38,6 +39,10 @@ const BINDING_KEY = 'vectorCode.vectorGraph.binding.';
 const icon = registerIcon('vector-code-tickets', Codicon.issues, localize('vectorGraphTicketsIcon', 'VectorGraph tickets.'));
 
 export class VectorGraphTicketsView extends ViewPane {
+	private scope!: HTMLSelectElement;
+	private assignee!: HTMLSelectElement;
+	private activeWork!: HTMLElement;
+	private metadataKey: string | undefined;
 	private session: IVectorGraphSession = { workspaces: [] };
 	private account!: HTMLElement;
 	private signInButton!: HTMLButtonElement;
@@ -70,7 +75,8 @@ export class VectorGraphTicketsView extends ViewPane {
 		@IVectorCodeWorkbenchService private readonly projects: IVectorCodeWorkbenchService,
 		@IStorageService private readonly storage: IStorageService,
 		@IQuickInputService private readonly quickInput: IQuickInputService,
-		@IEditorService private readonly editors: IEditorService,
+		@IViewsService private readonly views: IViewsService,
+		@IVectorGraphWorkService private readonly work: IVectorGraphWorkService,
 		@INotificationService private readonly notifications: INotificationService,
 		@IKeybindingService keybindings: IKeybindingService,
 		@IContextMenuService contextMenus: IContextMenuService,
@@ -83,6 +89,8 @@ export class VectorGraphTicketsView extends ViewPane {
 		@IHoverService hover: IHoverService,
 	) {
 		super(options, keybindings, contextMenus, configuration, contextKeys, descriptors, instantiation, graphOpener, theme, hover);
+		this._register(graph.onDidChangeTickets(event => { if (this.root && event.workspace === this.binding()?.workspace.id) { void this.refresh(); } }));
+		this._register(work.onDidChange(() => { if (this.root) { this.renderActiveWork(); } }));
 		this._register(graph.onDidChangeSession(() => {
 			this.generation++;
 			this.discoveryProject = undefined;
@@ -97,7 +105,7 @@ export class VectorGraphTicketsView extends ViewPane {
 			this.loading = false;
 			if (this.root) {
 				this.search.value = '';
-				this.category.value = '';
+				this.category.value = ''; this.scope.value = 'project'; this.assignee.value = ''; this.metadataKey = undefined;
 				this.renderTickets();
 				if (this.isBodyVisible()) { void this.refresh(); }
 			}
@@ -116,7 +124,15 @@ export class VectorGraphTicketsView extends ViewPane {
 		});
 		const toolbar = append(this.root, $('.vector-graph-tickets__toolbar'));
 		this.configureButton = this.button(toolbar, localize('vectorGraphConnect', 'Choose Workspace'), () => this.configure());
+		this.button(toolbar, localize('vectorGraphChooseProject', 'Choose Project'), () => this.chooseProject());
+		this.button(toolbar, localize('vectorGraphNewTicket', 'New Ticket'), () => this.newTicket());
 		this.refreshButton = this.button(toolbar, localize('vectorGraphRefresh', 'Refresh'), () => { this.discoveryProject = undefined; return this.refresh(); });
+		this.activeWork = append(this.root, $('.vector-graph-active-work'));
+		this.scope = append(this.root, $<HTMLSelectElement>('select')); this.scope.setAttribute('aria-label', localize('workTicketScope', 'Ticket scope'));
+		for (const [value, title] of [['project', localize('workLinkedProject', 'Linked project')], ['team', localize('workWholeTeam', 'Whole team')]]) { const option = append(this.scope, $<HTMLOptionElement>('option')); option.value = value; option.textContent = title; }
+		this.assignee = append(this.root, $<HTMLSelectElement>('select')); this.assignee.setAttribute('aria-label', localize('workAssigneeFilter', 'Filter by assignee'));
+		const all = append(this.assignee, $<HTMLOptionElement>('option')); all.value = ''; all.textContent = localize('workAllAssignees', 'All assignees');
+		for (const control of [this.scope, this.assignee]) { this._register(addDisposableListener(control, EventType.CHANGE, () => { void this.refresh(); })); }
 		this.status = append(this.root, $('.vector-graph-tickets__status'));
 		this.status.setAttribute('role', 'status');
 		this.search = append(this.root, $<HTMLInputElement>('input.vector-graph-tickets__search'));
@@ -215,7 +231,9 @@ export class VectorGraphTicketsView extends ViewPane {
 			if (!team || project !== this.projectKey() || projectGeneration !== this.projectGeneration || this._store.isDisposed) { return; }
 			this.selectedIdentifier = undefined;
 			this.storage.store(BINDING_KEY + project, { workspace: workspace.value, team: team.value }, StorageScope.PROFILE, StorageTarget.MACHINE);
+			this.invalidateBinding(project);
 			await this.refresh();
+			await this.chooseProject();
 		} catch (error) {
 			if (project === this.projectKey() && projectGeneration === this.projectGeneration && !this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
 		} finally {
@@ -224,6 +242,38 @@ export class VectorGraphTicketsView extends ViewPane {
 		}
 	}
 
+	private invalidateBinding(project: string): void {
+		this.generation++; this.tickets = []; this.cursor = undefined; this.selectedIdentifier = undefined;
+		this.work.select(undefined); this.work.setActive(project, undefined);
+		this.metadataKey = undefined; this.assignee.value = ''; this.scope.value = 'project';
+		this.renderTickets(); this.renderActiveWork();
+	}
+	private async chooseProject(): Promise<void> {
+		const project = this.projectKey(); const generation = this.projectGeneration; const binding = this.binding();
+		if (!project || !binding) { throw new Error('Choose a workspace and team first.'); }
+		const projects = await this.graph.listProjects(binding.workspace.id, binding.team.id);
+		if (!projects.length) { throw new Error('No accessible VectorGraph projects belong to this team. Create or join a project in VectorGraph, then try again.'); }
+		const selected = await this.quickInput.pick(projects.map(value => ({ label: value.name, description: value.id, value })), { placeHolder: 'Link this repository to a VectorGraph project' });
+		if (!selected || project !== this.projectKey() || generation !== this.projectGeneration || binding.workspace.id !== this.binding()?.workspace.id || binding.team.id !== this.binding()?.team.id || this._store.isDisposed) { return; }
+		this.storage.store(BINDING_KEY + project, { ...binding, project: selected.value }, StorageScope.PROFILE, StorageTarget.MACHINE);
+		this.invalidateBinding(project);
+		await this.refresh();
+	}
+	private async newTicket(): Promise<void> {
+		const binding = this.binding(); const project = this.projectKey();
+		if (!binding?.project || !project) { throw new Error('Choose a linked VectorGraph project before creating a ticket.'); }
+		this.work.select({ workspace: binding.workspace.id, project, binding });
+		await this.views.openView(VECTOR_GRAPH_DETAILS_VIEW, true);
+	}
+	private renderActiveWork(): void {
+		clearNode(this.activeWork);
+		const project = this.projectKey(); const active = project ? this.work.getActive(project) : undefined;
+		if (active && this.session.workspaces.some(workspace => workspace.id === active.workspace)) {
+			const button = append(this.activeWork, $<HTMLButtonElement>('button')); button.type = 'button'; button.textContent = localize('workActiveTicket', 'Working on {0}', active.identifier);
+			// This node owns its click handler and is discarded when the active ticket changes.
+			button.onclick = () => { this.work.select({ workspace: active.workspace, identifier: active.identifier, project: project! }); void this.views.openView(VECTOR_GRAPH_DETAILS_VIEW, true); };
+		}
+	}
 	private async refresh(more = false): Promise<void> {
 		if (more && (this.loading || !this.cursor)) { return; }
 		const generation = ++this.generation;
@@ -277,16 +327,28 @@ export class VectorGraphTicketsView extends ViewPane {
 			this.renderTickets();
 			return;
 		}
+		if (this.scope.value === 'project' && !binding.project) {
+			this.loading = false; this.status.textContent = localize('workChooseProjectPrompt', 'Choose Project to link this repository, or select Whole team to browse the team.'); this.renderTickets(); return;
+		}
+		if (this.metadataKey !== binding.workspace.id + ':' + binding.team.id) {
+			try {
+				const metadata = await this.graph.getTeamMetadata(binding.workspace.id, binding.team.id);
+				if (generation !== this.generation || this._store.isDisposed) { return; }
+				clearNode(this.assignee); const all = append(this.assignee, $<HTMLOptionElement>('option')); all.value = ''; all.textContent = localize('workAllAssignees', 'All assignees');
+				for (const member of metadata.members) { const option = append(this.assignee, $<HTMLOptionElement>('option')); option.value = member.id; option.textContent = member.name; }
+				this.metadataKey = binding.workspace.id + ':' + binding.team.id;
+			} catch (error) { if (generation === this.generation) { this.loading = false; this.status.textContent = toErrorMessage(error); this.renderTickets(); } return; }
+		}
 		this.loading = true;
 		this.status.textContent = localize('vectorGraphLoading', 'Loading {0} / {1}…', binding.workspace.name, binding.team.name);
 		this.renderTickets();
 		try {
-			const page = await this.graph.listTickets(binding.workspace.id, binding.team.id, more ? this.cursor : undefined);
+			const page = await this.graph.listTickets(binding.workspace.id, binding.team.id, more ? this.cursor : undefined, this.scope.value === 'project' ? binding.project?.id : undefined, this.assignee.value || undefined);
 			if (generation !== this.generation || this._store.isDisposed) { return; }
 			if (page.nextCursor && page.nextCursor === this.cursor) { throw new Error(localize('vectorGraphRepeatedCursor', 'VectorGraph returned the same page. Refresh to retry.')); }
 			this.tickets = [...new Map([...this.tickets, ...page.tickets].map(ticket => [ticket.identifier, ticket])).values()];
 			this.cursor = page.nextCursor;
-			this.status.textContent = localize('vectorGraphLoaded', '{0} / {1} · {2} tickets loaded', binding.workspace.name, binding.team.name, this.tickets.length);
+			this.status.textContent = localize('vectorGraphLoaded', '{0} / {1} · {2} tickets loaded', binding.workspace.name, this.scope.value === 'project' ? binding.project?.name ?? binding.team.name : binding.team.name, this.tickets.length);
 		} catch (error) {
 			if (generation === this.generation && !this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
 		} finally {
@@ -298,6 +360,7 @@ export class VectorGraphTicketsView extends ViewPane {
 	}
 
 	private renderTickets(): void {
+		this.renderActiveWork();
 		const focused = this.list.ownerDocument.activeElement;
 		const focusedId = this.list.contains(focused) ? focused?.getAttribute('data-ticket') : undefined;
 		this.listDisposables.clear();
@@ -336,7 +399,8 @@ export class VectorGraphTicketsView extends ViewPane {
 		try {
 			this.selectedIdentifier = ticket.identifier;
 			this.renderTickets();
-			await this.editors.openEditor(new VectorGraphTicketInput(binding.workspace.id, ticket.identifier), { pinned: true });
+			this.work.select({ workspace: binding.workspace.id, identifier: ticket.identifier, project: this.projectKey()!, binding });
+			await this.views.openView(VECTOR_GRAPH_DETAILS_VIEW, true);
 		} catch (error) {
 			if (!this._store.isDisposed) { this.notifications.error(toErrorMessage(error)); }
 		}

@@ -64,6 +64,7 @@ import { ILifecycleMainService, LifecycleMainPhase, ShutdownReason } from '../..
 import { ILoggerService, ILogService } from '../../platform/log/common/log.js';
 import { IMenubarMainService, MenubarMainService } from '../../platform/menubar/electron-main/menubarMainService.js';
 import { INativeHostMainService, NativeHostMainService } from '../../platform/native/electron-main/nativeHostMainService.js';
+import { VectorGraphRepositoryAccess } from '../../platform/vectorGraph/electron-main/vectorGraphRepositoryAccess.js';
 import { VectorGraphChannel } from '../../platform/vectorGraph/common/vectorGraphIpc.js';
 import { IVectorGraphService, VECTOR_GRAPH_CHANNEL } from '../../platform/vectorGraph/common/vectorGraph.js';
 import { VectorGraphMainService } from '../../platform/vectorGraph/electron-main/vectorGraphMainService.js';
@@ -1229,7 +1230,8 @@ export class CodeApplication extends Disposable {
 		mainProcessElectronServer.registerChannel('nativeHost', nativeHostChannel);
 		sharedProcessClient.then(client => client.registerChannel('nativeHost', nativeHostChannel));
 
-		mainProcessElectronServer.registerChannel(VECTOR_GRAPH_CHANNEL, new VectorGraphChannel(accessor.get(IVectorGraphService)));
+		const vectorGraphRepositoryAccess = accessor.get(IInstantiationService).createInstance(VectorGraphRepositoryAccess);
+		mainProcessElectronServer.registerChannel(VECTOR_GRAPH_CHANNEL, new VectorGraphChannel(accessor.get(IVectorGraphService), vectorGraphRepositoryAccess.authorize.bind(vectorGraphRepositoryAccess)));
 
 		const vectorCodeMobileRelayBridgeChannel = ProxyChannel.fromService(accessor.get(IVectorCodeMobileRelayBridgeService), disposables);
 		mainProcessElectronServer.registerChannel(VECTOR_CODE_MOBILE_RELAY_BRIDGE_CHANNEL, vectorCodeMobileRelayBridgeChannel);

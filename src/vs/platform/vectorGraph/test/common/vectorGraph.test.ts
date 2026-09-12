@@ -54,6 +54,10 @@ suite('VectorGraph ticket contracts', () => {
 		const service: IVectorGraphService = {
 			_serviceBrand: undefined,
 			onDidChangeSession: Event.None,
+			onDidChangeTickets: Event.None,
+			listProjects: async () => [], getTeamMetadata: async () => ({ statuses: [], members: [] }),
+			createTicket: async () => 'VC-57', updateTicket: async () => { }, addComment: async () => { }, linkPullRequest: async () => { },
+			getRepositoryState: async () => ({ head: '', branch: '', changes: [] }), createBranch: async () => { },
 			getSession: async () => ({ workspaces: [] }),
 			beginSignIn: async () => ({ workspaces: [] }),
 			pollSignIn: async () => ({ workspaces: [] }),
@@ -73,5 +77,11 @@ suite('VectorGraph ticket contracts', () => {
 			await rejects(channel.call(undefined, command, []), /Unsupported/);
 		}
 		await rejects(channel.call(undefined, 'listTickets', [{ operation: 'write' }]), /Invalid/);
+		for (const operation of ['getRepositoryState', 'createBranch', 'discoverRepository']) { await rejects(channel.call('window:1', operation, ['file:///outside']), /access is unavailable/); }
+		const authorizations: unknown[][] = [];
+		const scoped = new VectorGraphChannel(service, async (...args) => { authorizations.push(args); throw new Error('Denied'); });
+		await rejects(scoped.call('window:1', 'createBranch', ['file:///outside', 'branch', 'head']), /Denied/);
+		await rejects(scoped.call('window:1', 'linkPullRequest', ['workspace', 'VC-57', 'file:///outside', 'url', 'key']), /Denied/);
+		deepStrictEqual(authorizations, [['window:1', 'file:///outside', true], ['window:1', 'file:///outside', false]]);
 	});
 });

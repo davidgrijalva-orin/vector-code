@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IVectorGraphProject, IVectorGraphTeamMetadata, IVectorGraphIssueDraft, IVectorGraphIssuePatch, IVectorGraphRepositoryState } from './vectorGraphWork.js';
 import { Event } from '../../../base/common/event.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 
@@ -23,6 +24,7 @@ export interface IVectorGraphTeam extends IVectorGraphWorkspace { readonly ident
 export interface IVectorGraphBinding {
 	readonly workspace: IVectorGraphWorkspace;
 	readonly team: IVectorGraphTeam;
+	readonly project?: IVectorGraphProject;
 }
 export interface IVectorGraphTicket {
 	readonly identifier: string;
@@ -38,11 +40,18 @@ export interface IVectorGraphTicketPage {
 }
 export interface IVectorGraphTicketDetail extends IVectorGraphTicket {
 	readonly description: string;
+	readonly teamId?: string;
+	readonly statusId?: string;
+	readonly assigneeUserId?: string;
+	readonly projectId?: string;
+	readonly updatedAt?: string;
+	readonly links?: readonly { readonly title: string; readonly url: string }[];
 	readonly comments: readonly { readonly author: string; readonly body: string }[];
 }
 export interface IVectorGraphService {
 	readonly _serviceBrand: undefined;
 	readonly onDidChangeSession: Event<void>;
+	readonly onDidChangeTickets: Event<{ workspace: string; identifier: string }>;
 	getSession(): Promise<IVectorGraphSession>;
 	beginSignIn(): Promise<IVectorGraphSession>;
 	pollSignIn(): Promise<IVectorGraphSession>;
@@ -51,7 +60,15 @@ export interface IVectorGraphService {
 	discoverRepository(project: string): Promise<IVectorGraphDiscovery>;
 	listWorkspaces(): Promise<readonly IVectorGraphWorkspace[]>;
 	listTeams(workspace: string): Promise<readonly IVectorGraphTeam[]>;
-	listTickets(workspace: string, team: string, cursor?: string): Promise<IVectorGraphTicketPage>;
+	listTickets(workspace: string, team: string, cursor?: string, project?: string, assignee?: string): Promise<IVectorGraphTicketPage>;
+	listProjects(workspace: string, team: string): Promise<readonly IVectorGraphProject[]>;
+	getTeamMetadata(workspace: string, team: string): Promise<IVectorGraphTeamMetadata>;
+	createTicket(workspace: string, draft: IVectorGraphIssueDraft, requestId: string): Promise<string>;
+	updateTicket(workspace: string, identifier: string, patch: IVectorGraphIssuePatch, requestId: string): Promise<void>;
+	addComment(workspace: string, identifier: string, body: string, requestId: string): Promise<void>;
+	linkPullRequest(workspace: string, identifier: string, project: string, url: string, requestId: string): Promise<void>;
+	getRepositoryState(project: string): Promise<IVectorGraphRepositoryState>;
+	createBranch(project: string, branch: string, expectedHead: string): Promise<void>;
 	getTicket(workspace: string, identifier: string): Promise<IVectorGraphTicketDetail>;
 }
 
@@ -89,7 +106,15 @@ export function parseVectorGraphTicketDetail(value: unknown): IVectorGraphTicket
 	const result = vectorGraphRecord(value);
 	const issue = vectorGraphRecord(result.issue);
 	return {
-		...parseVectorGraphTicket(issue), description: (issue.description === null || issue.description === undefined) ? '' : vectorGraphText(issue.description),
+		...parseVectorGraphTicket(issue),
+		teamId: typeof issue.teamId === 'string' ? issue.teamId : undefined,
+		statusId: typeof issue.statusId === 'string' ? issue.statusId : undefined,
+		projectId: typeof issue.projectId === 'string' ? issue.projectId : undefined,
+		assigneeUserId: typeof issue.assigneeUserId === 'string' ? issue.assigneeUserId : undefined,
+		updatedAt: typeof issue.updatedAt === 'string' ? issue.updatedAt : undefined,
+		links: result.links === undefined ? [] : vectorGraphArray(result.links).map(value => {
+			const link = vectorGraphRecord(value); return { title: typeof link.title === 'string' ? link.title : vectorGraphText(link.url), url: vectorGraphText(link.url) };
+		}), description: (issue.description === null || issue.description === undefined) ? '' : vectorGraphText(issue.description),
 		comments: vectorGraphArray(result.comments).map(value => {
 			const comment = vectorGraphRecord(value);
 			return { author: typeof comment.authorName === 'string' ? comment.authorName : 'Unknown author', body: vectorGraphText(comment.body) };

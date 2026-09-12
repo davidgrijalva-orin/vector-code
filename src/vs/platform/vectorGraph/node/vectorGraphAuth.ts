@@ -113,11 +113,11 @@ export class VectorGraphAuth extends Disposable {
 		this.state.removeItem(sessionKey);
 		this.changed.fire();
 	}
-	async call(workspace: string, operation: string, query: object = {}, pathParameters: object = {}): Promise<unknown> {
+	async call(workspace: string, operation: string, query: object = {}, pathParameters: object = {}, body?: object, idempotencyKey?: string): Promise<unknown> {
 		const generation = this.generation;
 		const profile = (await this.load()).find(profile => profile.workspace.id === workspace);
 		if (!profile) { throw new Error('Sign in to VectorGraph and authorize this workspace to continue.'); }
-		const result = await this.request(`/cli/v1/workspaces/${encodeURIComponent(workspace)}/operations/${operation}`, { query, pathParameters }, profile.token);
+		const result = await this.request(`/cli/v1/workspaces/${encodeURIComponent(workspace)}/operations/${operation}`, { query, pathParameters, body, idempotencyKey }, profile.token);
 		if (generation !== this.generation) { throw new Error('VectorGraph account changed. Refresh to continue.'); }
 		return result.body;
 	}

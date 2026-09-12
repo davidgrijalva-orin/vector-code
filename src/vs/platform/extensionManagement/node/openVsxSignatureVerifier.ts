@@ -9,7 +9,7 @@ import { CancellationToken } from '../../../base/common/cancellation.js';
 import { TargetPlatform } from '../../extensions/common/extensions.js';
 import { asJson, asText, IRequestService } from '../../request/common/request.js';
 
-const registryOrigin = 'https://open-vsx.org';
+import { OPEN_VSX_ORIGIN as registryOrigin } from '../common/openVsx.js';
 
 /** Open VSX signs the complete VSIX bytes with Ed25519. The key is retrieved from its HTTPS registry. */
 export async function verifyOpenVsxSignature(extensionId: string, version: string, packagePath: string, signaturePath: string, request: IRequestService, targetPlatform?: TargetPlatform): Promise<boolean> {
@@ -17,7 +17,7 @@ export async function verifyOpenVsxSignature(extensionId: string, version: strin
 	if (parts.length !== 2 || parts.some(part => !/^[\w-]+$/.test(part)) || !version) { throw new Error('Invalid Open VSX extension identity.'); }
 	const platform = targetPlatform && ![TargetPlatform.UNIVERSAL, TargetPlatform.UNDEFINED, TargetPlatform.UNKNOWN].includes(targetPlatform) ? `${encodeURIComponent(targetPlatform)}/` : '';
 	const url = `${registryOrigin}/api/${parts.map(encodeURIComponent).join('/')}/${platform}${encodeURIComponent(version)}`;
-	const metadata = await asJson<{ namespace?: string; name?: string; version?: string; files?: { publicKey?: string } }>(await request.request({ type: 'GET', url, timeout: 15000, callSite: 'openVsxSignatureVerifier.metadata' }, CancellationToken.None));
+	const metadata = await asJson<{ namespace?: string; name?: string; version?: string; files?: { publicKey?: string } }>(await request.request({ type: 'GET', url, timeout: 15000, followRedirects: 0, callSite: 'openVsxSignatureVerifier.metadata' }, CancellationToken.None));
 	if (!metadata || `${metadata.namespace}.${metadata.name}`.toLowerCase() !== extensionId.toLowerCase() || metadata.version !== version || typeof metadata.files?.publicKey !== 'string') {
 		throw new Error('Open VSX did not provide a signing key for this extension version.');
 	}
@@ -25,16 +25,16 @@ export async function verifyOpenVsxSignature(extensionId: string, version: strin
 	if (keyUrl.origin !== registryOrigin || keyUrl.username || keyUrl.password || !/^\/api\/-\/public-key\/[\w-]+$/.test(keyUrl.pathname) || keyUrl.search || keyUrl.hash) {
 		throw new Error('Open VSX returned an invalid signing key URL.');
 	}
-	const pem = await asText(await request.request({ type: 'GET', url: keyUrl.toString(), timeout: 15000, callSite: 'openVsxSignatureVerifier.key' }, CancellationToken.None));
+	const pem = await asText(await request.request({ type: 'GET', url: keyUrl.toString(), timeout: 15000, followRedirects: 0, callSite: 'openVsxSignatureVerifier.key' }, CancellationToken.None));
 	if (!pem || pem.length > 4096) { throw new Error('Invalid Open VSX signing key.'); }
 	const key = createPublicKey(pem);
 	if (key.asymmetricKeyType !== 'ed25519') { throw new Error('Unsupported Open VSX signing key.'); }
-	const signature = await readSignature(signaturePath);
+	const signature = await readOpenVsxSignature(signaturePath);
 	if ((await fs.stat(packagePath)).size > 512 * 1024 * 1024) { throw new Error('Extension exceeds the signature verification size limit.'); }
 	return verify(null, await fs.readFile(packagePath), key, signature);
 }
 
-async function readSignature(path: string): Promise<Buffer> {
+export async function readOpenVsxSignature(path: string): Promise<Buffer> {
 	const { open } = await import('yauzl');
 	return new Promise((resolve, reject) => {
 		open(path, { lazyEntries: true }, (error, zip) => {

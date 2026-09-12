@@ -3,6 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { URI } from '../../../../base/common/uri.js';
+import { FileService } from '../../../files/common/fileService.js';
+import { DiskFileSystemProvider } from '../../../files/node/diskFileSystemProvider.js';
+import { NullLogService } from '../../../log/common/log.js';
+import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
+import { UriIdentityService } from '../../../uriIdentity/common/uriIdentityService.js';
+import { IProductService } from '../../../product/common/productService.js';
+import { INativeEnvironmentService } from '../../../environment/common/environment.js';
+import { ExtensionSignatureVerificationCode, IGalleryExtension, IExtensionGalleryService, InstallOperation } from '../../common/extensionManagement.js';
+import { OPEN_VSX_GALLERY_URL } from '../../common/openVsx.js';
+import { ExtensionsDownloader } from '../../node/extensionDownloader.js';
+import { ExtensionSignatureVerificationService } from '../../node/extensionSignatureVerificationService.js';
 import { rejects, strictEqual } from 'assert';
 import { generateKeyPairSync, sign } from 'crypto';
 import { promises as fs } from 'fs';
@@ -16,7 +28,7 @@ import { IRequestService } from '../../../request/common/request.js';
 import { verifyOpenVsxSignature } from '../../node/openVsxSignatureVerifier.js';
 
 suite('Open VSX package verification', () => {
-	ensureNoDisposablesAreLeakedInTestSuite();
+	const store = ensureNoDisposablesAreLeakedInTestSuite();
 	const keys = generateKeyPairSync('ed25519');
 	let directory: string;
 	let packagePath: string;
@@ -25,7 +37,8 @@ suite('Open VSX package verification', () => {
 	let key: string;
 	let urls: string[];
 	const request = {
-		request: async ({ url }: { url: string }) => {
+		request: async ({ url, followRedirects }: { url: string; followRedirects?: number }) => {
+			strictEqual(followRedirects, 0);
 			urls.push(url);
 			const body = url.includes('/public-key/') ? key : JSON.stringify({ namespace: 'publisher', name: 'extension', version: '1.0.0', files: { publicKey: keyUrl } });
 			return { res: { statusCode: 200, headers: {} }, stream: bufferToStream(VSBuffer.fromString(body)) };
@@ -36,12 +49,29 @@ suite('Open VSX package verification', () => {
 		packagePath = join(directory, 'extension.vsix'); signaturePath = join(directory, 'extension.sigzip');
 		keyUrl = 'https://open-vsx.org/api/-/public-key/test-key';
 		key = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString(); urls = [];
-		const bytes = Buffer.from('package bytes protected by registry signature');
-		await fs.writeFile(packagePath, bytes);
+		await zip(packagePath, [{ path: 'extension/package.json', contents: Buffer.from('{"name":"extension","version":"1.0.0"}') }]);
+		const bytes = await fs.readFile(packagePath);
 		await zip(signaturePath, [{ path: '.signature.sig', contents: sign(null, bytes, keys.privateKey) }]);
 	});
 	teardown(async () => { await fs.rm(directory, { recursive: true, force: true }); });
 
+	test('downloads and verifies Open VSX archives containing only the Ed25519 signature', async () => {
+		const log = store.add(new NullLogService());
+		const files = store.add(new FileService(log));
+		const disk = store.add(new DiskFileSystemProvider(log));
+		store.add(files.registerProvider('file', disk));
+		const identity = store.add(new UriIdentityService(files));
+		const product = { extensionsGallery: { serviceUrl: OPEN_VSX_GALLERY_URL } } as IProductService;
+		const verifier = new ExtensionSignatureVerificationService(log, NullTelemetryService, product, request);
+		const gallery = {
+			download: async (_extension: IGalleryExtension, location: URI) => { await fs.mkdir(join(directory, 'cache'), { recursive: true }); await fs.copyFile(packagePath, location.fsPath); },
+			downloadSignatureArchive: async (_extension: IGalleryExtension, location: URI) => { await fs.copyFile(signaturePath, location.fsPath); }
+		} as unknown as IExtensionGalleryService;
+		const downloader = store.add(new ExtensionsDownloader({ extensionsDownloadLocation: URI.file(join(directory, 'cache')) } as INativeEnvironmentService, files, gallery, verifier, NullTelemetryService, identity, log, product));
+		const extension = { identifier: { id: 'publisher.extension' }, version: '1.0.0', isSigned: true, properties: { targetPlatform: TargetPlatform.UNIVERSAL } } as IGalleryExtension;
+		const result = await downloader.download(extension, InstallOperation.Install, true);
+		strictEqual(result.verificationStatus, ExtensionSignatureVerificationCode.Success);
+	});
 	test('verifies the registry signature over the entire downloaded package', async () => {
 		strictEqual(await verifyOpenVsxSignature('publisher.extension', '1.0.0', packagePath, signaturePath, request), true);
 		strictEqual(urls[0], 'https://open-vsx.org/api/publisher/extension/1.0.0');

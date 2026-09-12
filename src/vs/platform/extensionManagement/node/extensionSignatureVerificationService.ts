@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { OPEN_VSX_GALLERY_URL } from '../common/openVsx.js';
 import { IProductService } from '../../product/common/productService.js';
 import { IRequestService } from '../../request/common/request.js';
 import { verifyOpenVsxSignature } from './openVsxSignatureVerifier.js';
@@ -77,7 +78,7 @@ export class ExtensionSignatureVerificationService implements IExtensionSignatur
 	}
 
 	public async verify(extensionId: string, version: string, vsixFilePath: string, signatureArchiveFilePath: string, clientTargetPlatform?: TargetPlatform, extensionTargetPlatform?: TargetPlatform): Promise<IExtensionSignatureVerificationResult | undefined> {
-		if (this.productService.extensionsGallery?.serviceUrl === 'https://open-vsx.org/vscode/gallery') {
+		if (this.productService.extensionsGallery?.serviceUrl === OPEN_VSX_GALLERY_URL) {
 			try {
 				const valid = await verifyOpenVsxSignature(extensionId, version, vsixFilePath, signatureArchiveFilePath, this.requestService, extensionTargetPlatform);
 				const code = valid ? ExtensionSignatureVerificationCode.Success : ExtensionSignatureVerificationCode.SignatureIsInvalid;

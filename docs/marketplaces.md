@@ -6,6 +6,8 @@ Open **Extensions** from the activity bar (`Shift+Command+X` on macOS, `Ctrl+Shi
 
 The existing VS Code extension manager connects to [Open VSX](https://open-vsx.org). Search for an extension, open its details, and choose **Install**. Installed extensions retain the native update, enable/disable, and uninstall actions. **Install from VSIX** remains available in the Extensions menu.
 
+Signed Open VSX packages are verified against the registry's Ed25519 public key before installation. Tampered packages, invalid signatures, unavailable keys, and key URLs outside the registry fail installation. Signature verification remains enabled.
+
 Open VSX is a separate catalog from Microsoft's Visual Studio Marketplace. Availability and licensing vary by publisher; a compatible VSIX can also be installed directly. Extensions that require Microsoft's proprietary services may not work in Vector Code.
 
 ## MCP servers

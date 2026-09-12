@@ -77,7 +77,7 @@ export class ExtensionsDownloader extends Disposable {
 		let signatureArchiveLocation;
 		try {
 			signatureArchiveLocation = await this.downloadSignatureArchive(extension);
-			const verificationStatus = (await this.extensionSignatureVerificationService.verify(extension.identifier.id, extension.version, location.fsPath, signatureArchiveLocation.fsPath, clientTargetPlatform))?.code;
+			const verificationStatus = (await this.extensionSignatureVerificationService.verify(extension.identifier.id, extension.version, location.fsPath, signatureArchiveLocation.fsPath, clientTargetPlatform, extension.properties.targetPlatform))?.code;
 			if (verificationStatus === ExtensionSignatureVerificationCode.PackageIsInvalidZip || verificationStatus === ExtensionSignatureVerificationCode.SignatureArchiveIsInvalidZip) {
 				try {
 					// Delete the downloaded vsix if VSIX or signature archive is invalid

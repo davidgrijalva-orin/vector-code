@@ -3,6 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IProductService } from '../../product/common/productService.js';
+import { IRequestService } from '../../request/common/request.js';
+import { verifyOpenVsxSignature } from './openVsxSignatureVerifier.js';
 import { getErrorMessage } from '../../../base/common/errors.js';
 import { isDefined } from '../../../base/common/types.js';
 import { TargetPlatform } from '../../extensions/common/extensions.js';
@@ -31,7 +34,7 @@ export interface IExtensionSignatureVerificationService {
 	 * @param signatureArchiveFilePath The signature archive file path.
 	 * @returns returns the verification result or undefined if the verification was not executed.
 	 */
-	verify(extensionId: string, version: string, vsixFilePath: string, signatureArchiveFilePath: string, clientTargetPlatform?: TargetPlatform): Promise<IExtensionSignatureVerificationResult | undefined>;
+	verify(extensionId: string, version: string, vsixFilePath: string, signatureArchiveFilePath: string, clientTargetPlatform?: TargetPlatform, extensionTargetPlatform?: TargetPlatform): Promise<IExtensionSignatureVerificationResult | undefined>;
 }
 
 declare namespace vsceSign {
@@ -56,6 +59,8 @@ export class ExtensionSignatureVerificationService implements IExtensionSignatur
 	constructor(
 		@ILogService private readonly logService: ILogService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
+		@IProductService private readonly productService: IProductService,
+		@IRequestService private readonly requestService: IRequestService,
 	) { }
 
 	private vsceSign(): Promise<typeof vsceSign> {
@@ -71,7 +76,19 @@ export class ExtensionSignatureVerificationService implements IExtensionSignatur
 		return import(mod);
 	}
 
-	public async verify(extensionId: string, version: string, vsixFilePath: string, signatureArchiveFilePath: string, clientTargetPlatform?: TargetPlatform): Promise<IExtensionSignatureVerificationResult | undefined> {
+	public async verify(extensionId: string, version: string, vsixFilePath: string, signatureArchiveFilePath: string, clientTargetPlatform?: TargetPlatform, extensionTargetPlatform?: TargetPlatform): Promise<IExtensionSignatureVerificationResult | undefined> {
+		if (this.productService.extensionsGallery?.serviceUrl === 'https://open-vsx.org/vscode/gallery') {
+			try {
+				const valid = await verifyOpenVsxSignature(extensionId, version, vsixFilePath, signatureArchiveFilePath, this.requestService, extensionTargetPlatform);
+				const code = valid ? ExtensionSignatureVerificationCode.Success : ExtensionSignatureVerificationCode.SignatureIsInvalid;
+				this.logService.info(`Open VSX signature verification for ${extensionId}: ${code}`);
+				return { code };
+			} catch (error) {
+				this.logService.error('Open VSX signature verification failed', getErrorMessage(error));
+				return { code: ExtensionSignatureVerificationCode.UnknownError };
+			}
+		}
+
 		let module: typeof vsceSign;
 
 		try {

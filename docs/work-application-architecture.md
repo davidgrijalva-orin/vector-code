@@ -115,6 +115,32 @@ uses a bounded atomic local journal through a versioned IPC service, with no new
 dependency or provider. See [local library contracts, workflows and limits](local-work-library.md).
 No sign-in flow or synchronization service is selected by this note.
 
+## Internal document tabs and capture placement
+
+The [accepted document structure](work-application-brief.md#document-structure-and-voice-note-destinations)
+supersedes the initial one-note/one-body model. Graph owns the shared document,
+its ordered internal tabs and durable content/page boundaries. Voice supplies
+capture/transcription provenance and processing through its API; it does not create
+a competing document system. Local services provide the same user-facing structure
+without requiring a Graph identity. App editor tabs are presentation state only.
+
+Required placement operations are append on a new page of an existing document
+tab, create a tab in an existing document, and create a document. APIs must accept
+an explicit destination, source capture identity, expected target revision and
+stable operation identity; return committed document/tab/content references or a
+recoverable conflict/uncertain result. Services own validation, authorization,
+atomic content mutation and duplicate prevention. The client must not emulate
+append by reading and blindly replacing a whole document. A destination change
+must not redirect an already submitted uncertain operation; reconcile its original
+receipt before a separate explicit move. Retain capture data when filing fails.
+
+Source inspection found existing Graph document content/revision persistence and
+Google Docs connector tab extraction, but no internal Graph document-tab contract
+in the inspected source. Connector extraction is not a native document model.
+A versioned Graph contract and compatible local migration are required before
+claiming this feature. Preserve old document clients and every existing note ID,
+body, history, recording reference and project association during migration.
+
 ## Optional assignment and moving captured work
 
 Notes and transcripts have a stable artifact identity independent of project

@@ -81,6 +81,35 @@ projects, notes, inbox, native editing/recovery, moves, search and Markdown expo
 automated coverage. Physical-device acceptance, model integration, sync, packaged
 acceptance and retention results are not established by these changes.
 
+## Document structure and voice-note destinations
+
+Owner clarification on 2026-09-12: VectorVoice notes are content in VectorGraph
+documents. A document contains internal tabs, distinct from open editor tabs.
+For each new typed note or recording/transcript, offer three destinations:
+
+- Append on the next page of a selected tab in an existing document.
+- Create a new tab inside an existing document.
+- Create a new document.
+
+Capture may still start before a destination or project is selected. Keep that
+capture durable in Inbox and allow filing during or after processing. Choosing or
+changing a destination must not restart recording/transcription. Preserve audio,
+source identity, timestamps and prior edits; retry must not append the same content
+or create a tab/document twice. Project membership belongs to the containing
+document and remains independent of its tab/page structure.
+
+Use this same document concept in the account-free local library, with an optional
+mapping to a shared Graph document. Existing local notes must migrate without loss
+into documents with an initial tab; do not require signup or duplicate the notes.
+Appending on a new page must preserve existing content and a durable page boundary,
+not overwrite the whole document or treat a visual line wrap as a saved page.
+The exact rich-content/page representation must follow the Graph-owned API design.
+
+This is accepted product scope, not current implementation evidence. The initial
+local library has one Markdown body per note, and the current native Graph adapter
+saves a document body. Internal document tabs, page-aware append, capture placement,
+compatible migration and their client controls remain to be implemented.
+
 ## Implementation sequence and acceptance
 
 The approved entry model comes first: implement a durable local project/note/inbox

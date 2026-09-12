@@ -6,6 +6,15 @@ the existing Work view. [Local recording/playback/export](local-recordings.md) n
 uses the same note identities. Transcription, publishing/sync and a unified permanent
 project rail remain separate work. It does not replace the existing connected Graph document actions.
 
+## Accepted document-model extension
+
+The owner clarified that a voice note belongs in a document: append on the next
+page of an existing tab, add a new internal document tab, or create a new document.
+See the [authoritative requirement](work-application-brief.md#document-structure-and-voice-note-destinations).
+The implementation described below still stores one Markdown body per local note;
+it does not yet implement these three destinations. Its stable IDs, history and
+recording references must survive migration to documents with an initial tab.
+
 ## API and storage ownership
 
 `IVectorCodeLibraryService` is the client contract. The `vectorCodeLibraryV1` IPC

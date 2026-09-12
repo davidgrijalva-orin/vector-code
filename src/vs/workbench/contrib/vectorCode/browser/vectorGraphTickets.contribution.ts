@@ -23,7 +23,7 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, IVectorGraphSession, filterVectorGraphTickets } from '../../../../platform/vectorGraph/common/vectorGraph.js';
+import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, IVectorGraphSession, isVectorGraphConnectionError, filterVectorGraphTickets } from '../../../../platform/vectorGraph/common/vectorGraph.js';
 import { ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions } from '../../../common/views.js';
@@ -43,6 +43,7 @@ export class VectorGraphTicketsView extends ViewPane {
 	private signInButton!: HTMLButtonElement;
 	private signOutButton!: HTMLButtonElement;
 	private signingIn = false;
+	private pollFailures = 0;
 	private readonly pollTimer = this._register(new MutableDisposable());
 	private discoveryProject: string | undefined;
 	private root!: HTMLElement;
@@ -162,6 +163,7 @@ export class VectorGraphTicketsView extends ViewPane {
 	private async signIn(): Promise<void> {
 		if (this.signingIn) { return; }
 		this.signingIn = true;
+		this.pollFailures = 0;
 		this.signInButton.disabled = true;
 		try {
 			const session = this.session.authorization ? this.session : await this.graph.beginSignIn();
@@ -176,11 +178,14 @@ export class VectorGraphTicketsView extends ViewPane {
 		this.pollTimer.value = disposableTimeout(async () => {
 			try {
 				const session = await this.graph.pollSignIn();
+				this.pollFailures = 0;
 				if (this._store.isDisposed) { return; }
 				this.session = session;
 				this.renderAccount();
 			} catch (error) {
-				if (!this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
+				if (this._store.isDisposed) { return; }
+				this.status.textContent = toErrorMessage(error);
+				if (isVectorGraphConnectionError(error) && ++this.pollFailures < 5 && this.session.authorization && Date.now() < this.session.authorization.expiresAt) { this.schedulePoll(); }
 			}
 		}, 2000);
 	}

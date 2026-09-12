@@ -115,3 +115,10 @@ export function vectorGraphRepositoryIdentity(remote: string): string | undefine
 	path = path.replace(/\.git\/?$/i, '').replace(/\/$/, '');
 	return /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(path) ? path.toLowerCase() : undefined;
 }
+
+export class VectorGraphConnectionError extends Error {
+	readonly code = 'VECTORGRAPH_CONNECTION_RETRY';
+}
+export function isVectorGraphConnectionError(error: unknown): boolean {
+	return error instanceof Error && (error as { code?: unknown }).code === 'VECTORGRAPH_CONNECTION_RETRY';
+}

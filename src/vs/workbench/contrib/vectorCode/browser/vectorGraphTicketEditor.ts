@@ -67,7 +67,12 @@ export class VectorGraphTicketEditor extends EditorPane {
 		@IVectorGraphService private readonly graph: IVectorGraphService,
 		@IMarkdownRendererService private readonly markdown: IMarkdownRendererService,
 		@IOpenerService private readonly opener: IOpenerService,
-	) { super(VectorGraphTicketEditor.ID, group, telemetry, theme, storage); }
+	) {
+		super(VectorGraphTicketEditor.ID, group, telemetry, theme, storage);
+		this._register(graph.onDidChangeSession(() => {
+			if (this.root && this.input instanceof VectorGraphTicketInput) { this.reload(this.input); }
+		}));
+	}
 	protected override createEditor(parent: HTMLElement): void {
 		this.root = append(parent, $('.vector-graph-ticket-editor'));
 		this.root.tabIndex = 0;

@@ -3,11 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Event } from '../../../base/common/event.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 
 export const VECTOR_GRAPH_CHANNEL = 'vectorGraphTickets';
 export const IVectorGraphService = createDecorator<IVectorGraphService>('vectorGraphService');
 
+export interface IVectorGraphSession {
+	readonly workspaces: readonly IVectorGraphWorkspace[];
+	readonly authorization?: { readonly url: string; readonly code: string; readonly expiresAt: number };
+}
+export interface IVectorGraphDiscovery {
+	readonly bindings: readonly IVectorGraphBinding[];
+	readonly incomplete: boolean;
+	readonly repository?: string;
+}
 export interface IVectorGraphWorkspace { readonly id: string; readonly name: string }
 export interface IVectorGraphTeam extends IVectorGraphWorkspace { readonly identifier: string }
 export interface IVectorGraphBinding {
@@ -32,6 +42,13 @@ export interface IVectorGraphTicketDetail extends IVectorGraphTicket {
 }
 export interface IVectorGraphService {
 	readonly _serviceBrand: undefined;
+	readonly onDidChangeSession: Event<void>;
+	getSession(): Promise<IVectorGraphSession>;
+	beginSignIn(): Promise<IVectorGraphSession>;
+	pollSignIn(): Promise<IVectorGraphSession>;
+	cancelSignIn(): Promise<void>;
+	signOut(): Promise<void>;
+	discoverRepository(project: string): Promise<IVectorGraphDiscovery>;
 	listWorkspaces(): Promise<readonly IVectorGraphWorkspace[]>;
 	listTeams(workspace: string): Promise<readonly IVectorGraphTeam[]>;
 	listTickets(workspace: string, team: string, cursor?: string): Promise<IVectorGraphTicketPage>;
@@ -82,4 +99,19 @@ export function parseVectorGraphTicketDetail(value: unknown): IVectorGraphTicket
 export function filterVectorGraphTickets(tickets: readonly IVectorGraphTicket[], query: string, category: string): readonly IVectorGraphTicket[] {
 	const search = query.trim().toLocaleLowerCase();
 	return tickets.filter(ticket => (!category || ticket.category === category) && `${ticket.identifier} ${ticket.title} ${ticket.project}`.toLocaleLowerCase().includes(search));
+}
+
+/** Match only GitHub remotes; another host with the same owner/name is a different repository. */
+export function vectorGraphRepositoryIdentity(remote: string): string | undefined {
+	const ssh = /^git@github\.com:([^?#\s]+)$/i.exec(remote);
+	let path = ssh?.[1];
+	if (!path) {
+		try {
+			const url = new URL(remote);
+			if (!['https:', 'ssh:'].includes(url.protocol) || url.hostname.toLowerCase() !== 'github.com' || url.port || url.search || url.hash) { return undefined; }
+			path = url.pathname.slice(1);
+		} catch { return undefined; }
+	}
+	path = path.replace(/\.git\/?$/i, '').replace(/\/$/, '');
+	return /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(path) ? path.toLowerCase() : undefined;
 }

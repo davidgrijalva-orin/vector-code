@@ -5,6 +5,7 @@ Vector Code is OrinTech's native workbench for project-based development. It kee
 ## Current Product Surface
 
 - Project switcher with per-project file, editor, terminal, task, and session state
+- Work section in Explorer with native VectorGraph sign-in, repository workspace discovery, project-scoped issues, and issue details in the editor
 - Phone Connection view for QR pairing through the relay-backed mobile bridge
 - Terminal panel with per-project terminal tabs and persistent hidden sessions
 - Rich Markdown editor with editable preview as the default `.md` experience

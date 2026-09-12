@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Event } from '../../../../../base/common/event.js';
 import { strictEqual } from 'assert';
 import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
@@ -53,6 +54,7 @@ suite('VectorGraph ticket editor', () => {
 	test('refresh remains active after the setInput token is cancelled', async () => {
 		let request = 0;
 		const graph = {
+			onDidChangeSession: Event.None,
 			getTicket: async () => ({
 				identifier: 'VC-52', title: `Ticket request ${++request}`, status: 'In Progress', category: 'started', priority: 'high', project: '', description: '', comments: []
 			})

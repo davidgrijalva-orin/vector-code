@@ -3,72 +3,76 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { net } from 'electron';
 import { execFile } from 'child_process';
-import { promises as fs } from 'fs';
-import { dirname, join } from '../../../base/common/path.js';
-import { findExecutable } from '../../../base/node/processes.js';
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { INativeEnvironmentService } from '../../environment/common/environment.js';
-import { ILogService } from '../../log/common/log.js';
-import { getResolvedShellEnv } from '../../shell/node/shellEnv.js';
-import { IVectorGraphService, IVectorGraphWorkspace, IVectorGraphTeam, IVectorGraphTicketPage, IVectorGraphTicketDetail, parseVectorGraphTicketPage, parseVectorGraphTicketDetail, vectorGraphRecord, vectorGraphText, vectorGraphArray } from '../common/vectorGraph.js';
+import { Disposable } from '../../../base/common/lifecycle.js';
+import { URI } from '../../../base/common/uri.js';
+import { IEncryptionMainService } from '../../encryption/common/encryptionService.js';
+import { IStateService } from '../../state/node/state.js';
+import { IVectorGraphService, IVectorGraphTeam, IVectorGraphTicketPage, IVectorGraphTicketDetail, IVectorGraphDiscovery, IVectorGraphBinding, parseVectorGraphTicketPage, parseVectorGraphTicketDetail, vectorGraphRecord, vectorGraphText, vectorGraphArray, vectorGraphRepositoryIdentity } from '../common/vectorGraph.js';
+import { VectorGraphAuth } from '../node/vectorGraphAuth.js';
 
-/** Read-only CLI adapter. Credentials and raw responses never cross IPC. */
-export class VectorGraphMainService implements IVectorGraphService {
+/** Native adapter with an explicit read API and IDE-owned device authorization. */
+export class VectorGraphMainService extends Disposable implements IVectorGraphService {
 	declare readonly _serviceBrand: undefined;
+	private readonly auth: VectorGraphAuth;
+	readonly onDidChangeSession;
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ILogService private readonly logService: ILogService,
-		@INativeEnvironmentService private readonly environmentService: INativeEnvironmentService,
-	) { }
-
-	async listWorkspaces(): Promise<readonly IVectorGraphWorkspace[]> {
-		const result = vectorGraphRecord(await this.run(['workspace', 'list', '--json']));
-		return vectorGraphArray(result.workspaces).map(value => {
-			const row = vectorGraphRecord(value);
-			return { id: vectorGraphText(row.id), name: vectorGraphText(row.name) };
-		});
+		@IEncryptionMainService encryption: IEncryptionMainService,
+		@IStateService state: IStateService,
+	) {
+		super();
+		this.auth = this._register(new VectorGraphAuth(encryption, state, net.fetch));
+		this.onDidChangeSession = this.auth.onDidChangeSession;
 	}
+	getSession() { return this.auth.getSession(); }
+	beginSignIn() { return this.auth.beginSignIn(); }
+	pollSignIn() { return this.auth.pollSignIn(); }
+	cancelSignIn() { return this.auth.cancelSignIn(); }
+	signOut() { return this.auth.signOut(); }
+	async listWorkspaces() { return (await this.getSession()).workspaces; }
 	async listTeams(workspace: string): Promise<readonly IVectorGraphTeam[]> {
-		const result = vectorGraphRecord(await this.call('listApiTeams', workspace));
+		const result = vectorGraphRecord(await this.auth.call(workspace, 'listApiTeams'));
 		return vectorGraphArray(result.teams).map(value => {
 			const row = vectorGraphRecord(value);
 			return { id: vectorGraphText(row.id), name: vectorGraphText(row.name), identifier: vectorGraphText(row.identifier) };
 		});
 	}
 	async listTickets(workspace: string, team: string, cursor?: string): Promise<IVectorGraphTicketPage> {
-		this.validateId(team);
+		if (typeof team !== 'string' || !/^[a-f0-9-]{36}$/i.test(team)) { throw new Error('Choose a VectorGraph team.'); }
 		if (cursor !== undefined && (typeof cursor !== 'string' || cursor.length > 4096)) { throw new Error('Invalid ticket cursor.'); }
-		return parseVectorGraphTicketPage(await this.call('listApiIssues', workspace, '--query-json', { teamId: team, limit: 100, cursor }));
+		return parseVectorGraphTicketPage(await this.auth.call(workspace, 'listApiIssues', { teamId: team, limit: 100, cursor }));
 	}
 	async getTicket(workspace: string, identifier: string): Promise<IVectorGraphTicketDetail> {
 		if (typeof identifier !== 'string' || !/^[A-Za-z][A-Za-z0-9]*-[1-9][0-9]*$/.test(identifier) || identifier.length > 100) { throw new Error('Invalid ticket identifier.'); }
-		return parseVectorGraphTicketDetail(await this.call('getApiIssue', workspace, '--path-json', { issueIdentifier: identifier }));
+		return parseVectorGraphTicketDetail(await this.auth.call(workspace, 'getApiIssue', {}, { issueIdentifier: identifier }));
 	}
-	private validateId(id: string): void {
-		if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id)) { throw new Error('Choose a saved VectorGraph workspace and team.'); }
-	}
-	private call(operation: string, workspace: string, argument?: string, values?: object): Promise<unknown> {
-		this.validateId(workspace);
-		return this.run(['api', 'call', operation, '--workspace', workspace, ...(argument ? [argument, JSON.stringify(values)] : []), '--json']);
-	}
-	private async run(args: string[]): Promise<unknown> {
-		const shellEnv = await getResolvedShellEnv(this.configurationService, this.logService, this.environmentService.args, process.env);
-		const env: NodeJS.ProcessEnv = { ...process.env, ...shellEnv, ELECTRON_RUN_AS_NODE: '1' };
-		// The view explicitly selects saved profiles rather than inheriting a terminal's overrides.
-		for (const key of ['VECTORGRAPH_API_TOKEN', 'VECTORGRAPH_CLI_TOKEN', 'VECTORGRAPH_WORKSPACE_ID', 'VECTORGRAPH_API_URL']) { delete env[key]; }
-		const executable = await findExecutable('vectorgraph', this.environmentService.userHome.fsPath, undefined, env);
-		if (!executable) { throw new Error('Install the VectorGraph CLI and sign in with vectorgraph auth login, then refresh Tickets.'); }
-		const script = /\.cmd$/i.test(executable) ? join(dirname(executable), 'node_modules', '@orintech', 'cli', 'dist', 'index.js') : await fs.realpath(executable);
-		if (!/\.[cm]?js$/i.test(script)) { throw new Error('Install the official @orintech/cli npm package to use Tickets.'); }
-		return new Promise((resolve, reject) => {
-			execFile(process.execPath, [script, ...args], { env, cwd: this.environmentService.userHome.fsPath, timeout: 30_000, maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
-				if (error) {
-					reject(new Error('Could not read VectorGraph. Check your connection and CLI sign-in (vectorgraph auth login), then retry.'));
-					return;
-				}
-				try { resolve(JSON.parse(stdout)); } catch { reject(new Error('VectorGraph returned invalid JSON. Update the CLI and retry.')); }
+	async discoverRepository(project: string): Promise<IVectorGraphDiscovery> {
+		const uri = URI.parse(project);
+		if (uri.scheme !== 'file' || uri.authority || !uri.path || uri.query || uri.fragment) { return { bindings: [], incomplete: false }; }
+		const remotes = await new Promise<string[]>((resolve, reject) => {
+			execFile('git', ['-C', uri.fsPath, 'config', '--local', '--no-includes', '--get-regexp', '^remote\\..*\\.url$'], { timeout: 5000, maxBuffer: 65536, windowsHide: true }, (error, stdout) => {
+				if (error && error.code !== 1) { reject(new Error('Cannot read this repository. Choose its workspace manually.')); return; }
+				const lines = stdout.split(/\r?\n/).filter(Boolean);
+				const origins = lines.filter(line => /^remote\.origin\.url\s/.test(line));
+				resolve((origins.length ? origins : lines).map(line => line.replace(/^\S+\s+/, '')));
 			});
 		});
+		const identities = new Set(remotes.map(vectorGraphRepositoryIdentity).filter((value): value is string => !!value));
+		if (!identities.size) { return { bindings: [], incomplete: false }; }
+		const bindings = new Map<string, IVectorGraphBinding>();
+		let incomplete = identities.size > 1;
+		for (const workspace of await this.listWorkspaces()) {
+			try {
+				const result = vectorGraphRecord(await this.auth.call(workspace.id, 'listApiGithubRepositories'));
+				for (const value of vectorGraphArray(result.repositories)) {
+					const row = vectorGraphRecord(value);
+					if (row.status !== 'enabled' || row.workspaceId !== workspace.id || typeof row.fullName !== 'string' || !identities.has(row.fullName.toLowerCase()) || typeof row.teamId !== 'string') { continue; }
+					const team = { id: row.teamId, name: vectorGraphText(row.teamName), identifier: vectorGraphText(row.teamIdentifier) };
+					bindings.set(workspace.id + ':' + team.id, { workspace, team });
+				}
+			} catch { incomplete = true; }
+		}
+		return { bindings: [...bindings.values()], incomplete, repository: [...identities].join(', ') };
 	}
 }

@@ -4,13 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { deepStrictEqual, strictEqual, throws, rejects } from 'assert';
+import { Event } from '../../../../base/common/event.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { IVectorGraphService, filterVectorGraphTickets, parseVectorGraphTicketDetail, parseVectorGraphTicketPage } from '../../common/vectorGraph.js';
+import { IVectorGraphService, filterVectorGraphTickets, parseVectorGraphTicketDetail, parseVectorGraphTicketPage, vectorGraphRepositoryIdentity } from '../../common/vectorGraph.js';
 import { VectorGraphChannel } from '../../common/vectorGraphIpc.js';
 
 suite('VectorGraph ticket contracts', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 	const issue = { identifier: 'VC-52', title: 'Ticket view', statusName: 'Todo', statusCategory: 'unstarted', priority: 'high', projectName: 'Workbench', description: 'Keep the project flow.', credential: 'must-not-cross-ipc' };
+
+	test('normalizes equivalent GitHub remotes without matching other hosts or paths', () => {
+		for (const remote of ['git@github.com:Orin/Vector.git', 'https://github.com/orin/vector.git', 'ssh://git@github.com/orin/vector']) {
+			strictEqual(vectorGraphRepositoryIdentity(remote), 'orin/vector');
+		}
+		for (const remote of ['https://evil.test/orin/vector', 'file:///orin/vector', 'https://github.com/orin/vector/issues', 'https://github.com/orin/vector?token=secret', '/orin/vector']) {
+			strictEqual(vectorGraphRepositoryIdentity(remote), undefined);
+		}
+	});
 
 	test('projects only ticket fields from API data and retains the next cursor', () => {
 		const page = parseVectorGraphTicketPage({ issues: [issue], pageInfo: { hasNextPage: true, nextCursor: 'opaque-page-2' }, token: 'must-not-cross-ipc' });
@@ -39,10 +49,17 @@ suite('VectorGraph ticket contracts', () => {
 		strictEqual(JSON.stringify(ticket).includes('not exported'), false);
 	});
 
-	test('IPC exposes read operations but cannot invoke process or authentication helpers', async () => {
+	test('IPC exposes explicit operations but cannot invoke private helpers', async () => {
 		const calls: string[] = [];
 		const service: IVectorGraphService = {
 			_serviceBrand: undefined,
+			onDidChangeSession: Event.None,
+			getSession: async () => ({ workspaces: [] }),
+			beginSignIn: async () => ({ workspaces: [] }),
+			pollSignIn: async () => ({ workspaces: [] }),
+			cancelSignIn: async () => { },
+			signOut: async () => { },
+			discoverRepository: async () => ({ bindings: [], incomplete: false }),
 			listWorkspaces: async () => { calls.push('workspaces'); return []; },
 			listTeams: async workspace => { calls.push(workspace); return []; },
 			listTickets: async () => ({ tickets: [] }),

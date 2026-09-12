@@ -45,8 +45,6 @@
 .vector-graph-tickets__title { font-weight: 600; }
 .vector-graph-tickets__meta, .vector-graph-tickets__status, .vector-graph-tickets__empty { font-size: 11px; color: var(--vscode-descriptionForeground); }
 .vector-graph-tickets span, .vector-graph-tickets__status, .vector-graph-tickets__empty { overflow-wrap: anywhere; }
-.vector-graph-tickets__heading { text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: .6px; padding-top: 8px; }
-.vector-graph-tickets .vector-code-project-switcher { max-height: 180px; overflow: auto; flex-shrink: 0; }
 .vector-graph-ticket-editor { box-sizing: border-box; overflow: auto; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); padding: 32px clamp(20px, 5%, 72px); }
 .vector-graph-ticket-editor__article { max-width: 880px; margin: 0 auto; overflow-wrap: anywhere; line-height: 1.65; }
 .vector-graph-ticket-editor__toolbar { display: flex; align-items: center; justify-content: space-between; color: var(--vscode-descriptionForeground); }
@@ -61,3 +59,5 @@
 .vector-graph-ticket-editor button { font: inherit; padding: 5px 12px; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, transparent); border-radius: 4px; cursor: pointer; }
 .vector-graph-ticket-editor :focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
 .vector-graph-tickets__ticket.selected { background: var(--vscode-list-inactiveSelectionBackground); color: var(--vscode-list-inactiveSelectionForeground); border-color: var(--vscode-focusBorder); }
+
+.vector-graph-tickets__account { font-size: 11px; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }

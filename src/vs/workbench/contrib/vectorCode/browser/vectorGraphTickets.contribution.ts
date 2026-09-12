@@ -6,7 +6,8 @@
 import { $, append, addDisposableListener, clearNode, EventType } from '../../../../base/browser/dom.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { toErrorMessage } from '../../../../base/common/errorMessage.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
+import { disposableTimeout } from '../../../../base/common/async.js';
+import { DisposableStore, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -22,24 +23,28 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, filterVectorGraphTickets } from '../../../../platform/vectorGraph/common/vectorGraph.js';
+import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, IVectorGraphSession, filterVectorGraphTickets } from '../../../../platform/vectorGraph/common/vectorGraph.js';
 import { ViewPane } from '../../../browser/parts/views/viewPane.js';
-import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContainer.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
-import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions, ViewContainerLocation } from '../../../common/views.js';
+import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions } from '../../../common/views.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { IVectorCodeWorkbenchService, VECTOR_CODE_ADD_PROJECT_COMMAND_ID } from '../common/vectorCode.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { VectorCodeProjectSwitcher } from './vectorCodeProjectSwitcher.js';
+import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { VectorGraphTicketInput } from './vectorGraphTicketEditor.js';
+import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import './media/vectorGraphTickets.css';
 
 const VIEW_ID = 'vectorCode.vectorGraphTickets';
 const BINDING_KEY = 'vectorCode.vectorGraph.binding.';
 const icon = registerIcon('vector-code-tickets', Codicon.issues, localize('vectorGraphTicketsIcon', 'VectorGraph tickets.'));
 
-class VectorGraphTicketsView extends ViewPane {
+export class VectorGraphTicketsView extends ViewPane {
+	private session: IVectorGraphSession = { workspaces: [] };
+	private account!: HTMLElement;
+	private signInButton!: HTMLButtonElement;
+	private signOutButton!: HTMLButtonElement;
+	private signingIn = false;
+	private readonly pollTimer = this._register(new MutableDisposable());
+	private discoveryProject: string | undefined;
 	private root!: HTMLElement;
 	private status!: HTMLElement;
 	private list!: HTMLElement;
@@ -65,8 +70,6 @@ class VectorGraphTicketsView extends ViewPane {
 		@IStorageService private readonly storage: IStorageService,
 		@IQuickInputService private readonly quickInput: IQuickInputService,
 		@IEditorService private readonly editors: IEditorService,
-		@ICommandService private readonly commands: ICommandService,
-		@IWorkspaceContextService private readonly workspace: IWorkspaceContextService,
 		@INotificationService private readonly notifications: INotificationService,
 		@IKeybindingService keybindings: IKeybindingService,
 		@IContextMenuService contextMenus: IContextMenuService,
@@ -74,11 +77,16 @@ class VectorGraphTicketsView extends ViewPane {
 		@IContextKeyService contextKeys: IContextKeyService,
 		@IViewDescriptorService descriptors: IViewDescriptorService,
 		@IInstantiationService instantiation: IInstantiationService,
-		@IOpenerService opener: IOpenerService,
+		@IOpenerService private readonly graphOpener: IOpenerService,
 		@IThemeService theme: IThemeService,
 		@IHoverService hover: IHoverService,
 	) {
-		super(options, keybindings, contextMenus, configuration, contextKeys, descriptors, instantiation, opener, theme, hover);
+		super(options, keybindings, contextMenus, configuration, contextKeys, descriptors, instantiation, graphOpener, theme, hover);
+		this._register(graph.onDidChangeSession(() => {
+			this.generation++;
+			this.discoveryProject = undefined;
+			if (this.root) { void this.refresh(); }
+		}));
 		this._register(projects.onDidChangeActiveProject(() => {
 			this.generation++;
 			this.projectGeneration++;
@@ -98,18 +106,13 @@ class VectorGraphTicketsView extends ViewPane {
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 		this.root = append(container, $('.vector-graph-tickets'));
-		append(this.root, $('.vector-graph-tickets__heading')).textContent = localize('ticketsProjects', 'Projects');
-		const switcher = this._register(new VectorCodeProjectSwitcher(this.root, {
-			add: () => this.commands.executeCommand(VECTOR_CODE_ADD_PROJECT_COMMAND_ID),
-			select: project => this.projects.switchProject(project.uri),
-			close: project => this.projects.closeProject(project.uri),
-			onError: error => this.notifications.error(error)
-		}));
-		const updateProjects = () => switcher.update(this.projects.getProjectSummaries(), this.projects.getActiveProjectUri(), this.projects.getProjectStatusLabel());
-		updateProjects();
-		this._register(this.workspace.onDidChangeWorkspaceFolders(updateProjects));
-		this._register(this.projects.onDidChangeActiveProject(updateProjects));
-		append(this.root, $('.vector-graph-tickets__heading')).textContent = localize('ticketsHeading', 'VectorGraph Tickets');
+		this.account = append(this.root, $('.vector-graph-tickets__account'));
+		const accountActions = append(this.root, $('.vector-graph-tickets__toolbar'));
+		this.signInButton = this.button(accountActions, localize('vectorGraphSignInAction', 'Sign in to VectorGraph'), () => this.signIn());
+		this.signOutButton = this.button(accountActions, localize('vectorGraphSignOutAction', 'Sign Out'), async () => {
+			this.pollTimer.clear();
+			if (this.session.authorization) { await this.graph.cancelSignIn(); } else { await this.graph.signOut(); }
+		});
 		const toolbar = append(this.root, $('.vector-graph-tickets__toolbar'));
 		this.configureButton = this.button(toolbar, localize('vectorGraphConnect', 'Choose Workspace'), () => this.configure());
 		this.refreshButton = this.button(toolbar, localize('vectorGraphRefresh', 'Refresh'), () => this.refresh());
@@ -146,6 +149,42 @@ class VectorGraphTicketsView extends ViewPane {
 		void this.refresh();
 	}
 
+	private renderAccount(): void {
+		this.account.textContent = this.session.authorization
+			? localize('vectorGraphApproving', 'Approve in your browser · {0}', this.session.authorization.code)
+			: this.session.workspaces.length ? localize('vectorGraphConnected', 'VectorGraph · Connected') : localize('vectorGraphDisconnected', 'VectorGraph · Not signed in');
+		this.signInButton.textContent = this.session.authorization ? localize('vectorGraphContinueSignIn', 'Open Sign-in Page') : this.session.workspaces.length ? localize('vectorGraphReconnect', 'Reconnect') : localize('vectorGraphSignInAction', 'Sign in to VectorGraph');
+		this.signOutButton.hidden = !this.session.workspaces.length && !this.session.authorization;
+		this.signOutButton.textContent = this.session.authorization ? localize('vectorGraphCancelSignIn', 'Cancel Sign-in') : localize('vectorGraphSignOutAction', 'Sign Out');
+		this.configureButton.disabled = !this.projectKey() || this.configuring || !this.session.workspaces.length;
+		if (this.session.authorization) { this.schedulePoll(); }
+	}
+	private async signIn(): Promise<void> {
+		if (this.signingIn) { return; }
+		this.signingIn = true;
+		this.signInButton.disabled = true;
+		try {
+			const session = this.session.authorization ? this.session : await this.graph.beginSignIn();
+			if (this._store.isDisposed) { return; }
+			this.session = session;
+			this.renderAccount();
+			if (session.authorization) { await this.graphOpener.open(session.authorization.url, { openExternal: true }); }
+		} catch (error) { this.notifications.error(error); }
+		finally { this.signingIn = false; if (!this._store.isDisposed) { this.signInButton.disabled = false; } }
+	}
+	private schedulePoll(): void {
+		this.pollTimer.value = disposableTimeout(async () => {
+			try {
+				const session = await this.graph.pollSignIn();
+				if (this._store.isDisposed) { return; }
+				this.session = session;
+				this.renderAccount();
+			} catch (error) {
+				if (!this._store.isDisposed) { this.status.textContent = toErrorMessage(error); }
+			}
+		}, 2000);
+	}
+
 	private projectKey(): string | undefined { return this.projects.getActiveProjectUri()?.toString(); }
 	private binding(): IVectorGraphBinding | undefined {
 		const key = this.projectKey();
@@ -162,7 +201,7 @@ class VectorGraphTicketsView extends ViewPane {
 		this.configureButton.disabled = true;
 		try {
 			const workspaces = await this.graph.listWorkspaces();
-			if (!workspaces.length) { throw new Error(localize('vectorGraphSignIn', 'Sign in with vectorgraph auth login, then choose a workspace.')); }
+			if (!workspaces.length) { await this.signIn(); return; }
 			const workspace = await this.quickInput.pick(workspaces.map(value => ({ label: value.name, description: value.id, value })), { placeHolder: localize('vectorGraphChooseWorkspace', 'Choose the VectorGraph workspace for this project') });
 			if (!workspace || project !== this.projectKey() || projectGeneration !== this.projectGeneration || this._store.isDisposed) { return; }
 			const teams = await this.graph.listTeams(workspace.value.id);
@@ -183,9 +222,50 @@ class VectorGraphTicketsView extends ViewPane {
 	private async refresh(more = false): Promise<void> {
 		if (more && (this.loading || !this.cursor)) { return; }
 		const generation = ++this.generation;
-		const binding = this.binding();
-		if (!more) { this.tickets = []; this.cursor = undefined; }
-		this.configureButton.disabled = !this.projectKey() || this.configuring;
+		this.loading = true;
+		let binding = this.binding();
+		if (!more) { this.tickets = []; this.cursor = undefined; this.renderTickets(); }
+		this.configureButton.disabled = !this.projectKey() || this.configuring || !this.session.workspaces.length;
+		try {
+			const session = await this.graph.getSession();
+			if (generation !== this.generation || this._store.isDisposed) { return; }
+			this.session = session;
+			this.renderAccount();
+			if (!this.session.workspaces.length) {
+				this.loading = false;
+				this.tickets = [];
+				this.cursor = undefined;
+				this.status.textContent = localize('vectorGraphConnectAccount', 'Sign in to connect your project with VectorGraph.');
+				this.renderTickets();
+				return;
+			}
+			if (binding && !this.session.workspaces.some(workspace => workspace.id === binding!.workspace.id)) {
+				throw new Error(localize('vectorGraphAuthorizeWorkspace', 'This project belongs to a workspace that is not authorized. Reconnect or choose another workspace.'));
+			}
+			const project = this.projectKey();
+			if (!binding && project && this.discoveryProject !== project) {
+				this.discoveryProject = project;
+				this.status.textContent = localize('vectorGraphDiscovering', 'Finding the workspace for this repository…');
+				const discovery = await this.graph.discoverRepository(project);
+				if (generation !== this.generation || this._store.isDisposed) { return; }
+				if (!discovery.incomplete && discovery.bindings.length === 1) {
+					binding = discovery.bindings[0];
+					this.storage.store(BINDING_KEY + project, binding, StorageScope.PROFILE, StorageTarget.MACHINE);
+				} else {
+					this.loading = false;
+					this.status.textContent = discovery.incomplete ? localize('vectorGraphDiscoveryIncomplete', 'Some workspace mappings are unavailable. Choose a workspace or reconnect to restore access.') : discovery.bindings.length > 1 ? localize('vectorGraphAmbiguous', 'This repository is linked to multiple teams. Choose the workspace and team for this project.') : localize('vectorGraphUnmapped', 'No workspace is linked to this repository yet. Choose a workspace to connect this project.');
+					this.renderTickets();
+					return;
+				}
+			}
+		} catch (error) {
+			if (generation === this.generation && !this._store.isDisposed) {
+				this.loading = false;
+				this.status.textContent = toErrorMessage(error);
+				this.renderTickets();
+			}
+			return;
+		}
 		if (!binding) {
 			this.loading = false;
 			this.status.textContent = this.projectKey() ? localize('vectorGraphBind', 'Choose a workspace and team to see tickets for this project.') : localize('vectorGraphOpenProject', 'Open a project to view its VectorGraph tickets.');
@@ -258,7 +338,7 @@ class VectorGraphTicketsView extends ViewPane {
 		const button = append(container, $<HTMLButtonElement>('button.vector-graph-tickets__action'));
 		button.type = 'button';
 		button.textContent = label;
-		this._register(addDisposableListener(button, EventType.CLICK, () => { void action(); }));
+		this._register(addDisposableListener(button, EventType.CLICK, () => { void action().catch(error => this.notifications.error(error)); }));
 		return button;
 	}
 
@@ -266,13 +346,10 @@ class VectorGraphTicketsView extends ViewPane {
 	override dispose(): void { this.generation++; super.dispose(); }
 }
 
-const container = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
-	id: VIEW_ID, title: localize2('vectorGraphTickets', 'Tickets'), icon,
-	ctorDescriptor: new SyncDescriptor(ViewPaneContainer, [VIEW_ID, { mergeViewWithContainerWhenSingleView: true }]),
-	storageId: VIEW_ID, order: 2,
-	openCommandActionDescriptor: { id: VIEW_ID, mnemonicTitle: localize('vectorGraphOpenTickets', '&&Tickets'), order: 2 }
-}, ViewContainerLocation.Sidebar);
-Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([{
-	id: VIEW_ID + '.list', name: localize2('vectorGraphTicketView', 'VectorGraph Tickets'), containerIcon: icon,
-	canToggleVisibility: false, canMoveView: true, ctorDescriptor: new SyncDescriptor(VectorGraphTicketsView)
-}], container);
+const container = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).get(EXPLORER_VIEWLET_ID);
+if (container) {
+	Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([{
+		id: VIEW_ID + '.list', name: localize2('vectorGraphWorkView', 'Work'), containerIcon: icon,
+		canToggleVisibility: true, canMoveView: false, ctorDescriptor: new SyncDescriptor(VectorGraphTicketsView), order: 10, weight: 30
+	}], container);
+}

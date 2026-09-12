@@ -78,6 +78,35 @@ does not prove shared subjects, audience, sessions, or authorization. Unified si
 and cross-product grants need an explicit account/workspace mapping and revocation
 contract; no token interchange is introduced here.
 
+## Account-independent entry — proposed design adjustment
+
+The owner's requirement to serve users without a Graph account means Graph IDs
+are shared-service identities, not prerequisites for every local project. A local
+project needs a stable client-service identity independent of folders and accounts.
+An optional connection maps that identity to an authorized Graph workspace/project.
+Selecting a Graph project in the current connected flow remains valid; it is not
+the only future project-creation route.
+
+Proposed local-first option: the UI remains an API client. A separately scoped
+native/local service owns local project/artifact persistence and capture; Graph
+and Voice services own hosted records, authorization, and processing. Local
+service/IPC APIs and hosted HTTP APIs expose versioned, explicit contracts. The
+renderer must not acquire database, provider, or backend implementation imports.
+Do not embed the complete Graph production stack just to obtain local notes, or
+copy its tenant/collaboration policies into a local single-user store. Reuse the
+existing file/editor services and extract only demonstrated shared contracts.
+
+Connecting later must be explicit: choose the local project and which materials
+to publish/link, verify the destination and audience, preserve local originals and
+identities, and record the mapping and recoverable outcome. Automatic synchronization,
+conflict policy, account disconnection, and cross-device recovery require their own
+bounded contract; they are not implied by opening a remote project.
+
+The product brief records the alternative account models. Local service packaging,
+local indexing/capture, speech/model availability, and any general Vector-account
+identity design remain proposals to validate. No new provider, dependency, local
+database, sign-in flow, or synchronization service is selected by this note.
+
 ## Optional assignment and moving captured work
 
 Notes and transcripts have a stable artifact identity independent of project

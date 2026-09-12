@@ -31,6 +31,40 @@ linking two separately displayed folder projects to the same Graph project does 
 complete the desktop grouping experience. Preserve each folder's editor/terminal
 state and separately authorized local access during that migration.
 
+## Use without a VectorGraph account — product exploration
+
+Owner requirement: the app must provide useful work for people who do not have a
+VectorGraph account. Do not make the connected Graph workflow the universal entry
+point. The current PR implements connected-client foundations only.
+
+Proposed experience for discussion: account-free local projects, notes, a capture
+inbox, audio recording, ordinary files, local search, and export; an optional Vector
+account adds hosted services, backup, sync, and collaboration. Transcription and
+generation are separate capabilities: local recording does not prove local speech
+or AI processing. A local model, user-configured provider, or hosted Voice service
+requires explicit capability and provider evaluation before implementation.
+
+First-run candidate: **New note**, **Record**, **New project**, and **Open folder**.
+A person can record a thought, preserve it in the inbox, organize it into a project
+later, and produce an editable deliverable. The core value should be evident before
+sign-in. Solo researchers, consultants, students, and developers can each use that
+sequence; shared Graph work is an optional expansion.
+
+Alternatives to evaluate:
+
+1. Local core with optional hosted services (recommended for discussion): useful
+   offline and no signup required; requires durable local project/artifact services
+   and a carefully scoped later connection/sync workflow.
+2. A simple Vector account for everything: easier cloud recovery and service access,
+   while Graph remains behind the API; still requires signup before useful work.
+3. Anonymous hosted guest sessions: quick trial, but recovery, retention, abuse,
+   and paid AI limits complicate making it a dependable daily work environment.
+
+No account-free library, inbox, recording, transcription, or synchronization is
+claimed as delivered by the connected-document PR. Decide whether a completely
+account-free first run is required and which hosted capabilities need a Vector
+account before committing to those implementation boundaries.
+
 ## First milestone
 
 1. Create or open a work project without a repository, or start an unassigned note

@@ -158,6 +158,11 @@ export class VectorGraphTicketsWidget extends Disposable {
 		this.configureButton.disabled = !this.projectKey() || this.configuring || !this.session.workspaces.length;
 		if (this.session.authorization) { this.schedulePoll(); }
 	}
+	async openAccount(signIn = false): Promise<void> {
+		this.session = await this.graph.getSession(); if (this._store.isDisposed) { return; }
+		this.renderAccount(); this.connection.open = true; this.signInButton.focus();
+		if (signIn) { await this.signIn(); }
+	}
 	private async signIn(): Promise<void> {
 		if (this.signingIn) { return; }
 		this.signingIn = true;

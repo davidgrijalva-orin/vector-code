@@ -5,7 +5,6 @@
 import { strictEqual } from 'assert';
 import { getWindow } from '../../../../../base/browser/dom.js';
 import { toDisposable } from '../../../../../base/common/lifecycle.js';
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { DeferredPromise, timeout } from '../../../../../base/common/async.js';
@@ -14,10 +13,10 @@ import { ICommandService } from '../../../../../platform/commands/common/command
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { IVectorGraphService } from '../../../../../platform/vectorGraph/common/vectorGraph.js';
 import { IVectorGraphDocument } from '../../../../../platform/vectorGraph/common/vectorGraphDocuments.js';
-import { workbenchInstantiationService, TestEditorGroupView } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
 import { IVectorCodeWorkbenchService } from '../../common/vectorCode.js';
 import { IVectorGraphWorkService } from '../../common/vectorGraphWork.js';
-import { VectorGraphProjectEditor, VectorGraphProjectInput, VectorGraphProjectSerializer } from '../../browser/vectorGraphProjectEditor.js';
+import { VectorGraphProjectWidget, isProjectSection } from '../../browser/vectorGraphProjectEditor.js';
 
 suite('VectorGraph project workspace', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
@@ -29,9 +28,9 @@ suite('VectorGraph project workspace', () => {
 		instantiation.stub(IVectorGraphWorkService, { getActive: () => undefined });
 		const project = URI.file('/local');
 		instantiation.stub(IVectorCodeWorkbenchService, { onDidChangeActiveProject: Event.None, getActiveProjectUri: () => project, getProjectSummaries: () => [{ uri: project, name: 'Local project', uriLabel: '/local' }] });
-		const editor = store.add(instantiation.createInstance(VectorGraphProjectEditor, new TestEditorGroupView(1)));
-		const root = document.createElement('div'); editor.create(root);
-		await editor.setInput(store.add(new VectorGraphProjectInput()), undefined, Object.create(null), CancellationToken.None);
+		const editor = store.add(instantiation.createInstance(VectorGraphProjectWidget));
+		const root = document.createElement('div'); editor.render(root);
+		await editor.selectSection('overview');
 		document.body.appendChild(root); store.add(toDisposable(() => root.remove()));
 		root.style.setProperty('--vectorcode-button-background', 'rgb(7, 133, 140)');
 		const primary = root.querySelector<HTMLButtonElement>('.vector-project__button.primary')!;
@@ -52,20 +51,17 @@ suite('VectorGraph project workspace', () => {
 		instantiation.stub(IVectorGraphWorkService, { getActive: () => undefined });
 		instantiation.stub(IVectorCodeWorkbenchService, { onDidChangeActiveProject: changed.event, getActiveProjectUri: () => project, getProjectSummaries: () => [] });
 		instantiation.get(IStorageService).store('vectorCode.vectorGraph.binding.' + project.toString(), { workspace: { id: 'alpha', name: 'Alpha' }, team: { id: 'team', name: 'Team', identifier: 'VC' }, project: { id: 'project', name: 'Project' } }, StorageScope.PROFILE, StorageTarget.MACHINE);
-		const editor = store.add(instantiation.createInstance(VectorGraphProjectEditor, new TestEditorGroupView(1)));
-		const root = document.createElement('div'); editor.create(root);
-		const loading = editor.setInput(store.add(new VectorGraphProjectInput('documents')), undefined, Object.create(null), CancellationToken.None);
+		const editor = store.add(instantiation.createInstance(VectorGraphProjectWidget));
+		const root = document.createElement('div'); editor.render(root);
+		const loading = editor.selectSection('documents');
 		await timeout(0); project = URI.file('/beta'); changed.fire(project);
 		await pending.complete([{ id: 'document', title: 'Private alpha document', body: '', teamId: 'team', projectIds: ['project'], revisionNumber: 1, versionNumber: 1, updatedAt: '2026-09-12T00:00:00Z' }]); await loading;
 		strictEqual(root.textContent?.includes('Private alpha document'), false);
 		strictEqual(root.textContent?.includes('Local files and Markdown editing work without an account'), true);
 	});
-	test('restores only validated navigation state', () => {
-		const serializer = new VectorGraphProjectSerializer();
-		const instantiation = workbenchInstantiationService({}, store);
-		strictEqual(serializer.deserialize(instantiation, '{"section":"billing"}'), undefined);
-		strictEqual(serializer.deserialize(instantiation, 'null'), undefined);
-		const restored = store.add(serializer.deserialize(instantiation, '{"section":"code"}')!);
-		strictEqual(serializer.serialize(restored), '{"section":"code"}');
+	test('accepts only supported project sections', () => {
+		strictEqual(isProjectSection('billing'), false);
+		strictEqual(isProjectSection(null), false);
+		strictEqual(isProjectSection('code'), true);
 	});
 });

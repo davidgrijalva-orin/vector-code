@@ -130,3 +130,8 @@
 .vector-code-control__pairing { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .vector-code-control__qr { display: block; max-width: min(100%, 240px); height: auto; background: white; }
 .vector-code-control__pairing-code { width: 100%; overflow-wrap: anywhere; padding: 10px; box-sizing: border-box; background: var(--vectorcode-textCodeBlock-background); }
+
+.vector-code-control__steps { padding-left: 24px; line-height: 1.65; color: var(--vectorcode-descriptionForeground); }
+.vector-code-control__steps li { margin: 10px 0; }
+.vector-code-control__setup { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--vectorcode-panel-border); }
+.vector-code-control__setup summary { cursor: pointer; font-weight: 600; }

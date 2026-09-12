@@ -31,8 +31,7 @@ import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContaine
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions, ViewContainerLocation } from '../../../common/views.js';
-import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { VectorGraphProjectInput } from './vectorGraphProjectEditor.js';
+import './vectorGraphProjectEditor.js';
 import {
 	IVectorCodeMobileConnectionStatus,
 	IVectorCodeMobileRelayService,
@@ -108,7 +107,6 @@ class VectorCodeProjectsView extends VectorCodeViewPane {
 		const brand = append(container, $('h2.vector-workspace-brand')); brand.textContent = 'VectorCode';
 		addNavigation([
 			[localize('workspaceHome', 'Project workspace'), 'vectorCode.openProjectWorkspace'],
-			[localize('workspaceFind', 'Search files'), 'workbench.action.findInFiles']
 		]);
 
 		const switcher = this._register(new VectorCodeProjectSwitcher(container, {
@@ -173,9 +171,9 @@ class VectorCodeProjectContribution implements IWorkbenchContribution {
 
 	static readonly ID = 'workbench.contrib.vectorCodeProject';
 
-	constructor(@IVectorCodeWorkbenchService vectorCodeWorkbenchService: IVectorCodeWorkbenchService, @IEditorService editors: IEditorService, @INotificationService notifications: INotificationService) {
+	constructor(@IVectorCodeWorkbenchService vectorCodeWorkbenchService: IVectorCodeWorkbenchService, @ICommandService commands: ICommandService, @INotificationService notifications: INotificationService) {
 		vectorCodeWorkbenchService.getProjectStatusLabel();
-		if (!editors.activeEditor) { void editors.openEditor(new VectorGraphProjectInput(), { pinned: true }).catch(error => notifications.error(error)); }
+		void commands.executeCommand('vectorCode.openProjectWorkspace').catch(error => notifications.error(error));
 	}
 }
 
@@ -192,11 +190,18 @@ class VectorCodeControlView extends VectorCodeViewPane {
 
 	private renderMobileCard(container: HTMLElement): void {
 		const mobileStatus = this.mobileRelayService.getStatus();
-		const mobile = this.renderStatusCard(container, Codicon.deviceMobile, localize('vectorCodeMobile', 'Phone Bridge'), mobileStatus.label);
+		append(container, $('h2')).textContent = localize('phoneConnectHeading', 'Connect your phone');
+		append(container, $('p')).textContent = localize('phoneConnectIntro', 'Use your desktop projects, files and terminals from VectorCode Mobile. Keep this desktop running while connected.');
+		const steps = append(container, $('ol.vector-code-control__steps'));
+		for (const text of [localize('phoneStepApp', 'Open VectorCode Mobile on your iPhone.'), localize('phoneStepPair', 'Choose Connect to desktop and scan the QR code below.'), localize('phoneStepReady', 'Wait for Connected before opening a project on your phone.')]) { append(steps, $('li')).textContent = text; }
+		const mobile = this.renderStatusCard(container, Codicon.deviceMobile, localize('vectorCodeMobile', 'Phone connection'), mobileStatus.label);
 		mobile.card.classList.add('vector-code-control__mobile');
 		const detail = append(mobile.card, $('.vector-code-control__mobile-detail'));
 		const actions = append(mobile.card, $('.vector-code-control__card-actions'));
-		const configureButton = this.renderButton(actions, localize('vectorCodeMobileConfigureRelay', 'Configure Secure Relay'), Codicon.key);
+		const setup = append(mobile.card, $('details.vector-code-control__setup'));
+		append(setup, $('summary')).textContent = localize('phoneAdvancedSetup', 'Connection setup');
+		append(setup, $('p')).textContent = localize('phoneSetupRequired', 'This connection currently requires a relay credential from your deployment administrator. Automatic personal-device enrollment is not available yet.');
+		const configureButton = this.renderButton(setup, localize('vectorCodeMobileConfigureRelay', 'Configure connection'), Codicon.key);
 		const startButton = this.renderButton(actions, localize('vectorCodeMobileRefreshQr', 'Create / Refresh QR'), Codicon.refresh);
 		const diagnosticsButton = this.renderButton(actions, localize('vectorCodeMobileDiagnostics', 'Diagnostics'), Codicon.output);
 		const pairingContainer = append(mobile.card, $('.vector-code-control__pairing'));
@@ -209,7 +214,7 @@ class VectorCodeControlView extends VectorCodeViewPane {
 		};
 
 		const updateStartButton = (status: IVectorCodeMobileConnectionStatus, busy = false): void => {
-			setVisibility(Boolean(status.requiresRelayIssuerToken), configureButton);
+			setVisibility(Boolean(status.requiresRelayIssuerToken), setup);
 			configureButton.disabled = busy || !hasVectorCodeRuntimeCapability(status.runtime, VECTOR_CODE_MOBILE_CAPABILITY_CONFIGURE);
 			setVisibility(!status.requiresRelayIssuerToken, startButton);
 			startButton.disabled = busy || !canRefreshPairing(status);

@@ -4,64 +4,34 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { $, append, clearNode, addDisposableListener, EventType, Dimension } from '../../../../base/browser/dom.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { Codicon } from '../../../../base/common/codicons.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
+import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI } from '../../../../base/common/uri.js';
 import { toErrorMessage } from '../../../../base/common/errorMessage.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
-import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IVectorGraphService } from '../../../../platform/vectorGraph/common/vectorGraph.js';
-import { EditorPaneDescriptor, IEditorPaneRegistry } from '../../../browser/editor.js';
-import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
-import { EditorInputCapabilities, IEditorOpenContext, IUntypedEditorInput, EditorExtensions, IEditorFactoryRegistry, IEditorSerializer } from '../../../common/editor.js';
-import { EditorInput } from '../../../common/editor/editorInput.js';
-import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { readVectorGraphBinding, VECTOR_GRAPH_BINDING_KEY } from '../common/vectorGraphBinding.js';
 import { IVectorGraphWorkService, VECTOR_GRAPH_DETAILS_VIEW } from '../common/vectorGraphWork.js';
+import { VectorGraphArtifactInput } from './vectorGraphArtifactEditor.js';
 import { VectorGraphTicketsWidget } from './vectorGraphTicketsWidget.js';
 import { openVectorGraphDocument } from './vectorGraphDocuments.contribution.js';
 import './media/vectorGraphProject.css';
 
-export const PROJECT_SECTIONS = ['overview', 'tickets', 'documents', 'graph', 'code'] as const;
+export const PROJECT_SECTIONS = ['overview', 'tickets', 'documents', 'canvas', 'graph', 'code'] as const;
 export type ProjectSection = typeof PROJECT_SECTIONS[number];
 export function isProjectSection(value: unknown): value is ProjectSection { return PROJECT_SECTIONS.some(section => section === value); }
-const titles = { overview: localize('projectOverview', 'Overview'), tickets: localize('projectTickets', 'Tickets'), documents: localize('projectDocuments', 'Documents'), graph: localize('projectGraph', 'Graph'), code: localize('projectCode', 'Code') };
-const icons = { overview: Codicon.home, tickets: Codicon.issues, documents: Codicon.fileText, graph: Codicon.typeHierarchy, code: Codicon.code };
+const titles = { overview: localize('projectOverview', 'Overview'), tickets: localize('projectTickets', 'Tickets'), documents: localize('projectDocuments', 'Documents'), canvas: localize('projectCanvas', 'Canvas'), graph: localize('projectGraph', 'Graph'), code: localize('projectCode', 'Code') };
+const icons = { overview: Codicon.home, tickets: Codicon.issues, documents: Codicon.fileText, canvas: Codicon.symbolColor, graph: Codicon.typeHierarchy, code: Codicon.code };
 
-/** One project page follows the active repository; document/file editors retain their own identity. */
-export class VectorGraphProjectInput extends EditorInput {
-	static readonly ID = 'workbench.input.vectorGraphProject';
-	constructor(public section: ProjectSection = 'overview') { super(); }
-	override get typeId(): string { return VectorGraphProjectInput.ID; }
-	override get resource(): URI { return URI.from({ scheme: 'vectorgraph-project', path: '/workspace' }); }
-	override get capabilities(): EditorInputCapabilities { return super.capabilities | EditorInputCapabilities.Readonly | EditorInputCapabilities.Singleton; }
-	override getName(): string { return localize('projectWorkspace', 'Project workspace'); }
-	override matches(other: EditorInput | IUntypedEditorInput): boolean { return other instanceof VectorGraphProjectInput; }
-}
-export class VectorGraphProjectSerializer implements IEditorSerializer {
-	canSerialize(input: EditorInput): boolean { return input instanceof VectorGraphProjectInput; }
-	serialize(input: EditorInput): string | undefined { return input instanceof VectorGraphProjectInput ? JSON.stringify({ section: input.section }) : undefined; }
-	deserialize(_instantiation: IInstantiationService, value: string): EditorInput | undefined {
-		try { const data = JSON.parse(value); return isProjectSection(data.section) ? new VectorGraphProjectInput(data.section) : undefined; } catch { return undefined; }
-	}
-}
-
-export class VectorGraphProjectEditor extends EditorPane {
-	static readonly ID = 'workbench.editor.vectorGraphProject';
+export class VectorGraphProjectWidget extends Disposable {
 	private root!: HTMLElement;
 	private heading!: HTMLElement;
 	private subtitle!: HTMLElement;
@@ -70,9 +40,9 @@ export class VectorGraphProjectEditor extends EditorPane {
 	private readonly tabButtons = new Map<ProjectSection, HTMLButtonElement>();
 	private section: ProjectSection = 'overview';
 	private generation = 0;
+	private ticketWidget: VectorGraphTicketsWidget | undefined;
 	private readonly page = this._register(new DisposableStore());
-	constructor(group: IEditorGroup,
-		@ITelemetryService telemetry: ITelemetryService, @IThemeService theme: IThemeService,
+	constructor(
 		@IStorageService private readonly storage: IStorageService,
 		@IInstantiationService private readonly instantiation: IInstantiationService,
 		@IVectorCodeWorkbenchService private readonly projects: IVectorCodeWorkbenchService,
@@ -83,14 +53,14 @@ export class VectorGraphProjectEditor extends EditorPane {
 		@IVectorGraphWorkService private readonly work: IVectorGraphWorkService,
 		@INotificationService private readonly notifications: INotificationService,
 	) {
-		super(VectorGraphProjectEditor.ID, group, telemetry, theme, storage);
+		super();
 		this._register(projects.onDidChangeActiveProject(() => { if (this.root) { void this.renderSection(); } }));
 		this._register(graph.onDidChangeSession(() => { if (this.root) { void this.renderSection(); } }));
 		this._register(storage.onDidChangeValue(StorageScope.PROFILE, undefined, this._store)(event => {
 			if (event.key.startsWith(VECTOR_GRAPH_BINDING_KEY) && this.root) { this.updateHeading(); if (this.section !== 'tickets') { void this.renderSection(); } }
 		}));
 	}
-	protected override createEditor(parent: HTMLElement): void {
+	render(parent: HTMLElement): void {
 		this.root = append(parent, $('.vector-project')); this.root.tabIndex = -1;
 		const header = append(this.root, $('header.vector-project__header'));
 		append(header, $('p.vector-project__eyebrow')).textContent = localize('projectsBreadcrumb', 'Projects');
@@ -119,8 +89,8 @@ export class VectorGraphProjectEditor extends EditorPane {
 		this.subtitle.title = project?.fsPath ?? '';
 		this.subtitle.textContent = binding ? localize('projectRepositoryContext', '{0} · Repository: {1}', binding.workspace.name, repository?.name ?? project?.path ?? '') : project ? localize('localProjectPath', 'Local project · {0}', project.fsPath) : localize('standaloneWelcome', 'Open a folder to start coding. VectorGraph is optional.');
 	}
-	private async selectSection(section: ProjectSection): Promise<void> {
-		this.section = section; if (this.input instanceof VectorGraphProjectInput) { this.input.section = section; }
+	async selectSection(section: ProjectSection): Promise<void> {
+		this.section = section;
 		await this.renderSection();
 	}
 	private button(parent: HTMLElement, label: string, action: () => Promise<unknown>, primary = false): HTMLButtonElement {
@@ -128,7 +98,7 @@ export class VectorGraphProjectEditor extends EditorPane {
 		this.page.add(addDisposableListener(button, EventType.CLICK, () => { void action().catch(error => this.notifications.error(error)); })); return button;
 	}
 	private async renderSection(): Promise<void> {
-		const generation = ++this.generation; this.page.clear(); clearNode(this.content); this.updateHeading();
+		const generation = ++this.generation; this.page.clear(); this.ticketWidget = undefined; clearNode(this.content); this.updateHeading();
 		for (const tab of this.tabButtons.values()) { const selected = tab.dataset.section === this.section; tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1; }
 		this.content.setAttribute('aria-labelledby', 'vector-project-tab-' + this.section);
 		const project = this.projects.getActiveProjectUri()?.toString(); const binding = readVectorGraphBinding(this.storage, project);
@@ -139,7 +109,20 @@ export class VectorGraphProjectEditor extends EditorPane {
 				if (!current || !currentBinding?.project) { throw new Error(localize('linkProjectFirst', 'Choose a workspace and linked project in connection settings first.')); }
 				this.work.select({ workspace: currentBinding.workspace.id, project: current, binding: currentBinding }); await this.views.openView(VECTOR_GRAPH_DETAILS_VIEW, true);
 			}, true);
-			const widget = this.page.add(this.instantiation.createInstance(VectorGraphTicketsWidget)); widget.render(append(this.content, $('.vector-project__tickets'))); return;
+			const widget = this.page.add(this.instantiation.createInstance(VectorGraphTicketsWidget)); this.ticketWidget = widget; widget.render(append(this.content, $('.vector-project__tickets'))); return;
+		}
+		if (this.section === 'canvas') {
+			append(this.content, $('h2')).textContent = titles.canvas;
+			const status = append(this.content, $('p')); status.setAttribute('role', 'status');
+			if (!binding) { status.textContent = localize('canvasConnect', 'Connect VectorGraph to browse shared canvases.'); this.button(this.content, localize('canvasSignIn', 'Connect VectorGraph…'), () => this.selectSection('tickets')); return; }
+			status.textContent = localize('canvasLoading', 'Loading canvases…');
+			try {
+				const canvases = await this.graph.listCanvases(binding.workspace.id);
+				if (generation !== this.generation || this._store.isDisposed) { return; }
+				status.textContent = canvases.length ? localize('canvasWorkspaceList', 'Workspace canvases') : localize('canvasEmpty', 'No canvases in this workspace yet.');
+				for (const canvas of canvases) { this.button(this.content, canvas.title, () => this.editors.openEditor(new VectorGraphArtifactInput(binding.workspace.id, canvas.id, canvas.title, 'canvas'), { pinned: true })).classList.add('vector-project__document'); }
+			} catch (error) { if (generation === this.generation && !this._store.isDisposed) { status.textContent = toErrorMessage(error); } }
+			return;
 		}
 		if (this.section === 'documents') {
 			const toolbar = append(this.content, $('.vector-project__section-heading')); append(toolbar, $('h2')).textContent = titles.documents;
@@ -183,16 +166,14 @@ export class VectorGraphProjectEditor extends EditorPane {
 			this.button(this.content, localize('inspectProjectRelationships', 'Browse ticket relationships'), () => this.selectSection('tickets'), true);
 		}
 	}
-	override async setInput(input: VectorGraphProjectInput, options: IEditorOptions | undefined, context: IEditorOpenContext, token: CancellationToken): Promise<void> {
-		await super.setInput(input, options, context, token); if (!token.isCancellationRequested && this.input === input) { await this.selectSection(input.section); }
-	}
-	override clearInput(): void { this.generation++; this.page.clear(); if (this.content) { clearNode(this.content); } super.clearInput(); }
-	override layout(dimension: Dimension): void { this.root.style.width = dimension.width + 'px'; this.root.style.height = dimension.height + 'px'; }
-	override focus(): void { this.tabButtons.get(this.section)?.focus(); }
+	async openAccount(signIn = false): Promise<void> { if (this.section !== 'tickets' || !this.ticketWidget) { await this.selectSection('tickets'); } await this.ticketWidget?.openAccount(signIn); }
+	layout(dimension: Dimension): void { this.root.style.width = dimension.width + 'px'; this.root.style.height = dimension.height + 'px'; }
+	focus(): void { this.tabButtons.get(this.section)?.focus(); }
 }
-Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(EditorPaneDescriptor.create(VectorGraphProjectEditor, VectorGraphProjectEditor.ID, localize('projectEditor', 'Project workspace')), [new SyncDescriptor(VectorGraphProjectInput)]);
-Registry.as<IEditorFactoryRegistry>(EditorExtensions.EditorFactory).registerEditorSerializer(VectorGraphProjectInput.ID, VectorGraphProjectSerializer);
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.openProjectWorkspace', title: localize2('openProjectWorkspace', 'VectorCode: Open Project Workspace'), f1: true }); }
-	async run(accessor: ServicesAccessor): Promise<void> { await accessor.get(IEditorService).openEditor(new VectorGraphProjectInput(), { pinned: true }); }
+	async run(accessor: ServicesAccessor): Promise<void> {
+		accessor.get(IVectorGraphWorkService).select(undefined);
+		await accessor.get(IViewsService).openView(VECTOR_GRAPH_DETAILS_VIEW, true);
+	}
 });

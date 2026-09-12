@@ -22,6 +22,14 @@ Target: approved combined concept `exec-aba86ca7-a853-48f2-aae7-00a90fb5ca8c.png
 
 Compare final target and final native capture together, including typography, spacing, theme colors, icon clarity, real content wrapping, selected ticket inspector, resize/dismiss/reopen, editor-tab action, keyboard navigation and narrow layouts. The concept's full graph canvas is outside this delivery and remains in VC-58; the current tab states that limit explicitly. Native workbench chrome and real project names intentionally differ from the illustrative image.
 
-The Mac locked during QA and automatic unlock failed. No final visual pass is claimed. Keep PR in draft and VC-60 open until the final installed app can be inspected.
+The Mac is now unlocked. Installed signed candidate ded633f6c80abf03bacaca26a344cc2dea48417b and verified its version output. Compared the approved image with the running native app, then opened Tickets and selected VC-60. The corrected theme colors, selected row, repository subtitle and labeled inspector metadata are visible.
 
-final result: blocked
+The user's assessment is that the design is better but not complete. Remaining visual differences include weak sidebar grouping, small navigation and list typography relative to the concept, form-like ticket filters without the concept's status chips or column headings, and excess inspector space above the ticket identity. The inspector also remains open with an empty state after restart. These need another refinement pass; the target comparison is not yet accepted. Keep PR in draft and VC-60 open.
+
+final result: needs refinement
+
+## User-directed navigation revision
+
+The approved direction was refined by the user: permanent right-rail Workspace, section menu inside that rail, named closable ticket tabs there, inline ticket editing, rendered document previews, native canvas access, visible sign-in/sign-out, no dedicated left Search item, normal shell behavior, and a finished mobile connection flow. Implemented the native rail and artifact preview changes; 45 browser and 25 node tests pass. The installed ded633 preview predates this revision and is not acceptance evidence for it. Native verification of the new candidate remains pending.
+
+Mobile inspection found that personal-device enrollment is absent: the existing relay requires a deployment issuer credential. The screen now explains the actual prerequisites and steps. This does not complete mobile pairing; production enrollment and a real device round trip remain necessary. Canvas access is a native read-only scene preview; editing and collaboration remain in the full API coverage work. Planning metadata choices require planning:read; the CLI credential lacks that grant, and IDE-session behavior must be verified separately.

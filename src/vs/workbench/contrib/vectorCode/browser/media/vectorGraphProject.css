@@ -34,3 +34,26 @@
 	.vector-graph-tickets__ticket { grid-template-columns: 64px minmax(0, 1fr); gap: 6px 12px; }
 	.vector-graph-tickets__meta { grid-column: 2; }
 }
+
+.vector-project-rail { display: flex; flex-direction: column; overflow: hidden; }
+.vector-project-rail__tabs { display: flex; flex-shrink: 0; overflow-x: auto; border-bottom: 1px solid var(--vectorcode-panel-border); }
+.vector-project-rail__tab { display: flex; align-items: center; flex-shrink: 0; }
+.vector-project-rail__tabs button { background: transparent; border: 0; color: var(--vectorcode-foreground); font: inherit; cursor: pointer; padding: 12px; }
+.vector-project-rail__tabs [role = "tab"] { border-bottom: 2px solid transparent; }
+.vector-project-rail__tabs [aria-selected="true"] { color: var(--vectorcode-textLink-foreground); border-bottom-color: var(--vectorcode-focusBorder); }
+.vector-project-rail__tabs button:hover { background: var(--vectorcode-list-hoverBackground); }
+.vector-project-rail__tabs button:focus-visible { outline: 1px solid var(--vectorcode-focusBorder); outline-offset: -2px; }
+.vector-project-rail__body { flex: 1; min-height: 0; overflow: hidden; }
+.vector-project-rail__page { height: 100%; overflow: auto; }
+.vector-project-rail__page[hidden] { display: none; }
+.vector-project-rail .vector-project { padding: 20px; }
+.vector-project-rail .vector-project__header h1 { font-size: 22px; }
+.vector-project-rail .vector-project__tabs { gap: 8px; flex-wrap: wrap; }
+.vector-project-rail .vector-project__tabs button { font-size: 13px; padding: 8px 2px; }
+
+.vector-graph-artifact-editor { box-sizing: border-box; overflow: auto; padding: 32px; font-size: 16px; line-height: 1.65; color: var(--vectorcode-editor-foreground); background: var(--vectorcode-editor-background); }
+.vector-graph-artifact-editor h1 { font-size: 28px; line-height: 1.3; }
+
+.vector-project-rail__account { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-top: 1px solid var(--vectorcode-panel-border); }
+.vector-project-rail__account span { width: 100%; color: var(--vectorcode-descriptionForeground); }
+.vector-project-rail__account button { font: inherit; padding: 6px 10px; border: 1px solid var(--vectorcode-panel-border); border-radius: 4px; background: var(--vectorcode-button-secondaryBackground); color: var(--vectorcode-button-secondaryForeground); cursor: pointer; }

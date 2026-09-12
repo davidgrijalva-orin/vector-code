@@ -17,7 +17,8 @@ import { IEditorService } from '../../../services/editor/common/editorService.js
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { readVectorGraphBinding } from '../common/vectorGraphBinding.js';
-import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem, vectorGraphDocumentResource } from './vectorGraphDocumentFileSystem.js';
+import { VectorGraphArtifactInput } from './vectorGraphArtifactEditor.js';
+import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem } from './vectorGraphDocumentFileSystem.js';
 
 class VectorGraphDocumentsContribution extends Disposable {
 	static readonly ID = 'workbench.contrib.vectorGraphDocuments';
@@ -31,7 +32,7 @@ function context(accessor: ServicesAccessor) {
 	return { projects, project, storage, binding, graph: accessor.get(IVectorGraphService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService) };
 }
 function unchanged(value: ReturnType<typeof context>): boolean { const binding = readVectorGraphBinding(value.storage, value.project); return value.projects.getActiveProjectUri()?.toString() === value.project && binding?.workspace.id === value.binding.workspace.id && binding?.team.id === value.binding.team.id && binding?.project?.id === value.binding.project?.id; }
-export async function openVectorGraphDocument(editors: IEditorService, workspace: string, document: IVectorGraphDocument): Promise<void> { await editors.openEditor({ resource: vectorGraphDocumentResource(workspace, document.id), label: document.title, description: 'VectorGraph', options: { pinned: true } }); }
+export async function openVectorGraphDocument(editors: IEditorService, workspace: string, document: IVectorGraphDocument): Promise<void> { await editors.openEditor(new VectorGraphArtifactInput(workspace, document.id, document.title), { pinned: true }); }
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.openDocuments', title: localize2('openDocuments', 'VectorGraph: Open Document'), f1: true }); }
 	async run(accessor: ServicesAccessor): Promise<void> {

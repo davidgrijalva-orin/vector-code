@@ -66,6 +66,11 @@ suite('VectorGraph work operations', () => {
 		await rejects(service.addComment(workspace, 'VC-57', ' ', key));
 		strictEqual(calls.length, 3);
 	});
+	test('all mutable ticket metadata survives validation, including explicit clears', () => {
+		const patch = { projectId: null, sprintId: project, projectMilestoneId: null, targetDate: '2026-09-12', parentIssueIdentifier: 'VC-58', estimatePoints: 0, labelIds: [team], assigneeUserId: null };
+		deepStrictEqual(validateVectorGraphPatch(patch), patch);
+		for (const value of [{ estimatePoints: -1 }, { estimatePoints: 1.5 }, { labelIds: ['wrong'] }, { targetDate: '2026-02-30' }, { parentIssueIdentifier: 'bad' }, { sprintId: 'wrong' }]) { throws(() => validateVectorGraphPatch(value)); }
+	});
 	test('rejects arbitrary write payloads and unrelated PR links', () => {
 		for (const value of [{ operation: 'archiveApiIssue' }, { title: '' }, { statusId: 'wrong' }, { assigneeUserId: {} }, { priority: 'super' }]) { throws(() => validateVectorGraphPatch(value)); }
 		throws(() => validateVectorGraphPatch({ title: 'Missing project', teamId: team }, true));

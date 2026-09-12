@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IVectorGraphDocument, IVectorGraphDocumentSave } from './vectorGraphDocuments.js';
+import { IVectorGraphCanvas, IVectorGraphDocument, IVectorGraphDocumentSave } from './vectorGraphDocuments.js';
 import { IVectorGraphProject, IVectorGraphTeamMetadata, IVectorGraphIssueDraft, IVectorGraphIssuePatch, IVectorGraphRepositoryState } from './vectorGraphWork.js';
 import { Event } from '../../../base/common/event.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
@@ -47,11 +47,14 @@ export interface IVectorGraphTicketDetail extends IVectorGraphTicket {
 	readonly assigneeName?: string;
 	readonly projectId?: string;
 	readonly updatedAt?: string;
+	readonly sprintId?: string; readonly projectMilestoneId?: string; readonly targetDate?: string; readonly parentIssueIdentifier?: string; readonly estimatePoints?: number; readonly labelIds?: readonly string[];
 	readonly links?: readonly { readonly title: string; readonly url: string }[];
 	readonly comments: readonly { readonly author: string; readonly body: string }[];
 }
 export interface IVectorGraphService {
 	readonly _serviceBrand: undefined;
+	listCanvases(workspace: string): Promise<readonly IVectorGraphCanvas[]>;
+	getCanvas(workspace: string, canvas: string): Promise<IVectorGraphCanvas>;
 	listDocuments(workspace: string): Promise<readonly IVectorGraphDocument[]>;
 	getDocument(workspace: string, document: string): Promise<IVectorGraphDocument>;
 	createDocument(workspace: string, team: string, project: string, title: string, requestId: string): Promise<IVectorGraphDocument>;
@@ -114,6 +117,12 @@ export function parseVectorGraphTicketDetail(value: unknown): IVectorGraphTicket
 	const issue = vectorGraphRecord(result.issue);
 	return {
 		...parseVectorGraphTicket(issue),
+		sprintId: typeof issue.sprintId === 'string' ? issue.sprintId : undefined,
+		projectMilestoneId: typeof issue.projectMilestoneId === 'string' ? issue.projectMilestoneId : undefined,
+		targetDate: typeof issue.targetDate === 'string' ? issue.targetDate : undefined,
+		parentIssueIdentifier: typeof issue.parentIssueIdentifier === 'string' ? issue.parentIssueIdentifier : undefined,
+		estimatePoints: typeof issue.estimatePoints === 'number' ? issue.estimatePoints : undefined,
+		labelIds: Array.isArray(issue.labels) ? issue.labels.map(value => vectorGraphText(vectorGraphRecord(value).id)) : [],
 		teamId: typeof issue.teamId === 'string' ? issue.teamId : undefined,
 		statusId: typeof issue.statusId === 'string' ? issue.statusId : undefined,
 		projectId: typeof issue.projectId === 'string' ? issue.projectId : undefined,

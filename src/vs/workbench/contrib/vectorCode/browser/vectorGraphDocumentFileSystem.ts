@@ -32,7 +32,11 @@ export class VectorGraphDocumentFileSystem extends Disposable implements IFileSy
 	constructor(@IVectorGraphService private readonly graph: IVectorGraphService, @IStorageService private readonly storage: IStorageService, @IWorkingCopyService private readonly workingCopies: IWorkingCopyService) { super(); }
 	private key(resource: URI, suffix: string): string { identity(resource); return 'vectorGraph.document.' + suffix + '.' + resource.toString(); }
 	private async fetch(resource: URI): Promise<IVectorGraphDocument> { const id = identity(resource); return this.graph.getDocument(id.workspace, id.document); }
-	async stat(resource: URI): Promise<IStat> { const record = await this.fetch(resource); return { type: FileType.File, ctime: 0, mtime: record.revisionNumber, size: VSBuffer.fromString(record.body).byteLength }; }
+	async stat(resource: URI): Promise<IStat> {
+		const record = await this.fetch(resource); const mtime = Date.parse(record.updatedAt);
+		if (!Number.isFinite(mtime)) { throw new Error('VectorGraph returned an invalid document timestamp.'); }
+		return { type: FileType.File, ctime: 0, mtime, size: VSBuffer.fromString(record.body).byteLength };
+	}
 	async readFile(resource: URI): Promise<Uint8Array> {
 		const record = await this.fetch(resource);
 		// A background read must not move the revision under a dirty editor. A clean reload deliberately adopts the new revision.

@@ -30,7 +30,7 @@ suite('VectorGraph native documents', () => {
 		const storage = store.add(new TestStorageService());
 		let revision = 1; let dirty = false; let fail = true;
 		const calls: { save: IVectorGraphDocumentSave; key: string }[] = [];
-		const record = () => ({ id: document, title: 'Design', body: '# Body', projectIds: [], revisionNumber: revision, versionNumber: revision, updatedAt: '' });
+		const record = () => ({ id: document, title: 'Design', body: '# Body', projectIds: [], revisionNumber: revision, versionNumber: revision, updatedAt: '2026-09-12T16:00:00.000Z' });
 		const graph = {
 			getDocument: async () => record(),
 			saveDocument: async (_workspace: string, _document: string, save: IVectorGraphDocumentSave, key: string) => { calls.push({ save, key }); if (fail) { throw new Error('Connection lost'); } return record(); }
@@ -50,6 +50,14 @@ suite('VectorGraph native documents', () => {
 		await restored.writeFile(resource, VSBuffer.fromString('# Next').buffer, options);
 		strictEqual(calls[2].save.expectedRevisionNumber, 2);
 		strictEqual(calls[2].key === calls[1].key, false);
+	});
+	test('exposes the server timestamp as epoch milliseconds and rejects malformed timestamps', async () => {
+		let updatedAt = '2026-09-12T16:00:00.000Z';
+		const graph = { getDocument: async () => ({ body: 'Document', revisionNumber: 8, updatedAt }) } as unknown as IVectorGraphService;
+		const provider = store.add(new VectorGraphDocumentFileSystem(graph, store.add(new TestStorageService()), { isDirty: () => false } as unknown as IWorkingCopyService));
+		strictEqual((await provider.stat(resource)).mtime, Date.parse(updatedAt));
+		updatedAt = 'not a timestamp';
+		await rejects(provider.stat(resource), /invalid document timestamp/);
 	});
 	test('requires a loaded base, validates identity and refuses generic filesystem mutations', async () => {
 		const graph = { getDocument: async () => { throw new Error('Not authorized'); } } as unknown as IVectorGraphService;

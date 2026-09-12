@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { hasKey } from '../../../../base/common/types.js';
 import { parse, ParseError } from '../../../../base/common/json.js';
 import { McpConfigurationConverter } from '../../../../platform/mcp/common/mcpConfigurationConverter.js';
 import { IGalleryMcpServer, RegistryType, TransportType } from '../../../../platform/mcp/common/mcpManagement.js';
@@ -52,7 +51,7 @@ export function mcpInstallEdits(server: IGalleryMcpServer, type: RegistryType, t
 	const seen = new Set<string>();
 	const inputs = (converted.inputs ?? []).map(input => {
 		const id = prefix + input.id;
-		if (seen.has(id) || existing.inputs?.some(item => !!item && typeof item === 'object' && hasKey(item, { id: true }) && item.id === id)) {
+		if (seen.has(id) || existing.inputs?.some(item => !!item && typeof item === 'object' && (item as { id?: unknown }).id === id)) {
 			throw new Error('Conflicting MCP input IDs. Review the server manifest before configuring it.');
 		}
 		seen.add(id);

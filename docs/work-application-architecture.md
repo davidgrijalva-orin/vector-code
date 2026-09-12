@@ -87,15 +87,39 @@ Assignment state must not govern the lifetime of capture/transcription processin
 Changing a project neither restarts a job nor silently changes the context or
 write destination of an in-flight document-generation action.
 
-Graph's existing document create schema accepts an empty `links` array. Its update
-schema accepts a links-only patch with expected revision and versioned save.
-`artifact-document-mutations.ts` checks link access and performs the document CAS,
-link replacement, and version insertion in one transaction. This supports keeping
-one canonical note/document while changing its project relationships. A client
-must preserve non-project links and all unrelated project links when moving one
-association. The existing native parser only retains project IDs, so implementing
-moves requires extending that contract before writing link replacements; it must
-not reconstruct a partial link list and discard relationships.
+Graph's existing document create schema accepts an empty `links` array. The
+native **New Note Without a Project** command reuses that API with explicit team
+scope, an immutable retry request, and the existing document editor/provider.
+**Browse Team Documents** reopens authorized team documents without requiring a
+project; it deliberately includes both assigned and unassigned documents.
+
+The existing links-only update is not sufficient for a safe client-side move.
+`appendVisibleDocumentLinks` filters inaccessible relationships before returning
+them. Preserving every link in that response would still lose hidden relationships
+if the client submitted it as a replacement. Similarly, no visible project links
+does not prove an artifact is unassigned. Do not expose an inbox based on that
+client-side inference or implement moves by replacing a projected link set.
+
+Required Graph API additions, proposed rather than implemented:
+
+- An authorized inbox query evaluates absence of project associations on the
+  complete server-side record before projecting/filtering the response.
+- A bounded project-assignment mutation accepts the document identity, explicit
+  add/move/remove intent, source/destination project identities as appropriate,
+  expected revision, and idempotency identity. The server validates membership,
+  source/destination access, scope and revision; changes only the requested
+  association; preserves hidden/unrelated links; records the outcome; and returns
+  the normal authorized representation. Clients never supply a reconstructed full
+  link list for this operation.
+- The mutation and its receipt must support replay after an uncertain response
+  without another move or another version. Concurrent body or relationship edits
+  must conflict rather than silently overwrite either kind of change.
+
+All clients (desktop, web, CLI and voice actions) consume the same explicit,
+versioned contracts. Frontends must not import Graph/Voice service, repository,
+queue, provider, configuration, or database implementation. Native IPC is only
+the local capability and protected-credential transport boundary; it does not
+replace server-side authorization or domain validation.
 
 The first move operation stays in the same tenant and preserves existing team
 visibility. Clearing project membership must not clear team scope. Default the

@@ -51,16 +51,15 @@ export class VectorGraphDocumentContext extends Disposable {
 	}
 }
 
-/** Select an existing work project; no folder, Git or terminal APIs. */
-export async function chooseDocumentWorkProject(
+/** Choose an authorized storage audience independently of any project or folder. */
+export async function chooseDocumentScope(
 	graph: IVectorGraphService,
 	quick: IQuickInputService,
-	storage: IStorageService,
 	isCurrent: () => boolean,
 ): Promise<IVectorGraphBinding | undefined> {
 	const workspaces = await graph.listWorkspaces();
 	if (!isCurrent()) { return; }
-	if (!workspaces.length) { throw new Error(localize('workProjectSignIn', 'Sign in to VectorGraph in Work, then open a work project.')); }
+	if (!workspaces.length) { throw new Error(localize('workProjectSignIn', 'Sign in to VectorGraph in Work, then choose a workspace.')); }
 	const workspace = await quick.pick(workspaces.map(value => ({ label: value.name, value })), { placeHolder: localize('workProjectWorkspace', 'Choose a workspace') });
 	if (!workspace || !isCurrent()) { return; }
 	const teams = await graph.listTeams(workspace.value.id);
@@ -68,12 +67,24 @@ export async function chooseDocumentWorkProject(
 	if (!teams.length) { throw new Error(localize('workProjectNoTeams', 'No teams are accessible in this workspace. Check your VectorGraph access.')); }
 	const team = await quick.pick(teams.map(value => ({ label: value.name, description: value.identifier, value })), { placeHolder: localize('workProjectTeam', 'Choose a team') });
 	if (!team || !isCurrent()) { return; }
-	const projects = await graph.listProjects(workspace.value.id, team.value.id);
+	return { workspace: workspace.value, team: team.value };
+}
+
+/** Select an existing work project; no folder, Git or terminal APIs. */
+export async function chooseDocumentWorkProject(
+	graph: IVectorGraphService,
+	quick: IQuickInputService,
+	storage: IStorageService,
+	isCurrent: () => boolean,
+): Promise<IVectorGraphBinding | undefined> {
+	const scope = await chooseDocumentScope(graph, quick, isCurrent);
+	if (!scope || !isCurrent()) { return; }
+	const projects = await graph.listProjects(scope.workspace.id, scope.team.id);
 	if (!isCurrent()) { return; }
 	if (!projects.length) { throw new Error(localize('workProjectNone', 'No projects are accessible in this team. Create or join a project in VectorGraph, then try again.')); }
 	const project = await quick.pick(projects.map(value => ({ label: value.name, value })), { placeHolder: localize('workProjectChoose', 'Open a work project') });
 	if (!project || !isCurrent()) { return; }
-	const binding = { workspace: workspace.value, team: team.value, project: project.value };
+	const binding = { workspace: scope.workspace, team: scope.team, project: project.value };
 	storage.store(VECTOR_CODE_WORK_PROJECT_KEY, binding, StorageScope.WORKSPACE, StorageTarget.MACHINE);
 	return binding;
 }

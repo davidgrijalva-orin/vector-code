@@ -20,7 +20,9 @@ Users work directly and through text or voice where implemented. They explicitly
 select project materials for an agent. Generated work becomes durable project
 content that users can reopen and edit, not just a conversation attachment.
 Direct edits and agent edits share authorization, revision, retry, and recovery
-semantics. Neither document access nor voice access grants local file, terminal,
+semantics. The app is an API client. Graph/Voice services own business rules and
+processing; clients depend on versioned contracts, never backend implementation
+modules or direct database access. Neither document access nor voice access grants local file, terminal,
 device, or credential access.
 
 The existing desktop model equates one folder with one project. Migrating that
@@ -113,9 +115,11 @@ retain one operation identity on retries, and preserve the previous assignment
 when permission, conflict, or cancellation prevents the move. Reconcile uncertain
 completion before offering another mutation.
 
-Inbox capture, note creation without a project, and move/link controls are required
-follow-up implementation. The current desktop draft implements work-project
-selection and folder grouping; it does not yet provide those controls.
+The native draft now includes **New Note Without a Project** and **Browse Team
+Documents**, through the existing document create/list APIs and native editor.
+This supports saving/reopening notes before project selection. It does not yet
+provide recording capture, authoritative inbox filtering, or move/link controls.
+Those require the service-side contracts described in the architecture decision.
 
 ## Later sequence and delivery limits
 

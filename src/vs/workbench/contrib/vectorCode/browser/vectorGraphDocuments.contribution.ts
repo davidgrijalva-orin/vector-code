@@ -13,14 +13,14 @@ import { Action2, registerAction2 } from '../../../../platform/actions/common/ac
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IVectorGraphService } from '../../../../platform/vectorGraph/common/vectorGraph.js';
+import { IVectorGraphBinding, IVectorGraphService } from '../../../../platform/vectorGraph/common/vectorGraph.js';
 import { IVectorGraphDocument } from '../../../../platform/vectorGraph/common/vectorGraphDocuments.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { readSelectedWorkProject } from '../common/vectorCodeWorkProject.js';
 import { manageWorkProjectFolders, workProjectFolderItems } from './vectorCodeWorkProject.js';
-import { chooseDocumentWorkProject, VectorGraphDocumentContext } from './vectorGraphDocumentContext.js';
+import { chooseDocumentScope, chooseDocumentWorkProject, VectorGraphDocumentContext } from './vectorGraphDocumentContext.js';
 import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem, vectorGraphDocumentResource } from './vectorGraphDocumentFileSystem.js';
 
 class VectorGraphDocumentsContribution extends Disposable {
@@ -69,6 +69,36 @@ registerAction2(class extends Action2 {
 		} finally { value.selection.dispose(); }
 	}
 });
+async function createDocument(value: { storage: IStorageService; graph: IVectorGraphService; quick: IQuickInputService; editors: IEditorService; selection: VectorGraphDocumentContext }, binding: IVectorGraphBinding): Promise<void> {
+	const projectId = binding.project?.id;
+	const key = projectId ? 'vectorGraph.document.create.' + binding.workspace.id + '.' + projectId
+		: 'vectorGraph.note.create.' + binding.workspace.id + '.' + binding.team.id;
+	type PendingCreate = { title: string; id: string };
+	const pending = value.storage.getObject<PendingCreate>(key, StorageScope.PROFILE);
+	let title: string | undefined;
+	if (pending) {
+		const retry = await value.quick.pick([{ label: localize('retryDocumentCreation', 'Retry creating {0}', pending.title), value: pending.title }], {
+			placeHolder: localize('pendingDocumentCreation', 'The previous save is not confirmed. Retry it to recover the original result.')
+		});
+		title = retry?.value;
+	} else {
+		title = await value.quick.input({
+			title: projectId ? localize('newDocumentTitle', 'New VectorGraph document') : localize('newNoteTitle', 'New note'),
+			prompt: projectId ? localize('newDocumentProject', 'Create in {0}', binding.project!.name)
+				: localize('newNoteAudience', 'Save without a project. Workspace: {0}. Team: {1}.', binding.workspace.name, binding.team.name),
+			validateInput: async text => text.trim() && text.length <= 1000 ? undefined : localize('documentTitleRequired', 'Enter a title of at most 1000 characters.')
+		});
+	}
+	if (!title || !value.selection.isCurrent()) { return; }
+	const current = value.storage.getObject<PendingCreate>(key, StorageScope.PROFILE);
+	if (current && current.title !== title) { throw new Error(localize('otherDocumentPending', 'Another document save is awaiting confirmation. Retry that save first.')); }
+	const request = current ?? pending ?? { title, id: generateUuid() };
+	value.storage.store(key, request, StorageScope.PROFILE, StorageTarget.MACHINE);
+	const document = await value.graph.createDocument(binding.workspace.id, binding.team.id, projectId, request.title, request.id);
+	if (value.storage.getObject<PendingCreate>(key, StorageScope.PROFILE)?.id === request.id) { value.storage.remove(key, StorageScope.PROFILE); }
+	if (value.selection.isCurrent()) { await openDocument(value.editors, binding.workspace.id, document); }
+}
+
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.newDocument', title: localize2('newDocument', 'VectorGraph: New Document'), f1: true }); }
 	async run(accessor: ServicesAccessor, workProject = false): Promise<void> {
@@ -76,14 +106,7 @@ registerAction2(class extends Action2 {
 		try {
 			const projectId = value.binding.project?.id;
 			if (!projectId) { throw new Error(localize('documentChooseProject', 'Choose a linked project in Work before creating a document.')); }
-			const key = 'vectorGraph.document.create.' + value.binding.workspace.id + '.' + projectId;
-			const saved = value.storage.getObject<{ title: string; id: string }>(key, StorageScope.PROFILE);
-			const title = await value.quick.input({ title: localize('newDocumentTitle', 'New VectorGraph document'), value: saved?.title, prompt: localize('newDocumentProject', 'Create in {0}', value.binding.project!.name), validateInput: async text => text.trim() && text.length <= 1000 ? undefined : localize('documentTitleRequired', 'Enter a title of at most 1000 characters.') });
-			if (!title || !unchanged(value)) { return; }
-			const request = saved?.title === title ? saved : { title, id: generateUuid() }; value.storage.store(key, request, StorageScope.PROFILE, StorageTarget.MACHINE);
-			const document = await value.graph.createDocument(value.binding.workspace.id, value.binding.team.id, projectId, title, request.id);
-			value.storage.remove(key, StorageScope.PROFILE);
-			if (unchanged(value)) { await openDocument(value.editors, value.binding.workspace.id, document); }
+			await createDocument(value, value.binding);
 		} finally { value.selection.dispose(); }
 	}
 });
@@ -114,6 +137,38 @@ registerAction2(class extends Action2 {
 			} else if (action.command === 'folders') {
 				await manageWorkProjectFolders(storage, quick, binding, projects.getProjectSummaries(), () => selection.isCurrent());
 			} else { await commands.executeCommand(action.command, true); }
+		} finally { selection.dispose(); }
+	}
+});
+
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.newNote', title: localize2('newNote', 'VectorGraph: New Note Without a Project'), f1: true }); }
+	async run(accessor: ServicesAccessor): Promise<void> {
+		const projects = accessor.get(IVectorCodeWorkbenchService); const storage = accessor.get(IStorageService); const graph = accessor.get(IVectorGraphService);
+		const quick = accessor.get(IQuickInputService); const editors = accessor.get(IEditorService);
+		const selection = new VectorGraphDocumentContext(storage, projects, graph);
+		try {
+			const binding = await chooseDocumentScope(graph, quick, () => selection.isCurrent());
+			if (binding && selection.isCurrent()) { await createDocument({ storage, graph, quick, editors, selection }, binding); }
+		} finally { selection.dispose(); }
+	}
+});
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.browseDocuments', title: localize2('browseDocuments', 'VectorGraph: Browse Team Documents'), f1: true }); }
+	async run(accessor: ServicesAccessor): Promise<void> {
+		const projects = accessor.get(IVectorCodeWorkbenchService); const storage = accessor.get(IStorageService); const graph = accessor.get(IVectorGraphService);
+		const quick = accessor.get(IQuickInputService); const editors = accessor.get(IEditorService);
+		const selection = new VectorGraphDocumentContext(storage, projects, graph);
+		try {
+			const binding = await chooseDocumentScope(graph, quick, () => selection.isCurrent());
+			if (!binding || !selection.isCurrent()) { return; }
+			const documents = await graph.listDocuments(binding.workspace.id);
+			if (!selection.isCurrent()) { return; }
+			const selected = await quick.pick(documents.filter(document => document.teamId === binding.team.id).map(document => ({ label: document.title, document })), {
+				title: localize('teamDocuments', 'Documents in {0} / {1}', binding.workspace.name, binding.team.name),
+				placeHolder: localize('teamDocumentsHint', 'Includes notes saved without choosing a project')
+			});
+			if (selected && selection.isCurrent()) { await openDocument(editors, binding.workspace.id, selected.document); }
 		} finally { selection.dispose(); }
 	}
 });

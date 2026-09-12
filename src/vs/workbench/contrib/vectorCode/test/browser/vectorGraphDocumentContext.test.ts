@@ -230,7 +230,7 @@ suite('VectorGraph work projects without local folders', () => {
 		let created = 0;
 		f.graph.createDocument = async (workspace, team, project, title) => {
 			deepStrictEqual([workspace, team, project], [binding.workspace.id, binding.team.id, binding.project!.id]); created++;
-			return { id: binding.team.id, title, body: '', teamId: team, projectIds: [project], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
+			return { id: binding.team.id, title, body: '', teamId: team, projectIds: project ? [project] : [], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
 		};
 		const inst = store.add(new TestInstantiationService());
 		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
@@ -280,5 +280,66 @@ suite('VectorGraph work projects without local folders', () => {
 			deepStrictEqual(readWorkProjectFolders(f.storage, binding), [folder.toString()]);
 		});
 	}
+
+	function noteCommandFixture() {
+		const f = fixture(); const inst = store.add(new TestInstantiationService());
+		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
+		inst.stub(IQuickInputService, { pick: async items => (await items)[0], input: async () => 'Quick note' });
+		const opened: string[] = [];
+		inst.stub(IEditorService, { openEditor: async input => { if (isResourceEditorInput(input)) { opened.push(input.resource.toString()); } return undefined; } });
+		f.graph.listProjects = async () => { throw new Error('No project lookup is required'); };
+		const document = { id: binding.team.id, title: 'Quick note', body: '', teamId: binding.team.id, projectIds: [], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
+		const run = async (command = 'vectorCode.newNote') => inst.invokeFunction(accessor => CommandsRegistry.getCommand(command)!.handler(accessor));
+		return { ...f, inst, document, opened, run };
+	}
+
+	test('creates an unassigned note through the document API without requiring project lookup or changing project selection', async () => {
+		const f = noteCommandFixture(); let created = 0;
+		f.graph.createDocument = async (workspace, team, project, title, key) => {
+			deepStrictEqual([workspace, team, project, title], [binding.workspace.id, binding.team.id, undefined, 'Quick note']);
+			strictEqual(key.length, 36); created++; return f.document;
+		};
+		await f.run();
+		strictEqual(created, 1); strictEqual(f.opened.length, 1);
+		strictEqual(readDocumentBinding(f.storage, undefined), undefined);
+		deepStrictEqual(f.calls, ['workspaces', 'teams']);
+	});
+
+	test('an uncertain note creation retries the original API request and recovers the original document', async () => {
+		const f = noteCommandFixture(); const keys: string[] = [];
+		f.graph.createDocument = async (_workspace, _team, project, title, key) => {
+			strictEqual(project, undefined); strictEqual(title, 'Quick note'); keys.push(key);
+			if (keys.length === 1) { throw new Error('Connection lost after dispatch'); }
+			return f.document;
+		};
+		await rejects(f.run(), /Connection lost/);
+		strictEqual(f.opened.length, 0);
+		f.inst.stub(IQuickInputService, { pick: async items => (await items)[0], input: async () => { throw new Error('Do not create a replacement request'); } });
+		await f.run();
+		strictEqual(keys.length, 2); strictEqual(keys[0], keys[1]); strictEqual(f.opened.length, 1);
+		strictEqual(f.storage.get('vectorGraph.note.create.' + binding.workspace.id + '.' + binding.team.id, StorageScope.PROFILE), undefined);
+	});
+
+	for (const signOut of [false, true]) {
+		test(`note creation does not write when title entry ${signOut ? 'changes account' : 'is canceled'}`, async () => {
+			const f = noteCommandFixture();
+			f.graph.createDocument = async () => { throw new Error('Must not write'); };
+			f.inst.stub(IQuickInputService, { pick: async items => (await items)[0], input: async () => { if (signOut) { f.account.fire(); return 'Quick note'; } return undefined; } });
+			await f.run(); strictEqual(f.opened.length, 0);
+		});
+	}
+
+	test('team browsing reopens notes without requiring a project and does not mistake filtered links for inbox membership', async () => {
+		const f = noteCommandFixture();
+		f.graph.listDocuments = async () => [f.document, { ...f.document, id: binding.project!.id, projectIds: [binding.project!.id] }, { ...f.document, id: binding.workspace.id, teamId: 'another-team' }];
+		f.inst.stub(IQuickInputService, {
+			pick: async (items, options) => {
+				const resolved = await items;
+				if (options?.title?.startsWith('Documents in')) { strictEqual(resolved.length, 2); }
+				return resolved[0];
+			}
+		});
+		await f.run('vectorCode.browseDocuments'); strictEqual(f.opened.length, 1);
+	});
 
 });

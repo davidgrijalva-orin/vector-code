@@ -56,6 +56,18 @@ retired agent integrations or profiles implicitly.
 
 Use the repository source as the authority. Validate TypeScript changes with `npm run compile-check-ts-native` first, then run the narrower extension/client checks that match the files you touched.
 
+## API client boundary
+
+Owner clarification: the desktop application is a client of Graph and Voice APIs.
+Use explicit, versioned HTTP contracts for shared work and voice capabilities.
+Frontend/native presentation code must not import backend services, repositories,
+SQL, queues, provider implementations, or backend configuration. Server APIs own
+authorization, domain invariants, persistence, processing, relationship mutations,
+and authoritative inbox classification. Do not recreate those rules in the UI.
+The client owns presentation, editor drafts, explicit context selection, and retry
+receipts. Local files, microphones, terminals, and devices use their separately
+scoped native service/IPC APIs; artifact or voice access does not grant local access.
+
 Keep the whole codebase DRY. Treat duplicated logic or configuration as a defect: prefer shared helpers, schema/config sources, and thin adapters over copying behavior between desktop, iOS, services, docs, and tests.
 
 Keep VectorCode mobile work DRY. Reuse shared protocol models, project-scoped state helpers, and small SwiftUI controls instead of duplicating request shapes, tab chrome, project rows, buttons, or empty-state UI across iOS views and desktop bridge code.

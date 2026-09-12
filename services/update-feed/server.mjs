@@ -176,6 +176,20 @@ export function resolveVectorUpdate(feed, request) {
     return { statusCode: 204 };
   }
 
+  // A differing commit is not evidence of an upgrade. Local builds and pruned
+  // history must fail closed rather than receiving an older published binary.
+  const current = feed.releases.filter(release => release.commit === request.commit
+    && release.quality === request.quality && getReleaseAsset(release, request.platform));
+  if (!current.length || current.some(release => release.timestamp >= latest.timestamp)) {
+    return { statusCode: 204 };
+  }
+  const tied = feed.releases.some(release => release.quality === request.quality
+    && getReleaseAsset(release, request.platform) && release.timestamp === latest.timestamp
+    && release.commit !== latest.commit);
+  if (tied) {
+    return { statusCode: 204 };
+  }
+
   const asset = getReleaseAsset(latest, request.platform);
   if (!asset) {
     return { statusCode: 204 };

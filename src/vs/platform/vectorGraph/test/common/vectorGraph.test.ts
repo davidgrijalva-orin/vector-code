@@ -58,6 +58,7 @@ suite('VectorGraph ticket contracts', () => {
 			listProjects: async () => [], getTeamMetadata: async () => ({ statuses: [], members: [] }),
 			createTicket: async () => 'VC-57', updateTicket: async () => { }, addComment: async () => { }, linkPullRequest: async () => { },
 			getRepositoryState: async () => ({ head: '', branch: '', changes: [] }), createBranch: async () => { },
+			listDocuments: async () => [], getDocument: async () => { throw new Error('Unused'); }, createDocument: async () => { throw new Error('Unused'); }, saveDocument: async () => { throw new Error('Unused'); },
 			getSession: async () => ({ workspaces: [] }),
 			beginSignIn: async () => ({ workspaces: [] }),
 			pollSignIn: async () => ({ workspaces: [] }),

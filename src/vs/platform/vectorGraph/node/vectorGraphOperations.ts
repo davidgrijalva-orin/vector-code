@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IVectorGraphDocumentSave, parseVectorGraphDocument, validateVectorGraphDocumentSave } from '../common/vectorGraphDocuments.js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { URI } from '../../../base/common/uri.js';
@@ -12,6 +13,19 @@ import { IVectorGraphIssueDraft, IVectorGraphIssuePatch, IVectorGraphProject, IV
 type Call = (workspace: string, operation: string, query?: object, path?: object, body?: object, key?: string) => Promise<unknown>;
 export class VectorGraphOperations {
 	constructor(private readonly call: Call) { }
+	async listDocuments(workspace: string) { const result = vectorGraphRecord(await this.call(workspace, 'listApiWorkspaceDocuments')); return vectorGraphArray(result.documents).map(parseVectorGraphDocument); }
+	async getDocument(workspace: string, document: string) { const result = vectorGraphRecord(await this.call(workspace, 'getApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) })); return parseVectorGraphDocument(result.document); }
+	async createDocument(workspace: string, team: string, project: string, title: string, requestId: string) {
+		if (!title.trim() || title.length > 1000) { throw new Error('Enter a document title of at most 1000 characters.'); }
+		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
+		return parseVectorGraphDocument(result.document);
+	}
+	async saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) {
+		const result = vectorGraphRecord(await this.call(workspace, 'updateApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) }, { ...validateVectorGraphDocumentSave(save), saveMode: 'versioned' }, vectorGraphId(requestId)));
+		if (result.error) { throw new Error('Document changed on VectorGraph. Your edits are preserved. Compare or reload the latest version before saving.'); }
+		return parseVectorGraphDocument(result.document);
+	}
+
 	async listProjects(workspace: string, team: string): Promise<readonly IVectorGraphProject[]> {
 		vectorGraphId(team);
 		const result = vectorGraphRecord(await this.call(workspace, 'listApiProjects'));

@@ -21,6 +21,20 @@ suite('VectorGraph work operations', () => {
 	const team = '658d2b51-5118-46d4-8b60-bf1954501284';
 	const project = '1c084781-df5b-46d4-81b5-e3b8100c93e6';
 	const key = '01a09380-3fca-76d3-948c-aa88fe512a27';
+	test('document writes preserve revision checks, project links and retry identity', async () => {
+		const calls: unknown[][] = [];
+		const document = { id: project, title: 'Design', body: '# Content', teamId: team, links: [{ targetType: 'project', targetId: project }], revisionNumber: 3, versionNumber: 2, updatedAt: '' };
+		const service = new VectorGraphOperations(async (...args) => { calls.push(args); return { document }; });
+		deepStrictEqual((await service.createDocument(workspace, team, project, 'Design', key)).projectIds, [project]);
+		const save = { body: '# Updated', expectedRevisionNumber: 3, expectedVersionNumber: 2 };
+		await service.saveDocument(workspace, project, save, key);
+		deepStrictEqual(calls[0], [workspace, 'createApiWorkspaceDocument', {}, {}, { title: 'Design', body: '', teamId: team, links: [{ targetType: 'project', targetId: project }] }, key]);
+		deepStrictEqual(calls[1], [workspace, 'updateApiWorkspaceDocument', {}, { documentId: project }, { ...save, saveMode: 'versioned' }, key]);
+		await rejects(service.saveDocument(workspace, project, { ...save, expectedRevisionNumber: 0 }, key));
+		await rejects(service.saveDocument(workspace, project, { ...save, operation: 'delete' } as typeof save, key));
+		strictEqual(calls.length, 2);
+		await rejects(new VectorGraphOperations(async () => ({ document, error: { code: 'document_version_conflict' } })).saveDocument(workspace, project, save, key), /changed on VectorGraph/);
+	});
 	test('repository access rejects outside roots, missing trust, and symlink escapes', async () => {
 		const directory = await fs.mkdtemp(join(tmpdir(), 'vg-access-'));
 		try {

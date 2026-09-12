@@ -91,6 +91,13 @@ suite('VectorGraph IDE authorization', () => {
 		strictEqual(saved.size, 0);
 		await rejects(auth.call(workspace.id, 'listApiTeams'), /Sign in/);
 	});
+	test('conflicts retain authorization and describe recovery without another login', async () => {
+		const auth = create();
+		await auth.beginSignIn(); responses.push(approval()); await auth.pollSignIn();
+		responses.push(response({ error: { code: 'document_version_conflict' } }, 409));
+		await rejects(auth.call(workspace.id, 'updateApiWorkspaceDocument'), /conflicting change/);
+		deepStrictEqual((await auth.getSession()).workspaces, [workspace]);
+	});
 	test('canceling reconnect preserves the authorized account', async () => {
 		const auth = create();
 		await auth.beginSignIn(); responses.push(approval()); await auth.pollSignIn();

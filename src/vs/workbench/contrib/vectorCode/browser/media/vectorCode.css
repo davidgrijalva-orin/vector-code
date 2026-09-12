@@ -2086,12 +2086,6 @@ body,
 	color: #eef4f2;
 }
 
-.monaco-workbench .part.auxiliarybar {
-	display: none !important;
-	min-width: 0 !important;
-	width: 0 !important;
-}
-
 .monaco-workbench .part.activitybar {
 	background: #0b0f0f !important;
 	border-right-color: rgba(238, 244, 242, 0.08) !important;

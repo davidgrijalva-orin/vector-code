@@ -5,7 +5,7 @@
 
 import { $, addDisposableListener, append, clearNode, EventType, setVisibility } from '../../../../base/browser/dom.js';
 import { Codicon } from '../../../../base/common/codicons.js';
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
+import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
@@ -31,7 +31,6 @@ import { ViewPaneContainer } from '../../../browser/parts/views/viewPaneContaine
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
 import { IViewContainersRegistry, IViewDescriptorService, IViewsRegistry, Extensions as ViewExtensions, ViewContainerLocation } from '../../../common/views.js';
-import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import {
 	IVectorCodeMobileConnectionStatus,
@@ -152,28 +151,12 @@ function formatVectorCodeRuntimeDiagnosticSummary(summary: IVectorCodeRuntimeDia
 	return lines.join('\n');
 }
 
-class VectorCodeLayoutContribution extends Disposable implements IWorkbenchContribution {
+class VectorCodeProjectContribution implements IWorkbenchContribution {
 
-	static readonly ID = 'workbench.contrib.vectorCodeLayout';
+	static readonly ID = 'workbench.contrib.vectorCodeProject';
 
-	constructor(
-		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
-		@IVectorCodeWorkbenchService private readonly vectorCodeWorkbenchService: IVectorCodeWorkbenchService,
-	) {
-		super();
-		this.vectorCodeWorkbenchService.getProjectStatusLabel();
-		this.hideAuxiliaryBar();
-		this._register(this.layoutService.onDidChangePartVisibility(event => {
-			if (event.partId === Parts.AUXILIARYBAR_PART && event.visible) {
-				this.hideAuxiliaryBar();
-			}
-		}));
-	}
-
-	private hideAuxiliaryBar(): void {
-		if (this.layoutService.isVisible(Parts.AUXILIARYBAR_PART)) {
-			this.layoutService.setPartHidden(true, Parts.AUXILIARYBAR_PART);
-		}
+	constructor(@IVectorCodeWorkbenchService vectorCodeWorkbenchService: IVectorCodeWorkbenchService) {
+		vectorCodeWorkbenchService.getProjectStatusLabel();
 	}
 }
 
@@ -389,4 +372,4 @@ if (explorerViewContainer) {
 	}], explorerViewContainer);
 }
 
-registerWorkbenchContribution2(VectorCodeLayoutContribution.ID, VectorCodeLayoutContribution, WorkbenchPhase.AfterRestored);
+registerWorkbenchContribution2(VectorCodeProjectContribution.ID, VectorCodeProjectContribution, WorkbenchPhase.AfterRestored);

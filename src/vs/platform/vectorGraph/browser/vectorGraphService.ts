@@ -12,6 +12,10 @@ class BrowserVectorGraphService implements IVectorGraphService {
 	private unavailable(): Promise<never> { return Promise.reject(new Error('VectorGraph tickets are available in the desktop application.')); }
 	readonly onDidChangeSession = Event.None;
 	readonly onDidChangeTickets = Event.None;
+	listDocuments() { return this.unavailable(); }
+	getDocument() { return this.unavailable(); }
+	createDocument() { return this.unavailable(); }
+	saveDocument() { return this.unavailable(); }
 	listProjects() { return this.unavailable(); }
 	getTeamMetadata() { return this.unavailable(); }
 	createTicket() { return this.unavailable(); }

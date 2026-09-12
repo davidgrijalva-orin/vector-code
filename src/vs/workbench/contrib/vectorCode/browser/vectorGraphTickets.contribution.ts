@@ -31,11 +31,13 @@ import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IVectorGraphWorkService, VECTOR_GRAPH_DETAILS_VIEW } from '../common/vectorGraphWork.js';
 import './vectorGraphDetails.contribution.js';
+import './vectorGraphDocuments.contribution.js';
+import { ICommandService } from '../../../../platform/commands/common/commands.js';
+import { VECTOR_GRAPH_BINDING_KEY as BINDING_KEY, readVectorGraphBinding } from '../common/vectorGraphBinding.js';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from '../../files/common/files.js';
 import './media/vectorGraphTickets.css';
 
 const VIEW_ID = 'vectorCode.vectorGraphTickets';
-const BINDING_KEY = 'vectorCode.vectorGraph.binding.';
 const icon = registerIcon('vector-code-tickets', Codicon.issues, localize('vectorGraphTicketsIcon', 'VectorGraph tickets.'));
 
 export class VectorGraphTicketsView extends ViewPane {
@@ -126,6 +128,8 @@ export class VectorGraphTicketsView extends ViewPane {
 		this.configureButton = this.button(toolbar, localize('vectorGraphConnect', 'Choose Workspace'), () => this.configure());
 		this.button(toolbar, localize('vectorGraphChooseProject', 'Choose Project'), () => this.chooseProject());
 		this.button(toolbar, localize('vectorGraphNewTicket', 'New Ticket'), () => this.newTicket());
+		this.button(toolbar, localize('workDocuments', 'Documents'), () => this.instantiationService.invokeFunction(accessor => accessor.get(ICommandService).executeCommand('vectorCode.openDocuments')));
+		this.button(toolbar, localize('workNewDocument', 'New Document'), () => this.instantiationService.invokeFunction(accessor => accessor.get(ICommandService).executeCommand('vectorCode.newDocument')));
 		this.refreshButton = this.button(toolbar, localize('vectorGraphRefresh', 'Refresh'), () => { this.discoveryProject = undefined; return this.refresh(); });
 		this.activeWork = append(this.root, $('.vector-graph-active-work'));
 		this.scope = append(this.root, $<HTMLSelectElement>('select')); this.scope.setAttribute('aria-label', localize('workTicketScope', 'Ticket scope'));
@@ -207,12 +211,7 @@ export class VectorGraphTicketsView extends ViewPane {
 	}
 
 	private projectKey(): string | undefined { return this.projects.getActiveProjectUri()?.toString(); }
-	private binding(): IVectorGraphBinding | undefined {
-		const key = this.projectKey();
-		if (!key) { return undefined; }
-		const binding = this.storage.getObject<IVectorGraphBinding>(BINDING_KEY + key, StorageScope.PROFILE);
-		return binding && typeof binding.workspace?.id === 'string' && typeof binding.workspace.name === 'string' && typeof binding.team?.id === 'string' && typeof binding.team.name === 'string' ? binding : undefined;
-	}
+	private binding(): IVectorGraphBinding | undefined { return readVectorGraphBinding(this.storage, this.projectKey()); }
 
 	private async configure(): Promise<void> {
 		const project = this.projectKey();

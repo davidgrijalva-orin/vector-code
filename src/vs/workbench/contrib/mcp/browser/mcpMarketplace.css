@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 .mcp-marketplace { box-sizing: border-box; padding: 8px 12px; height: 100%; overflow: auto; }
 .mcp-marketplace__toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
-.mcp-marketplace input { box-sizing: border-box; width: 100%; min-width: 0; padding: 5px; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
-.mcp-marketplace button { cursor: pointer; padding: 4px 8px; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, transparent); }
-.mcp-marketplace button:hover { background: var(--vscode-button-secondaryHoverBackground); }
-.mcp-marketplace button:focus-visible, .mcp-marketplace input:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
-.mcp-marketplace__status { margin: 8px 0; color: var(--vscode-descriptionForeground); }
-.mcp-marketplace__server { padding: 10px 0; border-bottom: 1px solid var(--vscode-panel-border); overflow-wrap: anywhere; }
+.mcp-marketplace input { box-sizing: border-box; width: 100%; min-width: 0; padding: 5px; color: var(--vectorcode-input-foreground); background: var(--vectorcode-input-background); border: 1px solid var(--vectorcode-input-border, transparent); }
+.mcp-marketplace button { cursor: pointer; padding: 4px 8px; color: var(--vectorcode-button-secondaryForeground); background: var(--vectorcode-button-secondaryBackground); border: 1px solid var(--vectorcode-button-border, transparent); }
+.mcp-marketplace button:hover { background: var(--vectorcode-button-secondaryHoverBackground); }
+.mcp-marketplace button:focus-visible, .mcp-marketplace input:focus-visible { outline: 1px solid var(--vectorcode-focusBorder); outline-offset: 2px; }
+.mcp-marketplace__status { margin: 8px 0; color: var(--vectorcode-descriptionForeground); }
+.mcp-marketplace__server { padding: 10px 0; border-bottom: 1px solid var(--vectorcode-panel-border); overflow-wrap: anywhere; }
 .mcp-marketplace__server strong, .mcp-marketplace__server small { display: block; }
-.mcp-marketplace__server small { color: var(--vscode-descriptionForeground); }
+.mcp-marketplace__server small { color: var(--vectorcode-descriptionForeground); }
 .mcp-marketplace__server p { margin: 6px 0; }
 .mcp-marketplace [hidden] { display: none; }

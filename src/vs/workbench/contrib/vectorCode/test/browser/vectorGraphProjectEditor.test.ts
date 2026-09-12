@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { strictEqual } from 'assert';
+import { getWindow } from '../../../../../base/browser/dom.js';
+import { toDisposable } from '../../../../../base/common/lifecycle.js';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { URI } from '../../../../../base/common/uri.js';
@@ -30,6 +32,10 @@ suite('VectorGraph project workspace', () => {
 		const editor = store.add(instantiation.createInstance(VectorGraphProjectEditor, new TestEditorGroupView(1)));
 		const root = document.createElement('div'); editor.create(root);
 		await editor.setInput(store.add(new VectorGraphProjectInput()), undefined, Object.create(null), CancellationToken.None);
+		document.body.appendChild(root); store.add(toDisposable(() => root.remove()));
+		root.style.setProperty('--vectorcode-button-background', 'rgb(7, 133, 140)');
+		const primary = root.querySelector<HTMLButtonElement>('.vector-project__button.primary')!;
+		strictEqual(getWindow(root).getComputedStyle(primary).backgroundColor, 'rgb(7, 133, 140)', 'project actions must consume the native theme namespace');
 		strictEqual(root.querySelector('h1')?.textContent, 'Local project');
 		strictEqual(root.textContent?.includes('No VectorGraph account required'), true);
 		root.querySelector<HTMLButtonElement>('[data-section="code"]')!.click();

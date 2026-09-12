@@ -164,7 +164,7 @@ export class VectorGraphProjectEditor extends EditorPane {
 			this.button(actions, localize('overviewGit', 'Source control'), () => this.commands.executeCommand('workbench.view.scm'));
 			this.button(actions, localize('overviewRun', 'Run and debug'), () => this.commands.executeCommand('workbench.view.debug'));
 			if (!project) { this.button(actions, localize('openLocalProject', 'Open a folder…'), () => this.projects.addProjectToWorkspace(), true); }
-			append(this.content, $('h2.vector-project__connected-heading')).textContent = binding ? localize('connectedProject', 'Connected with VectorGraph') : localize('optionalGraph', 'Add VectorGraph when you need it');
+			append(this.content, $('h2.vector-project__connected-heading')).textContent = binding ? localize('connectedProject', 'VectorGraph project') : localize('optionalGraph', 'Add VectorGraph when you need it');
 			append(this.content, $('p')).textContent = binding ? localize('connectedBenefits', 'Plan work and keep decisions connected to this repository.') : localize('optionalBenefits', 'Connect tickets, shared documents and project context. Your local tools work independently.');
 			this.button(this.content, binding ? localize('reviewProjectTickets', 'Review tickets') : localize('connectOptionalGraph', 'Connect VectorGraph…'), () => this.selectSection('tickets'));
 			if (binding) { this.button(this.content, localize('readProjectDocuments', 'Open documents'), () => this.selectSection('documents')); }

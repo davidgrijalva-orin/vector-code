@@ -143,7 +143,10 @@ Legacy note bodies project as first tabs without rewriting existing events; addi
 tabs use separate content revisions and native resources. Local page markers are
 not the future Graph rich-content contract. Recording manifests may retain a tab
 and page destination while existing manifests retain their first-tab meaning.
-Filing an already started capture into another document remains to be implemented.
+Local capture filing now validates the recording manifest, then commits its new
+destination and revisioned placement in one library journal event. Public library
+IPC cannot bypass the recording service. Original capture provenance stays
+unchanged; hosted transcript placement still requires shared contracts.
 Preserve old document clients and every existing note ID, body, history, recording
 reference and project association during further migration.
 

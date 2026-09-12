@@ -37,8 +37,9 @@ UUID. The editor places the cursor after that boundary. This provides explicit
 append/retry identity, not a rich paginated layout or a published Graph content
 format. Direct Markdown editing can intentionally remove the boundary; historical
 content and recording references remain available. A shared rich document/tab API,
-visual page rendering, and filing an already started capture into a different
-document/tab remain open. No local-to-Graph upload or transcription is performed.
+visual page rendering remain open. Local recordings can now be filed during or
+after capture through the recording API, which commits the destination and its
+placement together in the library journal. No local-to-Graph upload or transcription is performed.
 
 ## API and storage ownership
 
@@ -112,3 +113,9 @@ extension dependencies and compiling GitHub with its NodeNext configuration; the
 subsequent isolated startup log is clean. Packaged acceptance remains open, and
 source tests and startup logs are not a packaged release result. No production
 workspace has been used for mutation QA, and no local material is uploaded on sign-in.
+
+The internal `fileRecording` journal operation composes existing destination mutation
+logic and a recording-placement revision in one commit. It is reachable through the
+validated recording service, not the public library IPC mutation channel. Source
+capture provenance remains in the unchanged recording manifest; current placements
+are separate library relationships, so ongoing chunk saves cannot undo a filing.

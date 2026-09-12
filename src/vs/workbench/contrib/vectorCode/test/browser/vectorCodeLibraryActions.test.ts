@@ -7,6 +7,7 @@ import { deepStrictEqual, rejects, strictEqual } from 'assert';
 import { ICommandService, CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { URI } from '../../../../../base/common/uri.js';
+import { IVectorCodeRecordingsService } from '../../../../../platform/vectorCode/common/vectorCodeRecordings.js';
 import { IWorkspaceEditingService } from '../../../../services/workspaces/common/workspaceEditing.js';
 import { IWorkingCopyService } from '../../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
@@ -14,7 +15,7 @@ import { IQuickInputService } from '../../../../../platform/quickinput/common/qu
 import { IFileDialogService } from '../../../../../platform/dialogs/common/dialogs.js';
 import { IFileService } from '../../../../../platform/files/common/files.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { IVectorCodeLibraryService, LibraryMutation, LocalLibrary } from '../../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LocalLibrary, FileRecordingRequest } from '../../../../../platform/vectorCode/common/vectorCodeLibrary.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { TestStorageService } from '../../../../test/common/workbenchTestServices.js';
 import '../../browser/vectorCodeLibrary.contribution.js';
@@ -24,10 +25,11 @@ suite('VectorCode local work actions', () => {
 	function fixture(choices: (number | number[] | undefined)[], title: string | undefined) {
 		const inst = store.add(new TestInstantiationService());
 		const storage = store.add(new TestStorageService());
-		const writes: LibraryMutation[] = []; const editors: unknown[] = []; const commands: unknown[][] = []; const folders: string[] = [];
+		const filings: FileRecordingRequest[] = []; const writes: LibraryMutation[] = []; const editors: unknown[] = []; const commands: unknown[][] = []; const folders: string[] = [];
 		let fail = false; let dirty = false;
 		const library: LocalLibrary = { version: 1, projects: [], notes: [] };
 		inst.stub(IStorageService, storage);
+		inst.stub(IVectorCodeRecordingsService, { file: async (request: FileRecordingRequest) => { filings.push(request); if (fail) { throw new Error('Lost reply'); } const id = request.destination.kind === 'createNote' ? request.requestId : request.destination.id; return { recordingId: request.recordingId, noteId: id, tabId: id, revision: request.expectedPlacementRevision + 1 }; } } as unknown as IVectorCodeRecordingsService);
 		inst.stub(IWorkingCopyService, { isDirty: () => dirty } as unknown as IWorkingCopyService);
 		inst.stub(IWorkspaceEditingService, { addFolders: async (items: { uri: URI }[]) => { folders.push(...items.map(item => item.uri.toString())); } } as unknown as IWorkspaceEditingService);
 		inst.stub(ICommandService, { executeCommand: async (...args: unknown[]) => { commands.push(args); } } as unknown as ICommandService);
@@ -38,12 +40,23 @@ suite('VectorCode local work actions', () => {
 		} as unknown as IVectorCodeLibraryService);
 		inst.stub(IEditorService, { openEditor: async (input: unknown) => { editors.push(input); } } as unknown as IEditorService);
 		inst.stub(IFileService, {} as IFileService); inst.stub(IFileDialogService, {} as IFileDialogService);
-		return { writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
+		return { filings, runFile: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.fileLocalRecording')!.handler, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId }), writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
 	}
 	const documentId = '658d2b51-5118-46d4-8b60-bf1954501284';
 	function addDocument(f: ReturnType<typeof fixture>) {
 		f.library.notes.push({ id: documentId, title: 'Document', body: 'Original', revision: 4, contentRevision: 2, contentUpdatedAt: 1, createdAt: 1, updatedAt: 1, history: [], projectIds: [] });
 	}
+	test('filing a recording uses the capture API and resumes uncertain completion with the original request', async () => {
+		const f = fixture([2], 'Filed audio'); addDocument(f); f.setFail(true);
+		await rejects(f.runFile(), /Lost reply/); strictEqual(f.filings.length, 1); deepStrictEqual(f.writes, []);
+		f.setFail(false); f.choices.push(0); await f.run();
+		deepStrictEqual(f.filings[0], f.filings[1]); strictEqual(f.editors.length, 1);
+		strictEqual(f.filings[0].destination.kind, 'createNote'); strictEqual(f.filings[0].expectedPlacementRevision, 0);
+	});
+	test('canceling recording filing does not change its destination or begin another capture', async () => {
+		const f = fixture([undefined], 'Unused'); addDocument(f); await f.runFile();
+		deepStrictEqual(f.filings, []); deepStrictEqual(f.writes, []); deepStrictEqual(f.commands, []);
+	});
 	test('new note offers a page, internal tab or separate document and preserves canceled choices', async () => {
 		for (const choices of [[1, undefined], [1, 0, undefined], [1, 0, 0, undefined]]) {
 			const f = fixture(choices, 'Title'); addDocument(f); await f.run(); deepStrictEqual(f.writes, []);

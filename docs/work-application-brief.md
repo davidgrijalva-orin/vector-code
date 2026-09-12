@@ -108,9 +108,10 @@ The exact rich-content/page representation must follow the Graph-owned API desig
 The local implementation now exposes internal tabs and the three new-content
 destinations through service APIs and native pickers. Existing notes retain their
 identity as each document's first tab. Recording starts can retain a selected
-document/tab/page reference. Local page boundaries currently use Markdown markers,
+document/tab/page reference, and existing local recordings can be filed into a new
+destination during or after capture without restarting audio. Local page boundaries currently use Markdown markers,
 not a rich paginated layout. The native Graph adapter still saves a document body;
-shared Graph tab/page APIs, filing an existing capture into a different destination,
+shared Graph tab/page APIs, hosted transcript filing,
 rich editor navigation and full desktop acceptance remain open. See the
 [local library implementation](local-work-library.md) for exact evidence and limits.
 

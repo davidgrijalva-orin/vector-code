@@ -14,8 +14,12 @@ export interface LocalProject { id: string; title: string; folders: string[]; re
 export interface LocalNoteRevision { body: string; revision: number; updatedAt: number }
 export interface LocalDocumentTab extends LocalNoteRevision { id: string; title: string; contentRevision: number; contentUpdatedAt: number; createdAt: number; history: LocalNoteRevision[] }
 export interface LocalNote extends LocalNoteRevision { additionalTabs?: LocalDocumentTab[]; contentUpdatedAt: number; contentRevision: number; createdAt: number; id: string; title: string; projectIds: string[]; history: LocalNoteRevision[] }
-export interface LocalLibrary { version: 1; projects: LocalProject[]; notes: LocalNote[] }
+export type RecordingDestination = { kind: 'createNote'; title: string; projectIds: string[] } | { kind: 'createTab'; id: string; expectedRevision: number; title: string } | { kind: 'appendPage'; id: string; tabId: string; expectedRevision: number };
+export interface RecordingPlacement { recordingId: string; noteId: string; tabId: string; pageId?: string; revision: number }
+export interface FileRecordingRequest { version: 1; requestId: string; recordingId: string; expectedPlacementRevision: number; destination: RecordingDestination }
+export interface LocalLibrary { recordingPlacements?: RecordingPlacement[]; version: 1; projects: LocalProject[]; notes: LocalNote[] }
 export type LibraryMutation = { version: 1; requestId: string } & (
+	{ kind: 'fileRecording'; recordingId: string; sourceNoteId: string; expectedPlacementRevision: number; destination: RecordingDestination } |
 	{ kind: 'createProject'; title: string } |
 	{ kind: 'createNote'; title: string; projectIds: string[] } |
 	{ kind: 'saveNote'; id: string; expectedRevision: number; expectedContentRevision?: number; body: string } |
@@ -25,12 +29,27 @@ export type LibraryMutation = { version: 1; requestId: string } & (
 	(({ kind: 'renameNote' } | { kind: 'renameProject' }) & { id: string; expectedRevision: number; title: string }) |
 	{ kind: 'setFolders'; id: string; expectedRevision: number; folders: string[] }
 );
-export interface LibraryReceipt { id: string; revision: number; contentRevision?: number; tabId?: string; pageId?: string }
+export interface LibraryReceipt { id: string; revision: number; contentRevision?: number; tabId?: string; pageId?: string; placementRevision?: number }
 export interface IVectorCodeLibraryService {
 	readonly _serviceBrand: undefined;
 	read(): Promise<LocalLibrary>;
 	findNotes(query: string): Promise<LocalNote[]>;
 	mutate(request: LibraryMutation): Promise<LibraryReceipt>;
+}
+export function validateFileRecordingRequest(value: unknown): FileRecordingRequest {
+	if (!value || typeof value !== 'object') { throw new Error('Invalid recording filing request.'); }
+	const request = value as FileRecordingRequest;
+	if (request.version !== 1 || !Number.isSafeInteger(request.expectedPlacementRevision) || request.expectedPlacementRevision < 0) { throw new Error('Invalid recording placement revision.'); }
+	const requestId = localLibraryId(request.requestId);
+	const destination = request.destination;
+	if (!destination || !['createNote', 'createTab', 'appendPage'].includes(destination.kind)) { throw new Error('Choose a document destination.'); }
+	const validated = validateLibraryMutation({ ...destination, version: 1, requestId, ...(destination.kind === 'appendPage' ? { body: '' } : {}) });
+	let target: RecordingDestination;
+	if (validated.kind === 'createNote') { target = { kind: validated.kind, title: validated.title, projectIds: validated.projectIds }; }
+	else if (validated.kind === 'createTab') { target = { kind: validated.kind, id: validated.id, expectedRevision: validated.expectedRevision, title: validated.title }; }
+	else if (validated.kind === 'appendPage') { target = { kind: validated.kind, id: validated.id, tabId: validated.tabId, expectedRevision: validated.expectedRevision }; }
+	else { throw new Error('Invalid recording destination.'); }
+	return { version: 1, requestId, recordingId: localLibraryId(request.recordingId), expectedPlacementRevision: request.expectedPlacementRevision, destination: target };
 }
 /** The legacy body is the first tab, preserving editor URIs, histories and recording references. */
 export function localDocumentTabs(note: LocalNote): LocalDocumentTab[] {
@@ -58,6 +77,7 @@ export function validateLibraryMutation(value: unknown): LibraryMutation {
 	};
 	const base = { version: 1 as const, requestId: request.requestId };
 	switch (request.kind) {
+		case 'fileRecording': return { ...validateFileRecordingRequest(request), kind: 'fileRecording', sourceNoteId: localLibraryId(request.sourceNoteId) };
 		case 'createProject': return { ...base, kind: request.kind, title: title(request.title) };
 		case 'createNote': return { ...base, kind: request.kind, title: title(request.title), projectIds: ids(request.projectIds) };
 		case 'createTab': case 'saveTab': case 'appendPage': case 'saveNote': case 'assignNote': case 'setFolders': case 'renameNote': case 'renameProject': {
@@ -95,7 +115,7 @@ export class VectorCodeLibraryChannel implements IServerChannel {
 		if (!Array.isArray(args)) { throw new Error('Invalid local work arguments.'); }
 		if (command === 'read' && args.length === 0) { return await this.service.read() as T; }
 		if (command === 'findNotes' && args.length === 1 && typeof args[0] === 'string') { return await this.service.findNotes(args[0]) as T; }
-		if (command === 'mutate' && args.length === 1) { return await this.service.mutate(validateLibraryMutation(args[0])) as T; }
+		if (command === 'mutate' && args.length === 1) { const request = validateLibraryMutation(args[0]); if (request.kind === 'fileRecording') { throw new Error('Use the recording API to validate capture identity before filing.'); } return await this.service.mutate(request) as T; }
 		throw new Error('Unsupported local work operation.');
 	}
 }

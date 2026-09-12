@@ -7,14 +7,15 @@ import { Event } from '../../../base/common/event.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
 import { IServerChannel } from '../../../base/parts/ipc/common/ipc.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { localLibraryId } from './vectorCodeLibrary.js';
+import { localLibraryId, FileRecordingRequest, RecordingPlacement, validateFileRecordingRequest } from './vectorCodeLibrary.js';
 
 export const VECTOR_CODE_RECORDINGS_CHANNEL = 'vectorCodeRecordingsV1';
 export const IVectorCodeRecordingsService = createDecorator<IVectorCodeRecordingsService>('vectorCodeRecordingsService');
 export interface RecordingStart { version: 1; id: string; noteId: string; mimeType: string; tabId?: string; pageId?: string }
-export interface LocalRecording extends RecordingStart { createdAt: number; status: 'capturing' | 'stopped'; chunks: number; bytes: number; durationMs?: number }
+export interface LocalRecording extends RecordingStart { placement?: RecordingPlacement; createdAt: number; status: 'capturing' | 'stopped'; chunks: number; bytes: number; durationMs?: number }
 export interface IVectorCodeRecordingsService {
 	readonly _serviceBrand: undefined;
+	file(request: FileRecordingRequest): Promise<RecordingPlacement>;
 	begin(request: RecordingStart): Promise<LocalRecording>;
 	append(id: string, sequence: number, data: VSBuffer): Promise<number>;
 	finish(id: string, chunks: number, durationMs: number): Promise<LocalRecording>;
@@ -36,6 +37,7 @@ export class VectorCodeRecordingsChannel implements IServerChannel {
 	listen<T>(): Event<T> { throw new Error('Unsupported recording event.'); }
 	async call<T>(_context: unknown, command: string, args: unknown): Promise<T> {
 		if (!Array.isArray(args)) { throw new Error('Invalid recording arguments.'); }
+		if (command === 'file' && args.length === 1) { return await this.service.file(validateFileRecordingRequest(args[0])) as T; }
 		if (command === 'begin' && args.length === 1) { return await this.service.begin(validateRecordingStart(args[0])) as T; }
 		if (command === 'append' && args.length === 3 && args[2] instanceof VSBuffer) { return await this.service.append(localLibraryId(args[0]), recordingSequence(args[1]), args[2]) as T; }
 		if (command === 'finish' && args.length === 3) { return await this.service.finish(localLibraryId(args[0]), recordingSequence(args[1]), args[2]) as T; }

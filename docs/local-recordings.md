@@ -90,5 +90,35 @@ Old manifests without these fields refer to the original first tab. Audio chunks
 capture identity and timestamps are unchanged by document project membership.
 Page/tab creation is committed before microphone acquisition; if acquisition fails,
 the empty destination remains available and no successful audio capture is claimed.
-This is destination selection at capture start, not transcription or a completed
-move/filing workflow for an already started recording.
+This is local audio organization; transcription remains a separate capability.
+
+## File during or after capture
+
+Open a document's recordings, select a capturing, unfinished or completed recording,
+and choose **File in another document or tab**. The destination picker offers a new
+page in an existing tab, a new tab, or a new document. Canceling the picker has no
+effect. Filing uses the recording API, which verifies the capture manifest before
+calling an internal library mutation; the library IPC channel rejects attempts to
+bypass that verification.
+
+The destination creation/append and the current recording placement are committed
+in one library journal event, with target and placement revision checks and a stable
+request/receipt. A stale filing fails without leaving another page or document. A
+lost reply can be retried from **Open Local Work** after restart without duplication.
+The retained request must finish before starting another uncertain local action.
+
+The original capture ID, source document/tab/page, timestamps, chunks and processing
+lifetime remain unchanged. Current placement is a separate revisioned relationship;
+listing uses it, while returned recording data retains both current placement and
+original provenance. Chunk appends and stop continue through the original capture ID.
+The original document and any separately typed text remain available; this action
+moves the recording relationship, not the source document's text. It does not copy,
+delete or reprocess audio, and it does not implement hosted transcript filing.
+
+Filing validation: 34 Node tests and 79 Chromium tests pass with native TypeScript,
+client transpile, changed-file ESLint and layer checks. Tests include capture
+continuing before/after filing, immutable source provenance, atomic failed commits,
+lost replies after commit with restart, stale placement/target rejection, public
+IPC bypass rejection, canceled UI choices and retained-request recovery. The fresh
+desktop candidate starts with isolated profile paths, but the Mac remains locked;
+no visible or physical-device acceptance is claimed.

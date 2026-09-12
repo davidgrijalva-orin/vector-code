@@ -26,15 +26,32 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		if (prior.fingerprint !== fingerprint) { throw new Error('This request was already used for a different change.'); }
 		return prior.result;
 	}
+	const result = applyChange(state, request, event.at);
+	state.receipts.set(request.requestId, { fingerprint, result });
+	return result;
+}
+/** Compound recording filing and its destination commit in the same library event. */
+function applyChange(state: LibraryState, request: LibraryMutation, at: number): LibraryReceipt {
 	const { projects, notes } = state.library;
 	const checkProjects = (ids: string[]) => { if (ids.some(id => !projects.some(project => project.id === id))) { throw new Error('A selected project no longer exists.'); } };
 	let result: LibraryReceipt;
-	if (request.kind === 'createProject') {
+	if (request.kind === 'fileRecording') {
+		if (!notes.some(note => note.id === request.sourceNoteId)) { throw new Error('The recording source document does not exist.'); }
+		const placements = state.library.recordingPlacements ?? [];
+		const previous = placements.find(placement => placement.recordingId === request.recordingId);
+		if ((previous?.revision ?? 0) !== request.expectedPlacementRevision) { throw new Error('This recording was filed elsewhere. Refresh its destination before retrying.'); }
+		const destination = request.destination;
+		const target = validateLibraryMutation({ ...destination, version: 1, requestId: request.requestId, ...(destination.kind === 'appendPage' ? { body: '' } : {}) });
+		result = applyChange(state, target, at);
+		const placement = { recordingId: request.recordingId, noteId: result.id, tabId: result.tabId ?? result.id, ...(result.pageId ? { pageId: result.pageId } : {}), revision: (previous?.revision ?? 0) + 1 };
+		state.library.recordingPlacements = [...placements.filter(item => item.recordingId !== request.recordingId), placement];
+		result = { ...result, tabId: placement.tabId, placementRevision: placement.revision };
+	} else if (request.kind === 'createProject') {
 		projects.push({ id: request.requestId, title: request.title, folders: [], revision: 1 });
 		result = { id: request.requestId, revision: 1 };
 	} else if (request.kind === 'createNote') {
 		checkProjects(request.projectIds);
-		notes.push({ id: request.requestId, title: request.title, projectIds: request.projectIds, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: event.at, createdAt: event.at, updatedAt: event.at, history: [] });
+		notes.push({ id: request.requestId, title: request.title, projectIds: request.projectIds, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: at, createdAt: at, updatedAt: at, history: [] });
 		result = { id: request.requestId, revision: 1 };
 	} else if (request.kind === 'createTab' || request.kind === 'saveTab' || request.kind === 'appendPage') {
 		const note = notes.find(note => note.id === request.id);
@@ -42,18 +59,18 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		if (request.kind === 'createTab') {
 			if (note.revision !== request.expectedRevision) { throw new Error('This document changed in another window. Reload before adding a tab.'); }
 			if ((note.additionalTabs?.length ?? 0) >= 99) { throw new Error('Documents support up to 100 tabs.'); }
-			(note.additionalTabs ??= []).push({ id: request.requestId, title: request.title, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: event.at, createdAt: event.at, updatedAt: event.at, history: [] });
+			(note.additionalTabs ??= []).push({ id: request.requestId, title: request.title, body: '', revision: 1, contentRevision: 1, contentUpdatedAt: at, createdAt: at, updatedAt: at, history: [] });
 			result = { id: note.id, tabId: request.requestId, revision: note.revision + 1, contentRevision: 1 };
 		} else {
 			const tab = request.tabId === note.id ? note : note.additionalTabs?.find(tab => tab.id === request.tabId);
 			if (!tab) { throw new Error('The document tab does not exist.'); }
 			if (tab.contentRevision !== request.expectedRevision) { throw new Error('This tab changed in another window. Preserve your draft and reload before retrying.'); }
 			const body = request.kind === 'appendPage' ? tab.body + localPageBreak(request.requestId) + request.body : request.body;
-			saveContent(tab, body, event.at);
+			saveContent(tab, body, at);
 			if (tab !== note) { tab.revision = tab.contentRevision; tab.updatedAt = tab.contentUpdatedAt; }
 			result = { id: note.id, tabId: request.tabId, revision: note.revision + 1, contentRevision: tab.contentRevision, ...(request.kind === 'appendPage' ? { pageId: request.requestId } : {}) };
 		}
-		note.revision++; note.updatedAt = Math.max(event.at, note.updatedAt + 1);
+		note.revision++; note.updatedAt = Math.max(at, note.updatedAt + 1);
 	} else {
 		const item = request.kind === 'setFolders' || request.kind === 'renameProject' ? projects.find(project => project.id === request.id) : notes.find(note => note.id === request.id);
 		if (!item) { throw new Error('The local work item does not exist.'); }
@@ -64,14 +81,13 @@ function apply(state: LibraryState, event: LibraryEvent): LibraryReceipt {
 		if (hasKey(item, { body: true })) {
 			if (request.kind === 'assignNote') { checkProjects(request.projectIds); item.projectIds = request.projectIds; }
 			if (request.kind === 'saveNote') {
-				saveContent(item, request.body, event.at);
+				saveContent(item, request.body, at);
 			}
-			item.updatedAt = Math.max(event.at, item.updatedAt + 1);
+			item.updatedAt = Math.max(at, item.updatedAt + 1);
 		}
 		item.revision++;
 		result = { id: item.id, revision: item.revision, ...(hasKey(item, { contentRevision: true }) ? { contentRevision: item.contentRevision } : {}) };
 	}
-	state.receipts.set(request.requestId, { fingerprint, result });
 	return result;
 }
 /** One main-process owner serializes windows. The committed journal is the durable source of truth. */

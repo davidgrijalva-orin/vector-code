@@ -7,7 +7,7 @@ import { promises as fs } from 'fs';
 import { createHash } from 'crypto';
 import { join } from '../../../base/common/path.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
-import { IVectorCodeLibraryService, localLibraryId, localDocumentTabs, localPageBreak } from '../common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, localLibraryId, localDocumentTabs, localPageBreak, FileRecordingRequest, RecordingPlacement, validateFileRecordingRequest } from '../common/vectorCodeLibrary.js';
 import { IVectorCodeRecordingsService, LocalRecording, RecordingStart, recordingSequence, validateRecordingStart } from '../common/vectorCodeRecordings.js';
 import { writeLocalWorkFile } from './vectorCodeLocalFile.js';
 
@@ -30,6 +30,18 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 		return value;
 	}
 	private async save(manifest: Manifest): Promise<void> { await writeLocalWorkFile(this.path(manifest.recording.id, 'recording.json'), JSON.stringify(manifest)); }
+	private async describe(recording: LocalRecording): Promise<LocalRecording> {
+		const placement = (await this.library.read()).recordingPlacements?.find(placement => placement.recordingId === recording.id);
+		return { ...recording, ...(placement ? { placement } : {}) };
+	}
+	file(input: FileRecordingRequest): Promise<RecordingPlacement> {
+		const request = validateFileRecordingRequest(input);
+		return this.serial(async () => {
+			const { recording } = await this.manifest(request.recordingId);
+			const receipt = await this.library.mutate({ ...request, kind: 'fileRecording', sourceNoteId: recording.noteId });
+			return { recordingId: recording.id, noteId: receipt.id, tabId: receipt.tabId!, ...(receipt.pageId ? { pageId: receipt.pageId } : {}), revision: receipt.placementRevision! };
+		});
+	}
 	begin(input: RecordingStart): Promise<LocalRecording> {
 		const request = validateRecordingStart(input);
 		return this.serial(async () => {
@@ -38,13 +50,13 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 			try {
 				const { recording } = await this.manifest(request.id);
 				if (recording.noteId !== request.noteId || recording.mimeType !== request.mimeType || recording.tabId !== request.tabId || recording.pageId !== request.pageId) { throw new Error('This recording identity was used for a different capture.'); }
-				return recording;
+				return this.describe(recording);
 			} catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { throw error; } }
 			const tab = localDocumentTabs(note).find(tab => tab.id === (request.tabId ?? note.id));
 			if (!tab || (request.pageId && !tab.body.includes(localPageBreak(request.pageId)))) { throw new Error('The recording destination tab or page no longer exists.'); }
 			const recording: LocalRecording = { ...request, createdAt: Date.now(), status: 'capturing', chunks: 0, bytes: 0 };
 			await this.save({ recording, parts: [] });
-			return recording;
+			return this.describe(recording);
 		});
 	}
 	append(id: string, sequence: number, content: VSBuffer): Promise<number> {
@@ -74,9 +86,9 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 			const manifest = await this.manifest(id);
 			if (!chunks) { throw new Error('No audio was captured. Try recording again.'); }
 			if (manifest.recording.chunks !== chunks) { throw new Error('Some audio has not been saved. Keep the recording open and retry.'); }
-			if (manifest.recording.status === 'stopped') { return manifest.recording; }
+			if (manifest.recording.status === 'stopped') { return this.describe(manifest.recording); }
 			manifest.recording.status = 'stopped'; manifest.recording.durationMs = durationMs;
-			await this.save(manifest); return manifest.recording;
+			await this.save(manifest); return this.describe(manifest.recording);
 		});
 	}
 	list(noteId: string): Promise<LocalRecording[]> {
@@ -85,11 +97,13 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 			let entries;
 			try { entries = await fs.readdir(this.directory, { withFileTypes: true }); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return []; } throw error; }
 			const recordings: LocalRecording[] = [];
+			const placements = (await this.library.read()).recordingPlacements ?? [];
 			for (const entry of entries) {
 				if (!entry.isDirectory() || !/^[a-f0-9-]{36}$/.test(entry.name)) { continue; }
 				let recording: LocalRecording;
 				try { recording = (await this.manifest(entry.name)).recording; } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { continue; } throw error; }
-				if (recording.noteId === noteId) { recordings.push(recording); }
+				const placement = placements.find(placement => placement.recordingId === recording.id);
+				if ((placement?.noteId ?? recording.noteId) === noteId) { recordings.push({ ...recording, ...(placement ? { placement } : {}) }); }
 			}
 			return recordings.sort((a, b) => b.createdAt - a.createdAt);
 		});
@@ -105,7 +119,7 @@ export class VectorCodeRecordings implements IVectorCodeRecordingsService {
 				if (bytes.byteLength !== manifest.parts[index].bytes || hash(bytes) !== manifest.parts[index].hash) { throw new Error('A saved audio chunk is damaged. The original files have been preserved.'); }
 				buffers.push(VSBuffer.wrap(bytes));
 			}
-			return { recording: manifest.recording, data: VSBuffer.concat(buffers) };
+			return { recording: await this.describe(manifest.recording), data: VSBuffer.concat(buffers) };
 		});
 	}
 }

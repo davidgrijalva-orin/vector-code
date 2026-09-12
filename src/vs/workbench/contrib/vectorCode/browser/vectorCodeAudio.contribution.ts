@@ -6,6 +6,7 @@
 import { localize2 } from '../../../../nls.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { Event } from '../../../../base/common/event.js';
+import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { INotificationService, INotificationHandle, Severity } from '../../../../platform/notification/common/notification.js';
@@ -39,13 +40,14 @@ registerAction2(class extends Action2 {
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.localNoteRecordings', title: localize2('localNoteRecordings', 'Work: Open Recordings in a Local Note'), f1: false }); }
 	async run(accessor: ServicesAccessor, noteId: string): Promise<void> {
-		const recordings = accessor.get(IVectorCodeRecordingsService); const audio = accessor.get(IVectorCodeAudioService); const quick = accessor.get(IQuickInputService); const dialogs = accessor.get(IFileDialogService); const files = accessor.get(IFileService);
+		const commands = accessor.get(ICommandService); const recordings = accessor.get(IVectorCodeRecordingsService); const audio = accessor.get(IVectorCodeAudioService); const quick = accessor.get(IQuickInputService); const dialogs = accessor.get(IFileDialogService); const files = accessor.get(IFileService);
 		const items = await recordings.list(noteId);
 		const selected = await quick.pick(items.map(recording => ({ label: new Date(recording.createdAt).toLocaleString(), description: recording.status === 'stopped' ? 'Saved recording' : 'Unfinished recording · saved audio can be recovered', recording })), { placeHolder: 'Audio attached to this note' });
 		if (!selected) { return; }
-		const action = await quick.pick([{ label: 'Play saved audio', play: true }, { label: 'Export saved audio as WebM…', play: false }], { placeHolder: 'An interrupted recording may contain only the successfully saved audio.' });
+		const action = await quick.pick([{ label: 'Play saved audio', kind: 'play' }, { label: 'Export saved audio as WebM…', kind: 'export' }, { label: 'File in another document or tab…', kind: 'file' }], { placeHolder: 'An interrupted recording may contain only the successfully saved audio.' });
 		if (!action) { return; }
-		if (action.play) { await audio.play(selected.recording.id); return; }
+		if (action.kind === 'file') { await commands.executeCommand('vectorCode.fileLocalRecording', selected.recording); return; }
+		if (action.kind === 'play') { await audio.play(selected.recording.id); return; }
 		const target = await dialogs.showSaveDialog({ title: 'Export saved recording', filters: [{ name: 'WebM audio', extensions: ['webm'] }] });
 		if (target) { const { data } = await recordings.read(selected.recording.id); await files.writeFile(target, data); }
 	}

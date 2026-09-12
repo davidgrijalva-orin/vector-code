@@ -16,7 +16,8 @@ import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject, localDocumentTabs, localPageBreak } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeLibraryService, LibraryMutation, LocalNote, LocalProject, localDocumentTabs, FileRecordingRequest, RecordingDestination, LibraryReceipt, validateLibraryMutation, localPageBreak } from '../../../../platform/vectorCode/common/vectorCodeLibrary.js';
+import { IVectorCodeRecordingsService, LocalRecording } from '../../../../platform/vectorCode/common/vectorCodeRecordings.js';
 import { IWorkspaceEditingService } from '../../../services/workspaces/common/workspaceEditing.js';
 import { IWorkingCopyService } from '../../../services/workingCopy/common/workingCopyService.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
@@ -30,16 +31,22 @@ class LocalLibraryContribution extends Disposable {
 registerWorkbenchContribution2(LocalLibraryContribution.ID, LocalLibraryContribution, WorkbenchPhase.BlockStartup);
 const pendingKey = 'vectorCode.localLibrary.pending';
 function context(accessor: ServicesAccessor) {
-	return { workingCopies: accessor.get(IWorkingCopyService), workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
+	return { recordings: accessor.get(IVectorCodeRecordingsService), workingCopies: accessor.get(IWorkingCopyService), workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
 }
 type LocalWorkContext = ReturnType<typeof context>;
 
-async function mutate(value: LocalWorkContext, request: LibraryMutation) {
+type PendingChange = LibraryMutation | { kind: 'fileRecordingRequest'; request: FileRecordingRequest };
+async function executeChange(value: LocalWorkContext, request: PendingChange): Promise<LibraryReceipt> {
+	if (request.kind !== 'fileRecordingRequest') { return value.library.mutate(request); }
+	const placement = await value.recordings.file(request.request);
+	return { id: placement.noteId, tabId: placement.tabId, pageId: placement.pageId, revision: placement.revision };
+}
+async function mutate(value: LocalWorkContext, request: PendingChange) {
 	const storage = value.storage;
 	if (storage.getObject(pendingKey, StorageScope.WORKSPACE)) { throw new Error('Open Local Work and retry the pending change first.'); }
 	storage.store(pendingKey, request, StorageScope.WORKSPACE, StorageTarget.MACHINE);
 	await storage.flush();
-	const result = await value.library.mutate(request);
+	const result = await executeChange(value, request);
 	storage.remove(pendingKey, StorageScope.WORKSPACE);
 	await storage.flush();
 	return result;
@@ -51,36 +58,57 @@ async function create(value: LocalWorkContext, kind: 'createProject' | 'createNo
 	const result = await mutate(value, kind === 'createProject' ? { ...request, kind } : { ...request, kind, projectIds });
 	if (kind === 'createNote') { await value.editors.openEditor({ resource: localNoteResource(result.id), label: title, options: { pinned: true } }); if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', result.id); } }
 }
-async function addDocumentContent(value: LocalWorkContext, note?: LocalNote, projectIds: string[] = [], record = false) {
+async function chooseDocumentDestination(value: LocalWorkContext, note?: LocalNote, projectIds: string[] = [], record = false): Promise<RecordingDestination | undefined> {
 	const documents = (await value.library.read()).notes;
-	if (!note && !documents.length) { return create(value, 'createNote', projectIds, record); }
-	const destination = await value.quick.pick([
+	const choice = documents.length || note ? await value.quick.pick([
 		{ label: 'Next page in an existing document tab', kind: 'appendPage' as const },
 		{ label: 'New tab in an existing document', kind: 'createTab' as const },
 		{ label: 'New document', kind: 'createNote' as const }
-	], { title: record ? 'Where should this recording go?' : 'Where should the new note go?' });
-	if (!destination) { return; }
-	if (destination.kind === 'createNote') { return create(value, 'createNote', projectIds, record); }
+	], { title: record ? 'Where should this recording go?' : 'Choose a document destination' }) : { kind: 'createNote' as const };
+	if (!choice) { return; }
+	if (choice.kind === 'createNote') {
+		const title = record ? 'Recording ' + new Date().toLocaleString() : await value.quick.input({ prompt: 'Name the new document.', validateInput: async text => !text.trim() || text.length > 1000 ? 'Enter a title of at most 1000 characters.' : undefined });
+		return title ? { kind: 'createNote', title, projectIds } : undefined;
+	}
 	if (!note) {
 		const selected = await value.quick.pick(documents.map(note => ({ label: note.title, note })), { placeHolder: 'Choose the document.' });
 		if (!selected) { return; } note = selected.note;
 	}
-	if (destination.kind === 'createTab') {
+	if (choice.kind === 'createTab') {
 		const title = await value.quick.input({ prompt: 'Name the new document tab.', validateInput: async text => !text.trim() || text.length > 1000 ? 'Enter a title of at most 1000 characters.' : undefined });
-		if (!title) { return; }
-		const receipt = await mutate(value, { version: 1, requestId: generateUuid(), kind: 'createTab', id: note.id, expectedRevision: note.revision, title });
-		await value.editors.openEditor({ resource: localNoteResource(note.id, receipt.tabId), label: note.title + ' · ' + title, options: { pinned: true } });
-		if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', note.id, receipt.tabId); }
-	} else {
-		const selected = await value.quick.pick(localDocumentTabs(note).map(tab => ({ label: tab.title, tab })), { placeHolder: 'Choose the tab to append to.' });
-		if (!selected) { return; }
-		const resource = localNoteResource(note.id, selected.tab.id);
-		if (value.workingCopies.isDirty(resource)) { throw new Error('Save or preserve the open draft in this tab before adding a page.'); }
-		const receipt = await mutate(value, { version: 1, requestId: generateUuid(), kind: 'appendPage', id: note.id, tabId: selected.tab.id, expectedRevision: selected.tab.contentRevision, body: '' });
-		await value.editors.openEditor({ resource, label: note.title + ' · ' + selected.tab.title, options: { pinned: true, forceReload: true, selection: { startLineNumber: (selected.tab.body + localPageBreak(receipt.pageId!)).split('\n').length, startColumn: 1 } } });
-		if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', note.id, selected.tab.id, receipt.pageId); }
+		return title ? { kind: 'createTab', id: note.id, expectedRevision: note.revision, title } : undefined;
 	}
+	const selected = await value.quick.pick(localDocumentTabs(note).map(tab => ({ label: tab.title, tab })), { placeHolder: 'Choose the tab to append to.' });
+	if (!selected) { return; }
+	if (value.workingCopies.isDirty(localNoteResource(note.id, selected.tab.id))) { throw new Error('Save or preserve the open draft in this tab before adding a page.'); }
+	return { kind: 'appendPage', id: note.id, tabId: selected.tab.id, expectedRevision: selected.tab.contentRevision };
 }
+async function openDestination(value: LocalWorkContext, receipt: LibraryReceipt): Promise<void> {
+	const note = (await value.library.read()).notes.find(note => note.id === receipt.id);
+	const tab = note && localDocumentTabs(note).find(tab => tab.id === (receipt.tabId ?? note.id));
+	const marker = receipt.pageId ? localPageBreak(receipt.pageId) : undefined;
+	const offset = marker && tab ? tab.body.indexOf(marker) : -1;
+	const selection = offset >= 0 && marker && tab ? { startLineNumber: tab.body.slice(0, offset + marker.length).split('\n').length, startColumn: 1 } : undefined;
+	await value.editors.openEditor({ resource: localNoteResource(receipt.id, receipt.tabId), label: note ? note.title + ' · ' + (tab?.title ?? 'Notes') : undefined, options: { pinned: true, forceReload: !!receipt.pageId, selection } });
+}
+async function addDocumentContent(value: LocalWorkContext, note?: LocalNote, projectIds: string[] = [], record = false) {
+	const destination = await chooseDocumentDestination(value, note, projectIds, record);
+	if (!destination) { return; }
+	const request = validateLibraryMutation({ ...destination, version: 1, requestId: generateUuid(), ...(destination.kind === 'appendPage' ? { body: '' } : {}) });
+	const receipt = await mutate(value, request);
+	await openDestination(value, receipt);
+	if (record) { await value.commands.executeCommand('vectorCode.recordLocalNote', receipt.id, receipt.tabId, receipt.pageId); }
+}
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.fileLocalRecording', title: localize2('fileLocalRecording', 'Work: File a Recording in a Document'), f1: false }); }
+	async run(accessor: ServicesAccessor, recording: LocalRecording): Promise<void> {
+		const value = context(accessor);
+		const destination = await chooseDocumentDestination(value);
+		if (!destination) { return; }
+		const receipt = await mutate(value, { kind: 'fileRecordingRequest', request: { version: 1, requestId: generateUuid(), recordingId: recording.id, expectedPlacementRevision: recording.placement?.revision ?? 0, destination } });
+		await openDestination(value, receipt);
+	}
+});
 async function openDocument(value: LocalWorkContext, note: LocalNote) {
 	const tabs = localDocumentTabs(note);
 	const tab = tabs.length === 1 ? tabs[0] : (await value.quick.pick(tabs.map(tab => ({ label: tab.title, tab })), { title: note.title, placeHolder: 'Open a document tab.' }))?.tab;
@@ -153,11 +181,11 @@ registerAction2(class extends Action2 {
 	async run(accessor: ServicesAccessor): Promise<void> {
 		const value = context(accessor);
 		const quick = value.quick; const service = value.library; const storage = value.storage;
-		const pending = storage.getObject<LibraryMutation>(pendingKey, StorageScope.WORKSPACE);
+		const pending = storage.getObject<PendingChange>(pendingKey, StorageScope.WORKSPACE);
 		if (pending) {
 			const retry = await quick.pick([{ label: 'Retry pending change', retry: true, dismiss: false }, { label: 'Keep the pending change for later', retry: false, dismiss: false }, { label: 'Dismiss request and inspect saved work', retry: false, dismiss: true }], { placeHolder: 'The previous change may have been saved. Retry safely with its original identity.' });
 			if (retry?.dismiss) { storage.remove(pendingKey, StorageScope.WORKSPACE); }
-			if (retry?.retry) { await service.mutate(pending); storage.remove(pendingKey, StorageScope.WORKSPACE); }
+			if (retry?.retry) { const receipt = await executeChange(value, pending); storage.remove(pendingKey, StorageScope.WORKSPACE); await storage.flush(); if (pending.kind === 'fileRecordingRequest') { await openDestination(value, receipt); } }
 			return;
 		}
 		const library = await service.read();

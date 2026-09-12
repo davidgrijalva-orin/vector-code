@@ -10,6 +10,7 @@ import { join } from '../../../../base/common/path.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { VSBuffer } from '../../../../base/common/buffer.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
+import { FileRecordingRequest, VectorCodeLibraryChannel, IVectorCodeLibraryService, LibraryMutation } from '../../common/vectorCodeLibrary.js';
 import { VectorCodeLibrary } from '../../node/vectorCodeLibrary.js';
 import { VectorCodeRecordings } from '../../node/vectorCodeRecordings.js';
 import { RecordingStart, VectorCodeRecordingsChannel } from '../../common/vectorCodeRecordings.js';
@@ -25,6 +26,63 @@ suite('VectorCode durable local recordings', () => {
 		request = { version: 1, id: generateUuid(), noteId: note.id, mimeType: 'audio/webm;codecs=opus' };
 	});
 	teardown(async () => { await fs.rm(directory, { recursive: true, force: true }); });
+	test('filing during capture atomically creates a destination and preserves original audio and provenance', async () => {
+		const started = await service.begin(request); await service.append(request.id, 0, VSBuffer.fromString('before'));
+		const filing: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createNote', title: 'Filed recording', projectIds: [] } };
+		const placed = await service.file(filing);
+		await service.append(request.id, 1, VSBuffer.fromString('after')); await service.finish(request.id, 2, 2000);
+		service = new VectorCodeRecordings(join(directory, 'audio'), new VectorCodeLibrary(join(directory, 'library')));
+		deepStrictEqual(await service.file(filing), placed);
+		strictEqual((await service.list(request.noteId)).length, 0);
+		strictEqual((await service.list(placed.noteId)).length, 1);
+		const result = await service.read(request.id);
+		strictEqual(result.recording.noteId, request.noteId); strictEqual(result.recording.createdAt, started.createdAt);
+		strictEqual(result.data.toString(), 'beforeafter'); deepStrictEqual(result.recording.placement, placed);
+		strictEqual((await new VectorCodeLibrary(join(directory, 'library')).read()).notes.length, 2);
+	});
+	test('a lost reply after filing commits reconciles to the original receipt after restart', async () => {
+		await service.begin(request);
+		const filing: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createNote', title: 'Only once', projectIds: [] } };
+		const uncertain = new VectorCodeRecordings(join(directory, 'audio'), { read: () => library.read(), mutate: async (request: LibraryMutation) => { await library.mutate(request); throw new Error('Reply lost after commit'); } } as unknown as IVectorCodeLibraryService);
+		await rejects(uncertain.file(filing), /Reply lost/);
+		service = new VectorCodeRecordings(join(directory, 'audio'), new VectorCodeLibrary(join(directory, 'library')));
+		const receipt = await service.file(filing);
+		strictEqual(receipt.noteId, filing.requestId); strictEqual((await service.list(receipt.noteId)).length, 1);
+		strictEqual((await new VectorCodeLibrary(join(directory, 'library')).read()).notes.length, 2);
+		deepStrictEqual((await service.begin(request)).placement, receipt);
+	});
+	test('page/tab filing rejects stale placement and target revisions without creating duplicate destinations', async () => {
+		await service.begin(request);
+		const first: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createTab', id: request.noteId, expectedRevision: 1, title: 'Meetings' } };
+		const placed = await service.file(first);
+		const page: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 1, destination: { kind: 'appendPage', id: placed.noteId, tabId: placed.tabId, expectedRevision: 1 } };
+		const second = await service.file(page);
+		deepStrictEqual(await service.file(first), placed); deepStrictEqual(await service.file(page), second);
+		await rejects(service.file({ ...first, requestId: generateUuid() }), /filed elsewhere/);
+		await rejects(service.file({ ...page, requestId: generateUuid(), expectedPlacementRevision: 2 }), /changed in another window/);
+		await rejects(service.file({ ...first, destination: { ...first.destination, kind: 'createNote', title: 'Different', projectIds: [] } }), /different change/);
+		const saved = await library.read(); strictEqual(saved.notes.length, 1); strictEqual(saved.notes[0].additionalTabs?.length, 1);
+		deepStrictEqual(saved.recordingPlacements, [second]);
+	});
+	test('failed compound commit preserves both destination and placement, and the same request can retry', async () => {
+		await service.begin(request);
+		const filing: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createNote', title: 'Destination', projectIds: [] } };
+		const before = await library.read();
+		await fs.mkdir(join(directory, 'library', 'library-v1.json.pending'));
+		await rejects(service.file(filing)); deepStrictEqual(await library.read(), before);
+		await fs.rmdir(join(directory, 'library', 'library-v1.json.pending'));
+		const placed = await service.file(filing);
+		strictEqual(placed.noteId, filing.requestId); strictEqual((await library.read()).notes.length, 2);
+	});
+	test('filing validates capture identity through the recordings API and cannot bypass it through library IPC', async () => {
+		const filing: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createNote', title: 'Destination', projectIds: [] } };
+		await rejects(service.file(filing));
+		await rejects(new VectorCodeLibraryChannel(library).call(undefined, 'mutate', [{ ...filing, kind: 'fileRecording', sourceNoteId: request.noteId }]), /recording API/);
+		strictEqual((await library.read()).notes.length, 1);
+		await service.begin(request);
+		const channel = new VectorCodeRecordingsChannel(service);
+		const placed = await channel.call(undefined, 'file', [filing]); deepStrictEqual(placed, await service.file(filing));
+	});
 	test('recordings retain their tab and page destination across restart without duplicating capture', async () => {
 		const tab = await library.mutate({ version: 1, requestId: generateUuid(), kind: 'createTab', id: request.noteId, expectedRevision: 1, title: 'Meetings' });
 		const page = await library.mutate({ version: 1, requestId: generateUuid(), kind: 'appendPage', id: request.noteId, tabId: tab.tabId!, expectedRevision: 1, body: '' });

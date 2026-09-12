@@ -90,6 +90,34 @@ describe('resolveVectorUpdate', () => {
     });
   });
 
+  it('rejects an unknown newer local commit against the stale published feed', () => {
+    for (const commit of ['local-newer-commit', '0.1.0', '']) {
+      assert.deepEqual(resolveVectorUpdate(feed, { platform: 'darwin-arm64', quality: 'stable', commit }), { statusCode: 204 });
+    }
+  });
+
+  it('requires known history in the requested quality and platform', () => {
+    for (const override of [{ quality: 'insider' }, { assets: { 'win32-x64': { url: 'https://example.com/app.zip' } } }]) {
+      const mismatched = { ...feed, releases: [feed.releases[0], { ...feed.releases[1], ...override }] };
+      assert.deepEqual(resolveVectorUpdate(mismatched, { platform: 'darwin-arm64', quality: 'stable', commit: 'old-commit' }), { statusCode: 204 });
+    }
+  });
+
+  it('orders distinct commits sharing a version by release timestamp', () => {
+    const sameVersion = { ...feed, releases: feed.releases.map(release => ({ ...release, version: '1.122.5' })) };
+    assert.equal(resolveVectorUpdate(sameVersion, { platform: 'darwin-arm64', quality: 'stable', commit: 'old-commit' }).statusCode, 200);
+    assert.equal(resolveVectorUpdate(sameVersion, { platform: 'darwin-arm64', quality: 'stable', commit: 'new-commit' }).statusCode, 204);
+    const stale = { ...sameVersion, releases: [sameVersion.releases[1]] };
+    assert.equal(resolveVectorUpdate(stale, { platform: 'darwin-arm64', quality: 'stable', commit: 'new-commit' }).statusCode, 204);
+  });
+
+  it('rejects equally dated or ambiguous latest builds', () => {
+    const tied = { ...feed, releases: [...feed.releases, { ...feed.releases[0], commit: 'other-commit' }] };
+    for (const commit of ['old-commit', 'new-commit', 'other-commit']) {
+      assert.equal(resolveVectorUpdate(tied, { platform: 'darwin-arm64', quality: 'stable', commit }).statusCode, 204);
+    }
+  });
+
   it('returns 204 when no asset exists for the requested platform', () => {
     assert.deepEqual(resolveVectorUpdate(feed, {
       platform: 'win32-x64-user',
@@ -169,6 +197,7 @@ describe('createUpdateFeedServer', () => {
     await withUpdateFeedServer({
       schemaVersion: 1,
       releases: [
+        feed.releases[1],
         {
           version: '0.1.2',
           commit: 'next-commit',
@@ -192,6 +221,17 @@ describe('createUpdateFeedServer', () => {
       assert.equal(await update.text(), '');
       assert.equal(update.headers.get('cache-control'), 'no-store');
       assert.match(update.headers.get('content-type'), /application\/json/);
+    });
+  });
+
+  it('returns an empty, uncacheable 204 for unknown builds over GET and HEAD', async () => {
+    await withUpdateFeedServer(feed, async origin => {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await fetch(`${origin}/api/update/darwin-arm64/stable/local-newer-commit`, { method });
+        assert.equal(response.status, 204);
+        assert.equal(await response.text(), '');
+        assert.equal(response.headers.get('cache-control'), 'no-store');
+      }
     });
   });
 
@@ -239,6 +279,7 @@ function updateFeedManifest(version, commit, timestamp) {
   return {
     schemaVersion: 1,
     releases: [
+      feed.releases[1],
       {
         version,
         commit,

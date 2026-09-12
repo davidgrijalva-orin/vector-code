@@ -186,9 +186,6 @@ async function main() {
 	const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 	const previousLatest = latestCompatibleRelease(manifest, platform, quality);
 	const previousCommit = typeof args['previous-commit'] === 'string' ? args['previous-commit'] : previousLatest?.commit;
-	if (previousLatest && previousLatest.version === version && previousLatest.commit !== commit) {
-		console.warn(`warning: release version ${version} matches the previous latest ${quality} release; pass --version to make the UI show a new product version.`);
-	}
 
 	const artifactStats = await stat(artifactPath);
 	const asset = {
@@ -197,11 +194,23 @@ async function main() {
 		size: artifactStats.size
 	};
 	const existingSameVersion = manifest.releases.find(release => release.version === version && release.quality === quality);
+	if (manifest.releases.some(release => release.quality === quality && release.commit === commit && release.version !== version)) {
+		throw new Error(`Commit ${commit} already has a release version; preserve its identity.`);
+	}
+	if (existingSameVersion && existingSameVersion.commit !== commit) {
+		throw new Error(`Release ${version} already belongs to ${existingSameVersion.commit}; use a new version for ${commit}.`);
+	}
+	if (existingSameVersion && args.timestamp !== undefined && timestamp !== existingSameVersion.timestamp) {
+		throw new Error(`Release ${version} timestamp is immutable.`);
+	}
+	if (!existingSameVersion && manifest.releases.some(release => release.quality === quality && release.timestamp >= timestamp)) {
+		throw new Error('A new release timestamp must be strictly newer than existing releases in its quality channel.');
+	}
 	const release = {
 		version,
 		commit,
 		quality,
-		timestamp,
+		timestamp: existingSameVersion?.timestamp ?? timestamp,
 		assets: {
 			...(existingSameVersion?.assets ?? {}),
 			[platform]: asset

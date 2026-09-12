@@ -31,6 +31,9 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Test VectorCode update ordering
+        run: node --test services/update-feed/server.test.mjs scripts/vector-release-update.test.mjs
+
       - name: Prepare node_modules cache key
         run: mkdir -p .build && node build/azure-pipelines/common/computeNodeModulesCacheKey.ts compile $(node -p process.arch) > .build/packagelockhash
 

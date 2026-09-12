@@ -109,6 +109,14 @@ release commit, or the new desktop candidate.
 
 ## Smallest implementation sequence
 
+The owner subsequently approved account-free personal work as the entry product,
+with optional connected context/continuity/collaboration. The connected implementation
+below remains useful but is not the universal first-run flow. The next core slice is
+a local project/note/inbox service and editor/recovery integration through explicit
+APIs, followed by local capture and organization. Local project identity and service
+persistence must not require a Graph UUID, credential, or network connection.
+
+
 1. **VectorCode / VC-61:** record this brief/ADR; select an existing work project
    independently of local folders; group documents and zero-to-many folder associations
    in the project picker; reuse new/open/save document actions. Validate no-folder context,

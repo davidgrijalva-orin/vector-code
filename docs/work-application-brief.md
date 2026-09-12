@@ -31,41 +31,66 @@ linking two separately displayed folder projects to the same Graph project does 
 complete the desktop grouping experience. Preserve each folder's editor/terminal
 state and separately authorized local access during that migration.
 
-## Use without a VectorGraph account — product exploration
+## Accepted entry experience: useful personal work, then connected context
 
-Owner requirement: the app must provide useful work for people who do not have a
-VectorGraph account. Do not make the connected Graph workflow the universal entry
-point. The current PR implements connected-client foundations only.
+Owner approved this direction on 2026-09-12. The account-free app is a complete,
+repeatable personal work tool, not an expiring demo or an onboarding shell. A person
+must be able to capture material, edit it, organize it into projects, find it again,
+reopen it later, and export usable work without signing up. Their local work stays
+available whether or not they ever create an account.
 
-Proposed experience for discussion: account-free local projects, notes, a capture
-inbox, audio recording, ordinary files, local search, and export; an optional Vector
-account adds hosted services, backup, sync, and collaboration. Transcription and
-generation are separate capabilities: local recording does not prove local speech
-or AI processing. A local model, user-configured provider, or hosted Voice service
-requires explicit capability and provider evaluation before implementation.
+The core includes local projects with zero-to-many folders, notes, an unassigned
+inbox, dependable saving/recovery, editing, local search, audio recording/playback,
+and export. First-run entry points are **New note**, **Record**, **New project**,
+and **Open folder**. Sign-in is not an interruption inside the basic workflow.
+The current PR's Graph-connected commands are an optional mode, not this final
+account-free onboarding.
 
-First-run candidate: **New note**, **Record**, **New project**, and **Open folder**.
-A person can record a thought, preserve it in the inbox, organize it into a project
-later, and produce an editable deliverable. The core value should be evident before
-sign-in. Solo researchers, consultants, students, and developers can each use that
-sequence; shared Graph work is an optional expansion.
+An optional account makes the user's accumulated work more useful through connected
+context, continuity, and collaboration. The intended distinction is:
 
-Alternatives to evaluate:
+| Account-free personal work | Optional connected account |
+| --- | --- |
+| Local projects, files, notes, recordings and recovery | Cross-device access and cloud recovery |
+| Explicitly selected material for the immediate task, when an engine is available | Relevant context across authorized project history and connected sources |
+| Search on this computer | Search connected documents, transcripts and decisions |
+| Manual organization and file export | Shared projects, collaboration and controlled access |
+| Local capture and editing | Hosted transcription/AI and connected conversation continuity |
 
-1. Local core with optional hosted services (recommended for discussion): useful
-   offline and no signup required; requires durable local project/artifact services
-   and a carefully scoped later connection/sync workflow.
-2. A simple Vector account for everything: easier cloud recovery and service access,
-   while Graph remains behind the API; still requires signup before useful work.
-3. Anonymous hosted guest sessions: quick trial, but recovery, retention, abuse,
-   and paid AI limits complicate making it a dependable daily work environment.
+Do not remove all useful context from the local experience. A person can select
+materials for the task at hand. Broader context remains transparent and scoped:
+an account is not permission to ingest every file or silently expand an agent's
+context. Display what material an action will use and preserve user control.
 
-No account-free library, inbox, recording, transcription, or synchronization is
-claimed as delivered by the connected-document PR. Decide whether a completely
-account-free first run is required and which hosted capabilities need a Vector
-account before committing to those implementation boundaries.
+Invite account creation at a requested benefit: continue on another device, use
+prior project conversations, connect another source, or collaborate. Explain the
+benefit and what will be uploaded. Do not force signup to recover existing local
+work, block its export, or silently publish the local library on connection.
 
-## First milestone
+Transcription/AI availability and economics remain separate decisions. Recording
+alone is not proof of offline speech processing. Evaluate whether a local engine
+or bounded hosted allowance is needed to make capture useful enough for repeat
+use; this approval does not select a model, provider, pricing, quota, or new identity
+system. A simple account experience should not require learning the Graph website.
+
+Product validation should observe whether people complete useful work before
+signup, return to continue the same project, and voluntarily choose a connected
+benefit. No account-free library, inbox, recorder, model, sync, or retention result
+is claimed as implemented by this decision.
+
+## Implementation sequence and acceptance
+
+The approved entry model comes first: implement a durable local project/note/inbox
+service behind explicit APIs, connect it to native editing and recovery, then
+complete local recording/playback and basic organization/search/export. Verify
+repeated capture, edit, move, reopen, and export with no Graph credential and no
+network dependency. Preserve the existing IDE and per-folder state.
+
+The connected document/agent milestone remains required through the existing API
+path below. It must not gate basic local work. Add hosted processing and richer
+context only with an explicit connection; record local-to-shared mapping and
+recoverable outcomes. Account creation, sharing, sync and Voice auth still need
+concrete contracts and validation.
 
 1. Create or open a work project without a repository, or start an unassigned note
    in the inbox and choose its project later.
@@ -113,7 +138,8 @@ a bounded adapter to a configured external agent, or a newly scoped built-in tex
 surface. A configuration catalogue is not an executing agent. Preserve this
 boundary while implementing project selection and persistence independently.
 
-Voice follows the completed text workflow. Capture may start without a project;
+Local recording/playback belongs to the account-free core. Agent-assisted voice
+follows the stable document/action workflow. Capture may start without a project;
 when applying a document action, explicitly select its destination and context,
 and submit the same authorized
 document action as text. Report the returned artifact/revision. Interruption must
@@ -123,7 +149,8 @@ cancellation rolled back an already committed document.
 
 The audit found batch/chunked transcription and meeting intelligence in
 VectorVoice, not a small reusable realtime conversation/action runtime. Voice is
-therefore the immediate follow-up rather than a prerequisite for this milestone.
+therefore the immediate processing follow-up; it must not block local notes or
+recording/playback while its service contract is developed.
 
 ## Capture first, organize later
 
@@ -131,9 +158,10 @@ Owner clarification: notes and recordings/transcripts must not require choosing 
 project before capture. An **Inbox / Unassigned** area keeps saved items available
 until the user files them. Assignment can happen during a recording, during
 transcription, or after completion without restarting capture or processing.
-Unassigned means no project relationship; it does not mean unauthenticated,
-public, or automatically private. Use the item's actual workspace/team visibility
-and show that audience. Do not widen visibility by clearing its team scope.
+Unassigned means no project relationship. Local items remain local until explicitly
+connected. Hosted items retain their workspace/team authorization and actual
+audience; unassignment does not make them public or automatically private.
+Do not widen hosted visibility by clearing team scope.
 
 A user can move a note or transcript from one project to another, return it to
 unassigned, or explicitly link the same item to another project. **Move** replaces
@@ -141,7 +169,8 @@ the chosen source-project relationship; **Add to project** retains existing
 relationships. Neither operation duplicates content, reprocesses audio, changes
 stable item identity, discards edits/history, or replaces unrelated links.
 
-The initial move flow stays within an authorized workspace and preserves the
+Local moves stay within the local library. The initial hosted move flow stays
+within an authorized workspace and preserves the
 item's existing visibility. Cross-workspace or visibility-changing transfers need
 an explicit transfer design; ordinary project organization is not permission to
 copy data across tenants. Recheck source/destination access and current revision,

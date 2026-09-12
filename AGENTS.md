@@ -61,6 +61,10 @@ Use the repository source as the authority. Validate TypeScript changes with `np
 Owner clarification: the desktop application is a client of Graph and Voice APIs.
 Core local work must remain useful without a VectorGraph account; the connected
 Graph workflow is optional, not the universal project-creation prerequisite.
+The accepted entry experience is durable account-free personal work. An optional
+account adds connected context, cross-device continuity and collaboration. Do not
+gate basic local capture, editing, organization, recovery or export behind signup;
+do not silently upload local materials when an account is connected.
 Use explicit, versioned HTTP contracts for shared work and voice capabilities.
 Frontend/native presentation code must not import backend services, repositories,
 SQL, queues, provider implementations, or backend configuration. Server APIs own

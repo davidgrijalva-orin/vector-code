@@ -78,7 +78,7 @@ does not prove shared subjects, audience, sessions, or authorization. Unified si
 and cross-product grants need an explicit account/workspace mapping and revocation
 contract; no token interchange is introduced here.
 
-## Account-independent entry — proposed design adjustment
+## Account-independent entry — accepted product boundary
 
 The owner's requirement to serve users without a Graph account means Graph IDs
 are shared-service identities, not prerequisites for every local project. A local
@@ -87,7 +87,7 @@ An optional connection maps that identity to an authorized Graph workspace/proje
 Selecting a Graph project in the current connected flow remains valid; it is not
 the only future project-creation route.
 
-Proposed local-first option: the UI remains an API client. A separately scoped
+Accepted local-first boundary: the UI remains an API client. A separately scoped
 native/local service owns local project/artifact persistence and capture; Graph
 and Voice services own hosted records, authorization, and processing. Local
 service/IPC APIs and hosted HTTP APIs expose versioned, explicit contracts. The
@@ -102,16 +102,18 @@ identities, and record the mapping and recoverable outcome. Automatic synchroniz
 conflict policy, account disconnection, and cross-device recovery require their own
 bounded contract; they are not implied by opening a remote project.
 
-The product brief records the alternative account models. Local service packaging,
-local indexing/capture, speech/model availability, and any general Vector-account
-identity design remain proposals to validate. No new provider, dependency, local
+The owner accepted a useful account-free core with optional connected context,
+continuity and collaboration. The local API must support core capture/organization/
+recovery without a Graph credential or network dependency. Local service packaging,
+local indexing/capture implementation, speech/model availability, and the account
+identity integration still require concrete design and validation. No new provider, dependency, local
 database, sign-in flow, or synchronization service is selected by this note.
 
 ## Optional assignment and moving captured work
 
 Notes and transcripts have a stable artifact identity independent of project
-membership. A recording may begin in the account's permitted capture scope with
-no project; the desktop inbox presents unassigned items until the user files them.
+membership. A recording may begin in the permitted local device or hosted capture
+scope without choosing a project; the desktop inbox presents unassigned items until the user files them.
 Assignment state must not govern the lifetime of capture/transcription processing.
 Changing a project neither restarts a job nor silently changes the context or
 write destination of an in-flight document-generation action.

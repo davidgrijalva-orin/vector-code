@@ -261,3 +261,36 @@ not an ad hoc client database or a transcript attachment store.
 - Existing local development stays available offline. Shared Graph documents require
   authorization/network access; unsaved recovery must remain local until a successful
   save. This is not a promise of general offline synchronization.
+
+## Verified Voice-to-document integration gap (2026-09-13)
+
+The installed desktop can capture and file audio locally without an account. This
+is separate from hosted transcription. Read-only inspection of the current Voice
+`docs/TRANSCRIPTION_API.md`, `docs/PRODUCT.md`, and
+`services/api/src/transcriptions.ts` confirms that `POST /v1/transcriptions`
+accepts audio with a stable idempotency key, and `GET /v1/transcriptions/:id`
+returns processing/retention state. It does not return the complete transcript.
+Voice deliberately expires and deletes full transcript processing artifacts;
+meeting APIs return retained generated outputs and source evidence instead.
+
+The document workflow therefore needs an explicit server-owned handoff before a
+client implementation can claim connected transcript filing:
+
+- authenticate the desktop for Voice with its own authorized audience and tenant;
+  never send a VectorGraph credential to a different service;
+- authorize retention of the user-selected transcript or generated note as a
+  document result, with clear source, destination, and retention semantics;
+- expose a versioned, provider-neutral result and a stable processing identity;
+- apply the result through Graph's internal document-tab/page API, using a
+  revision check and idempotent placement receipt; a changed filing destination
+  must not restart transcription or overwrite another tab's edits;
+- preserve the original local audio, pending request, and editable document if
+  authorization, upload, processing, or placement fails. Connecting an account
+  never uploads existing recordings automatically.
+
+These are required backend contracts, not implemented endpoints. The CLI session
+currently verifies only VectorCode and HomePlatform workspace bindings; no Voice
+or Graph backend engineering binding is available. No service credentials,
+retention rules, backend source, or deployment were changed for the local desktop
+acceptance. The microphone QA recording stays local and must not be used to test
+hosted transcription without separate upload authorization.

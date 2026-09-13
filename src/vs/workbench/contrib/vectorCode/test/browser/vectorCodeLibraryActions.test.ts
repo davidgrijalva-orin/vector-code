@@ -40,7 +40,7 @@ suite('VectorCode local work actions', () => {
 		} as unknown as IVectorCodeLibraryService);
 		inst.stub(IEditorService, { openEditor: async (input: unknown) => { editors.push(input); } } as unknown as IEditorService);
 		inst.stub(IFileService, {} as IFileService); inst.stub(IFileDialogService, {} as IFileDialogService);
-		return { onPick: (callback: () => void) => { beforePick = callback; }, recordings, runContents: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.localDocumentContents')!.handler, documentId), filings, runFile: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.fileLocalRecording')!.handler, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId }), writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.openLocalWork')!.handler) };
+		return { onPick: (callback: () => void) => { beforePick = callback; }, recordings, runContents: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.localDocumentContents')!.handler, documentId), filings, runFile: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.fileLocalRecording')!.handler, { id: '8e045317-a99b-4517-95ff-b2b7e56f2e69', noteId: documentId }), writes, editors, commands, folders, library, choices, setDirty: (value: boolean) => { dirty = value; }, setFail: (value: boolean) => { fail = value; }, run: async () => inst.invokeFunction(CommandsRegistry.getCommand('vectorCode.localWorkPalette')!.handler) };
 	}
 	const documentId = '658d2b51-5118-46d4-8b60-bf1954501284';
 	function addDocument(f: ReturnType<typeof fixture>) {

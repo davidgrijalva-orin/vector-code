@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isWeb } from '../../../../base/common/platform.js';
+import { VectorCodeLocalWorkWidget } from './vectorCodeLocalWorkWidget.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -37,6 +39,12 @@ export class VectorGraphDetailsView extends ViewPane {
 	private accountGeneration = 0;
 	private railBody!: HTMLElement;
 	private home!: HTMLElement;
+	private connectedHome!: HTMLElement;
+	private localHome: HTMLElement | undefined;
+	private localWork: VectorCodeLocalWorkWidget | undefined;
+	private localMode = false;
+	private localButton: HTMLButtonElement | undefined;
+	private connectedButton: HTMLButtonElement | undefined;
 	private project!: VectorGraphProjectWidget;
 	private active: string | undefined;
 	private lastSelection: IVectorGraphSelection | undefined;
@@ -69,7 +77,17 @@ export class VectorGraphDetailsView extends ViewPane {
 		this.home = append(this.railBody, $('.vector-project-rail__page', { role: 'tabpanel' }));
 		this.project = this._register(this.instantiationService.createInstance(VectorGraphProjectWidget));
 		this.account = append(parent, $('.vector-project-rail__account')); void this.renderAccount();
-		this.project.render(this.home); void this.project.selectSection('overview');
+		if (!isWeb) {
+			const modes = append(this.home, $('.vector-project-rail__modes'));
+			this.localButton = append(modes, $<HTMLButtonElement>('button', { type: 'button' })); this.localButton.textContent = 'Local work';
+			this.connectedButton = append(modes, $<HTMLButtonElement>('button', { type: 'button' })); this.connectedButton.textContent = 'Connected project';
+			this._register(addDisposableListener(this.localButton, EventType.CLICK, () => { void this.showLocalWork(); }));
+			this._register(addDisposableListener(this.connectedButton, EventType.CLICK, () => this.showConnectedProject()));
+			this.localHome = append(this.home, $('.vector-project-rail__local')); this.localHome.hidden = true;
+		}
+		this.connectedHome = append(this.home, $('.vector-project-rail__connected'));
+		this.project.render(this.connectedHome); void this.project.selectSection('overview');
+		if (!isWeb && !this.projects.getActiveProjectUri()) { void this.showLocalWork(); }
 		this.showSelection();
 	}
 	private async renderAccount(): Promise<void> {
@@ -79,13 +97,19 @@ export class VectorGraphDetailsView extends ViewPane {
 			this.accountListeners.clear(); clearNode(this.account);
 			append(this.account, $('span')).textContent = session.workspaces.length ? localize('railGraphConnected', 'VectorGraph · Signed in') : localize('railGraphDisconnected', 'VectorGraph · Not signed in');
 			const manage = append(this.account, $<HTMLButtonElement>('button', { type: 'button' })); manage.textContent = session.workspaces.length ? localize('railGraphManage', 'Account & workspace') : localize('railGraphSignIn', 'Sign in');
-			this.accountListeners.add(addDisposableListener(manage, EventType.CLICK, () => { this.activate(undefined); void this.project.openAccount(!session.workspaces.length).catch(error => this.notifications.error(error)); }));
+			this.accountListeners.add(addDisposableListener(manage, EventType.CLICK, () => { this.showConnectedProject(); void this.project.openAccount(!session.workspaces.length).catch(error => this.notifications.error(error)); }));
 			if (session.workspaces.length || session.authorization) {
 				const signOut = append(this.account, $<HTMLButtonElement>('button', { type: 'button' })); signOut.textContent = session.authorization ? localize('railCancelSignIn', 'Cancel sign-in') : localize('railSignOut', 'Sign out');
 				this.accountListeners.add(addDisposableListener(signOut, EventType.CLICK, () => { void (session.authorization ? this.graph.cancelSignIn() : this.graph.signOut()).catch(error => this.notifications.error(error)); }));
 			}
 		} catch { if (generation === this.accountGeneration && !this._store.isDisposed) { this.account.textContent = localize('railAccountUnavailable', 'VectorGraph account unavailable. Open Workspace → Tickets to reconnect.'); } }
 	}
+	async showLocalWork(): Promise<void> {
+		if (!this.localHome) { return; }
+		if (!this.localWork) { this.localWork = this._register(this.instantiationService.createInstance(VectorCodeLocalWorkWidget)); this.localWork.render(this.localHome); }
+		this.localMode = true; this.activate(undefined); await this.localWork.refresh();
+	}
+	private showConnectedProject(): void { this.localMode = false; this.activate(undefined); }
 	private showSelection(): void {
 		if (!this.railBody) { return; }
 		const selection = this.work.selection; this.lastSelection = selection;
@@ -102,6 +126,11 @@ export class VectorGraphDetailsView extends ViewPane {
 		if (!this.home) { return; }
 		this.active = key;
 		this.home.hidden = key !== undefined;
+		this.connectedHome.hidden = this.localMode;
+		if (this.localHome) { this.localHome.hidden = !this.localMode; }
+		this.localButton?.setAttribute('aria-pressed', String(this.localMode));
+		this.connectedButton?.setAttribute('aria-pressed', String(!this.localMode));
+		this.localWork?.setVisible(key === undefined && this.localMode);
 		for (const [id, ticket] of this.tickets) { ticket.root.hidden = id !== key; }
 		this.renderTabs();
 	}

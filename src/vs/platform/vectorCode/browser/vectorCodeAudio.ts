@@ -30,6 +30,8 @@ export const IVectorCodeAudioService = createDecorator<IVectorCodeAudioService>(
 export interface IVectorCodeAudioService {
 	readonly _serviceBrand: undefined;
 	readonly onDidFinish: Event<AudioCaptureFinished>;
+	readonly onDidStopPlayback: Event<Error | undefined>;
+	readonly isPlaying: boolean;
 	readonly isRecording: boolean;
 	start(noteId: string, tabId?: string, pageId?: string): Promise<void>;
 	stop(): Promise<LocalRecording | undefined>;
@@ -41,6 +43,9 @@ export class LocalAudioCapture extends Disposable implements IVectorCodeAudioSer
 	declare readonly _serviceBrand: undefined;
 	private readonly finishedEmitter = this._register(new Emitter<AudioCaptureFinished>());
 	readonly onDidFinish = this.finishedEmitter.event;
+	private readonly playbackStoppedEmitter = this._register(new Emitter<Error | undefined>());
+	readonly onDidStopPlayback = this.playbackStoppedEmitter.event;
+	get isPlaying(): boolean { return !!this.player; }
 	private recorder: MediaRecorder | undefined;
 	private stream: MediaStream | undefined;
 	private initializing = false;
@@ -122,10 +127,10 @@ export class LocalAudioCapture extends Disposable implements IVectorCodeAudioSer
 		const url = URL.createObjectURL(new Blob([bytes], { type: recording.mimeType }));
 		const audio = new Audio(url); this.player = audio; this.playerUrl = url;
 		audio.addEventListener('ended', () => { if (this.player === audio) { this.stopPlayback(); } }, { once: true });
-		audio.addEventListener('error', () => { if (this.player === audio) { this.stopPlayback(); } }, { once: true });
+		audio.addEventListener('error', () => { if (this.player === audio) { this.stopPlayback(new Error('Saved audio could not be played. The recording is still available to export.')); } }, { once: true });
 		try { await audio.play(); } catch (error) { if (this.player !== audio) { return; } this.stopPlayback(); throw error; }
 	}
-	stopPlayback(): void { this.playbackGeneration++; this.player?.pause(); this.player?.removeAttribute('src'); this.player = undefined; if (this.playerUrl) { URL.revokeObjectURL(this.playerUrl); this.playerUrl = undefined; } }
+	stopPlayback(error?: Error): void { const wasPlaying = !!this.player; this.playbackGeneration++; this.player?.pause(); this.player?.removeAttribute('src'); this.player = undefined; if (this.playerUrl) { URL.revokeObjectURL(this.playerUrl); this.playerUrl = undefined; } if (wasPlaying) { this.playbackStoppedEmitter.fire(error); } }
 	override dispose(): void {
 		if (this.recorder?.state !== 'inactive') { this.recorder?.stop(); }
 		for (const track of this.stream?.getTracks() ?? []) { track.stop(); }

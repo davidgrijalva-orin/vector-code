@@ -1,0 +1,19 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+.vector-local-work { padding: 20px; color: var(--vectorcode-foreground); overflow-wrap: anywhere; }
+.vector-local-work h1 { font-size: 22px; margin: 0 0 8px; }
+.vector-local-work h2 { font-size: 18px; margin: 24px 0 12px; }
+.vector-local-work h3 { margin: 20px 0 10px; }
+.vector-local-work h4 { margin: 12px 0 6px; }
+.vector-local-work p { color: var(--vectorcode-descriptionForeground); line-height: 1.5; }
+.vector-local-work input, .vector-local-work select { display: block; box-sizing: border-box; width: 100%; margin: 12px 0; padding: 8px; color: var(--vectorcode-input-foreground); background: var(--vectorcode-input-background); border: 1px solid var(--vectorcode-input-border, var(--vectorcode-widget-border)); }
+.vector-local-work button, .vector-project-rail__modes button { cursor: pointer; padding: 7px 10px; color: var(--vectorcode-button-secondaryForeground); background: var(--vectorcode-button-secondaryBackground); border: 1px solid transparent; border-radius: 4px; font: inherit; text-align: left; }
+.vector-local-work button:hover, .vector-project-rail__modes button:hover { background: var(--vectorcode-button-secondaryHoverBackground); }
+.vector-local-work button:focus-visible, .vector-project-rail__modes button:focus-visible { outline: 1px solid var(--vectorcode-focusBorder); outline-offset: 1px; }
+.vector-local-work button[aria-current="true"], .vector-project-rail__modes button[aria-pressed="true"] { border-color: var(--vectorcode-focusBorder); }
+.vector-local-work__actions, .vector-project-rail__modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.vector-project-rail__modes { padding: 12px 20px 0; }
+.vector-local-work nav, .vector-local-work__tab { display: grid; gap: 6px; }
+.vector-local-work__recording { border-top: 1px solid var(--vectorcode-widget-border); padding: 8px 0; }

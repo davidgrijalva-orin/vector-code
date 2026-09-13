@@ -66,7 +66,8 @@ suite('VectorCode local audio capability', () => {
 		const backend = {
 			begin: async (request: RecordingStart) => { record = { ...request, createdAt: 1, status: 'capturing', chunks: 0, bytes: 0 }; return record; },
 			append: async (_id: string, sequence: number, data: VSBuffer) => { chunks.push(data); received(); return sequence + 1; },
-			finish: async (_id: string, count: number, durationMs: number) => ({ ...record, chunks: count, durationMs, status: 'stopped' as const })
+			finish: async (_id: string, count: number, durationMs: number) => ({ ...record, chunks: count, durationMs, status: 'stopped' as const }),
+			read: async () => ({ recording: record, data: VSBuffer.concat(chunks) })
 		} as unknown as IVectorCodeRecordingsService;
 		const capture = store.add(new LocalAudioCapture(backend, {
 			getStream: async () => destination.stream,
@@ -84,6 +85,10 @@ suite('VectorCode local audio capability', () => {
 			const copy = new Uint8Array(bytes.byteLength); copy.set(bytes.buffer);
 			const decoded = await context.decodeAudioData(copy.buffer);
 			strictEqual(decoded.length > 0, true); strictEqual(decoded.numberOfChannels > 0, true);
+			let stopped = 0; store.add(capture.onDidStopPlayback(() => stopped++));
+			await capture.play(record!.id); strictEqual(capture.isPlaying, true);
+			capture.stopPlayback(); strictEqual(capture.isPlaying, false); strictEqual(stopped, 1);
+			capture.stopPlayback(); strictEqual(stopped, 1, 'Already stopped playback must not signal a second completion');
 		} finally { capture.dispose(); oscillator.disconnect(); await context.close(); }
 	});
 

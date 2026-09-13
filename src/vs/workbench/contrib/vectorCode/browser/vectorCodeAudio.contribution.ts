@@ -44,8 +44,9 @@ registerAction2(class extends Action2 {
 		const items = await recordings.list(noteId);
 		const selected = recordingId ? items.filter(recording => recording.id === recordingId).map(recording => ({ recording }))[0] : await quick.pick(items.map(recording => ({ label: new Date(recording.createdAt).toLocaleString(), description: recording.status === 'stopped' ? 'Saved recording' : 'Unfinished recording · saved audio can be recovered', recording })), { placeHolder: 'Audio attached to this note' });
 		if (!selected) { return; }
-		const action = await quick.pick([{ label: 'Play saved audio', kind: 'play' }, { label: 'Export saved audio as WebM…', kind: 'export' }, { label: 'File in another document or tab…', kind: 'file' }], { placeHolder: 'An interrupted recording may contain only the successfully saved audio.' });
+		const action = await quick.pick([{ label: 'Process with Voice…', kind: 'voice' }, { label: 'Check Voice Processing…', kind: 'voiceStatus' }, { label: 'Play saved audio', kind: 'play' }, { label: 'Export saved audio as WebM…', kind: 'export' }, { label: 'File in another document or tab…', kind: 'file' }], { placeHolder: 'An interrupted recording may contain only the successfully saved audio.' });
 		if (!action) { return; }
+		if (action.kind === 'voice' || action.kind === 'voiceStatus') { await commands.executeCommand('vectorCode.voiceRecording', selected.recording, action.kind === 'voiceStatus'); return; }
 		if (action.kind === 'file') { await commands.executeCommand('vectorCode.fileLocalRecording', selected.recording); return; }
 		if (action.kind === 'play') {
 			await audio.play(selected.recording.id);

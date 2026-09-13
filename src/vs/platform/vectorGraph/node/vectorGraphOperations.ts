@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseVectorGraphCanvas, IVectorGraphDocumentSave, parseVectorGraphDocument, validateVectorGraphDocumentSave } from '../common/vectorGraphDocuments.js';
+import { parseVectorGraphCanvas, IVectorGraphDocumentFiling, IVectorGraphDocumentSave, parseVectorGraphDocument, validateVectorGraphDocumentSave, validateVectorGraphDocumentFiling } from '../common/vectorGraphDocuments.js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { URI } from '../../../base/common/uri.js';
@@ -20,6 +20,12 @@ export class VectorGraphOperations {
 	async createDocument(workspace: string, team: string, project: string | undefined, title: string, requestId: string) {
 		if (!title.trim() || title.length > 1000) { throw new Error('Enter a document title of at most 1000 characters.'); }
 		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: project === undefined ? [] : [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
+		return parseVectorGraphDocument(result.document);
+	}
+	async fileDocument(workspace: string, document: string, filing: IVectorGraphDocumentFiling, requestId: string) {
+		const { expectedRevisionNumber, ...projectFiling } = validateVectorGraphDocumentFiling(filing);
+		const result = vectorGraphRecord(await this.call(workspace, 'updateApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) }, { expectedRevisionNumber, projectFiling, saveMode: 'versioned' }, vectorGraphId(requestId)));
+		if (result.error) { throw new Error('Document changed on VectorGraph. Refresh before filing it again.'); }
 		return parseVectorGraphDocument(result.document);
 	}
 	async saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) {

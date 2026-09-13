@@ -35,6 +35,19 @@ suite('VectorGraph work operations', () => {
 		strictEqual(calls.length, 2);
 		await rejects(new VectorGraphOperations(async () => ({ document, error: { code: 'document_version_conflict' } })).saveDocument(workspace, project, save, key), /changed on VectorGraph/);
 	});
+	test('project filing sends only the explicit edge intent and rejects invalid mutations', async () => {
+		const calls: unknown[][] = [];
+		const document = { id: project, title: 'Note', body: 'Retained', teamId: team, links: [], revisionNumber: 4, versionNumber: 3, updatedAt: '' };
+		const service = new VectorGraphOperations(async (...args) => { calls.push(args); return { document }; });
+		const filing = { fromProjectId: project, toProjectId: null, expectedRevisionNumber: 3 };
+		await service.fileDocument(workspace, project, filing, key);
+		deepStrictEqual(calls[0], [workspace, 'updateApiWorkspaceDocument', {}, { documentId: project }, { expectedRevisionNumber: 3, projectFiling: { fromProjectId: project, toProjectId: null }, saveMode: 'versioned' }, key]);
+		await rejects(service.fileDocument(workspace, project, { ...filing, expectedRevisionNumber: 0 }, key));
+		await rejects(service.fileDocument(workspace, project, { ...filing, toProjectId: project }, key));
+		await rejects(service.fileDocument(workspace, project, { ...filing, links: [] } as typeof filing, key));
+		strictEqual(calls.length, 1);
+		await rejects(new VectorGraphOperations(async () => ({ error: { code: 'document_version_conflict' } })).fileDocument(workspace, project, filing, key), /changed on VectorGraph/);
+	});
 	test('notes use the existing create API with no project links and retain explicit team scope', async () => {
 		const calls: unknown[][] = [];
 		const document = { id: project, title: 'Note', body: '', teamId: team, links: [], revisionNumber: 1, versionNumber: 1, updatedAt: '' };

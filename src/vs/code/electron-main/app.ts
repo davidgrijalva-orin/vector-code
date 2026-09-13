@@ -66,6 +66,8 @@ import { IMenubarMainService, MenubarMainService } from '../../platform/menubar/
 import { INativeHostMainService, NativeHostMainService } from '../../platform/native/electron-main/nativeHostMainService.js';
 import { VectorGraphRepositoryAccess } from '../../platform/vectorGraph/electron-main/vectorGraphRepositoryAccess.js';
 import { IVectorCodeRecordingsService, VECTOR_CODE_RECORDINGS_CHANNEL, VectorCodeRecordingsChannel } from '../../platform/vectorCode/common/vectorCodeRecordings.js';
+import { VectorVoiceMainService } from '../../platform/vectorVoice/electron-main/vectorVoiceMainService.js';
+import { IVectorVoiceService, VECTOR_VOICE_CHANNEL, VectorVoiceChannel } from '../../platform/vectorVoice/common/vectorVoice.js';
 import { VectorCodeRecordingsMainService } from '../../platform/vectorCode/electron-main/vectorCodeRecordingsMainService.js';
 import { IVectorCodeLibraryService, VECTOR_CODE_LIBRARY_CHANNEL, VectorCodeLibraryChannel } from '../../platform/vectorCode/common/vectorCodeLibrary.js';
 import { VectorCodeLibraryMainService } from '../../platform/vectorCode/electron-main/vectorCodeLibraryMainService.js';
@@ -1058,6 +1060,7 @@ export class CodeApplication extends Disposable {
 
 		// Native Host
 		services.set(INativeHostMainService, new SyncDescriptor(NativeHostMainService, undefined, false /* proxied to other processes */));
+		services.set(IVectorVoiceService, new SyncDescriptor(VectorVoiceMainService));
 		services.set(IVectorCodeRecordingsService, new SyncDescriptor(VectorCodeRecordingsMainService));
 		services.set(IVectorCodeLibraryService, new SyncDescriptor(VectorCodeLibraryMainService));
 		services.set(IVectorGraphService, new SyncDescriptor(VectorGraphMainService));
@@ -1237,6 +1240,7 @@ export class CodeApplication extends Disposable {
 		sharedProcessClient.then(client => client.registerChannel('nativeHost', nativeHostChannel));
 
 		const vectorGraphRepositoryAccess = accessor.get(IInstantiationService).createInstance(VectorGraphRepositoryAccess);
+		mainProcessElectronServer.registerChannel(VECTOR_VOICE_CHANNEL, new VectorVoiceChannel(accessor.get(IVectorVoiceService)));
 		mainProcessElectronServer.registerChannel(VECTOR_CODE_RECORDINGS_CHANNEL, new VectorCodeRecordingsChannel(accessor.get(IVectorCodeRecordingsService)));
 		mainProcessElectronServer.registerChannel(VECTOR_CODE_LIBRARY_CHANNEL, new VectorCodeLibraryChannel(accessor.get(IVectorCodeLibraryService)));
 		mainProcessElectronServer.registerChannel(VECTOR_GRAPH_CHANNEL, new VectorGraphChannel(accessor.get(IVectorGraphService), vectorGraphRepositoryAccess.authorize.bind(vectorGraphRepositoryAccess)));

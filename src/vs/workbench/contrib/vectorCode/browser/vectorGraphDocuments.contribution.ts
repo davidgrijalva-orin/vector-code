@@ -8,13 +8,14 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
+import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IVectorGraphBinding, IVectorGraphService } from '../../../../platform/vectorGraph/common/vectorGraph.js';
-import { IVectorGraphDocument } from '../../../../platform/vectorGraph/common/vectorGraphDocuments.js';
+import { IVectorGraphDocument, IVectorGraphDocumentFiling, validateVectorGraphDocumentFiling } from '../../../../platform/vectorGraph/common/vectorGraphDocuments.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
@@ -124,6 +125,7 @@ registerAction2(class extends Action2 {
 			const folders = workProjectFolderItems(storage, binding, projects.getProjectSummaries());
 			const action = await quick.pick([
 				{ label: localize('workProjectOpenDocument', 'Open Document'), command: 'vectorCode.openDocuments', folder: undefined },
+				{ label: localize('workProjectFileDocument', 'Move or Link Document…'), command: 'vectorCode.fileDocument', folder: undefined },
 				{ label: localize('workProjectNewDocument', 'New Document'), command: 'vectorCode.newDocument', folder: undefined },
 				{ label: localize('workProjectManageFolders', 'Manage Folders…'), command: 'folders', folder: undefined },
 				{ label: localize('workProjectChange', 'Choose Another Work Project…'), command: 'vectorCode.openWorkProject', folder: undefined },
@@ -171,5 +173,41 @@ registerAction2(class extends Action2 {
 			});
 			if (selected && selection.isCurrent()) { await openVectorGraphDocument(editors, binding.workspace.id, selected.document); }
 		} finally { selection.dispose(); }
+	}
+});
+
+registerAction2(class extends Action2 {
+	constructor() { super({ id: 'vectorCode.fileDocument', title: localize2('fileDocument', 'VectorGraph: File Document in Project'), f1: true }); }
+	async run(accessor: ServicesAccessor, workProject = false): Promise<void> {
+		const value = context(accessor, workProject); const notifications = accessor.get(INotificationService);
+		try {
+			const documents = await value.graph.listDocuments(value.binding.workspace.id);
+			if (!unchanged(value)) { return; }
+			const selected = await value.quick.pick(documents.filter(document => document.teamId === value.binding.team.id).map(document => ({ label: document.title, document })), { placeHolder: localize('fileChooseDocument', 'Choose a document to move or link') });
+			if (!selected || !unchanged(value)) { return; }
+			const key = 'vectorGraph.pendingDocumentFiling.' + value.binding.workspace.id + '.' + selected.document.id;
+			type Pending = { id: string; filing: IVectorGraphDocumentFiling };
+			let pending = value.storage.getObject<Pending>(key, StorageScope.PROFILE);
+			if (pending) {
+				const retry = await value.quick.pick([{ label: localize('fileRetry', 'Retry Pending Filing'), retry: true }, { label: localize('fileRefresh', 'Discard Pending Request and Refresh'), retry: false }], { placeHolder: localize('filePending', 'A previous filing request has no confirmed result') });
+				if (!retry || !unchanged(value)) { return; }
+				if (!retry.retry) { value.storage.remove(key, StorageScope.PROFILE); return; }
+				validateVectorGraphDocumentFiling(pending.filing);
+			} else {
+				const document = await value.graph.getDocument(value.binding.workspace.id, selected.document.id);
+				const projects = await value.graph.listProjects(value.binding.workspace.id, value.binding.team.id);
+				if (!unchanged(value)) { return; }
+				const source = await value.quick.pick([{ label: localize('fileAddLink', 'Keep Existing Projects and Add a Link'), projectId: null as string | null }, ...projects.filter(project => document.projectIds.includes(project.id)).map(project => ({ label: project.name, projectId: project.id }))], { placeHolder: localize('fileSource', 'Choose the project association to move, or add another link') });
+				if (!source || !unchanged(value)) { return; }
+				const destination = await value.quick.pick([...(source.projectId ? [{ label: localize('fileRemoveLink', 'Remove This Project Association'), projectId: null as string | null }] : []), ...projects.filter(project => project.id !== source.projectId && (source.projectId !== null || !document.projectIds.includes(project.id))).map(project => ({ label: project.name, projectId: project.id }))], { placeHolder: localize('fileDestination', 'Choose the destination project') });
+				if (!destination || !unchanged(value)) { return; }
+				pending = { id: generateUuid(), filing: { fromProjectId: source.projectId, toProjectId: destination.projectId, expectedRevisionNumber: document.revisionNumber } };
+				value.storage.store(key, pending, StorageScope.PROFILE, StorageTarget.MACHINE);
+				await value.storage.flush();
+			}
+			await value.graph.fileDocument(value.binding.workspace.id, selected.document.id, pending.filing, pending.id);
+			if (value.storage.getObject<Pending>(key, StorageScope.PROFILE)?.id === pending.id) { value.storage.remove(key, StorageScope.PROFILE); }
+			if (unchanged(value)) { notifications.info(localize('documentFiled', 'Document project associations updated.')); }
+		} finally { value.selection.dispose(); }
 	}
 });

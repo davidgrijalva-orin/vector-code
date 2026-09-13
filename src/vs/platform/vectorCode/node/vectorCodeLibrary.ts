@@ -41,8 +41,13 @@ function applyChange(state: LibraryState, request: LibraryMutation, at: number):
 		const previous = placements.find(placement => placement.recordingId === request.recordingId);
 		if ((previous?.revision ?? 0) !== request.expectedPlacementRevision) { throw new Error('This recording was filed elsewhere. Refresh its destination before retrying.'); }
 		const destination = request.destination;
-		const target = validateLibraryMutation({ ...destination, version: 1, requestId: request.requestId, ...(destination.kind === 'appendPage' ? { body: '' } : {}) });
+		const target = validateLibraryMutation({ ...destination, version: 1, requestId: request.requestId, ...(destination.kind === 'appendPage' ? { body: request.body ?? '' } : {}) });
 		result = applyChange(state, target, at);
+		if (request.body !== undefined && destination.kind !== 'appendPage') {
+			const note = notes.find(note => note.id === result.id)!;
+			const tab = result.tabId ? note.additionalTabs!.find(tab => tab.id === result.tabId)! : note;
+			tab.body = request.body;
+		}
 		const placement = { recordingId: request.recordingId, noteId: result.id, tabId: result.tabId ?? result.id, ...(result.pageId ? { pageId: result.pageId } : {}), revision: (previous?.revision ?? 0) + 1 };
 		state.library.recordingPlacements = [...placements.filter(item => item.recordingId !== request.recordingId), placement];
 		result = { ...result, tabId: placement.tabId, placementRevision: placement.revision };

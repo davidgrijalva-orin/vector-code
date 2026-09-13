@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IVectorVoiceService } from '../../../../platform/vectorVoice/common/vectorVoice.js';
 import { localize2 } from '../../../../nls.js';
 import { hasKey } from '../../../../base/common/types.js';
 import { toErrorMessage } from '../../../../base/common/errorMessage.js';
@@ -38,14 +39,14 @@ class LocalLibraryContribution extends Disposable {
 registerWorkbenchContribution2(LocalLibraryContribution.ID, LocalLibraryContribution, WorkbenchPhase.BlockStartup);
 const pendingKey = 'vectorCode.localLibrary.pending';
 function context(accessor: ServicesAccessor) {
-	return { recordings: accessor.get(IVectorCodeRecordingsService), workingCopies: accessor.get(IWorkingCopyService), workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
+	return { voice: accessor.get(IVectorVoiceService), recordings: accessor.get(IVectorCodeRecordingsService), workingCopies: accessor.get(IWorkingCopyService), workspaces: accessor.get(IWorkspaceEditingService), commands: accessor.get(ICommandService), storage: accessor.get(IStorageService), library: accessor.get(IVectorCodeLibraryService), quick: accessor.get(IQuickInputService), editors: accessor.get(IEditorService), dialogs: accessor.get(IFileDialogService), files: accessor.get(IFileService) };
 }
 type LocalWorkContext = ReturnType<typeof context>;
 
-type PendingChange = LibraryMutation | { kind: 'fileRecordingRequest'; request: FileRecordingRequest };
+type PendingChange = LibraryMutation | (({ kind: 'fileRecordingRequest' } | { kind: 'fileVoiceResult' }) & { request: FileRecordingRequest });
 async function executeChange(value: LocalWorkContext, request: PendingChange): Promise<LibraryReceipt> {
-	if (request.kind !== 'fileRecordingRequest') { return value.library.mutate(request); }
-	const placement = await value.recordings.file(request.request);
+	if (request.kind !== 'fileRecordingRequest' && request.kind !== 'fileVoiceResult') { return value.library.mutate(request); }
+	const placement = await (request.kind === 'fileVoiceResult' ? value.voice.fileResult(request.request) : value.recordings.file(request.request));
 	return { id: placement.noteId, tabId: placement.tabId, pageId: placement.pageId, revision: placement.revision };
 }
 async function mutate(value: LocalWorkContext, request: PendingChange) {
@@ -107,11 +108,11 @@ async function addDocumentContent(value: LocalWorkContext, note?: LocalNote, pro
 }
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.fileLocalRecording', title: localize2('fileLocalRecording', 'Work: File a Recording in a Document'), f1: false }); }
-	async run(accessor: ServicesAccessor, recording: LocalRecording): Promise<void> {
+	async run(accessor: ServicesAccessor, recording: LocalRecording, voiceResult = false): Promise<void> {
 		const value = context(accessor);
 		const destination = await chooseDocumentDestination(value);
 		if (!destination) { return; }
-		const receipt = await mutate(value, { kind: 'fileRecordingRequest', request: { version: 1, requestId: generateUuid(), recordingId: recording.id, expectedPlacementRevision: recording.placement?.revision ?? 0, destination } });
+		const receipt = await mutate(value, { kind: voiceResult ? 'fileVoiceResult' : 'fileRecordingRequest', request: { version: 1, requestId: generateUuid(), recordingId: recording.id, expectedPlacementRevision: recording.placement?.revision ?? 0, destination } });
 		await openDestination(value, receipt);
 	}
 });
@@ -227,7 +228,7 @@ registerAction2(class extends Action2 {
 		if (pending) {
 			const retry = await quick.pick([{ label: 'Retry pending change', retry: true, dismiss: false }, { label: 'Keep the pending change for later', retry: false, dismiss: false }, { label: 'Dismiss request and inspect saved work', retry: false, dismiss: true }], { placeHolder: 'The previous change may have been saved. Retry safely with its original identity.' });
 			if (retry?.dismiss) { storage.remove(pendingKey, StorageScope.WORKSPACE); }
-			if (retry?.retry) { const receipt = await executeChange(value, pending); storage.remove(pendingKey, StorageScope.WORKSPACE); await storage.flush(); if (pending.kind === 'fileRecordingRequest') { await openDestination(value, receipt); } }
+			if (retry?.retry) { const receipt = await executeChange(value, pending); storage.remove(pendingKey, StorageScope.WORKSPACE); await storage.flush(); if (pending.kind === 'fileRecordingRequest' || pending.kind === 'fileVoiceResult') { await openDestination(value, receipt); } }
 			return;
 		}
 		const library = await service.read();

@@ -16,10 +16,10 @@ export interface LocalDocumentTab extends LocalNoteRevision { id: string; title:
 export interface LocalNote extends LocalNoteRevision { additionalTabs?: LocalDocumentTab[]; contentUpdatedAt: number; contentRevision: number; createdAt: number; id: string; title: string; projectIds: string[]; history: LocalNoteRevision[] }
 export type RecordingDestination = { kind: 'createNote'; title: string; projectIds: string[] } | { kind: 'createTab'; id: string; expectedRevision: number; title: string } | { kind: 'appendPage'; id: string; tabId: string; expectedRevision: number };
 export interface RecordingPlacement { recordingId: string; noteId: string; tabId: string; pageId?: string; revision: number }
-export interface FileRecordingRequest { version: 1; requestId: string; recordingId: string; expectedPlacementRevision: number; destination: RecordingDestination }
+export interface FileRecordingRequest { version: 1; requestId: string; recordingId: string; expectedPlacementRevision: number; destination: RecordingDestination; body?: string }
 export interface LocalLibrary { recordingPlacements?: RecordingPlacement[]; version: 1; projects: LocalProject[]; notes: LocalNote[] }
 export type LibraryMutation = { version: 1; requestId: string } & (
-	{ kind: 'fileRecording'; recordingId: string; sourceNoteId: string; expectedPlacementRevision: number; destination: RecordingDestination } |
+	{ kind: 'fileRecording'; recordingId: string; sourceNoteId: string; expectedPlacementRevision: number; destination: RecordingDestination; body?: string } |
 	{ kind: 'createProject'; title: string } |
 	{ kind: 'createNote'; title: string; projectIds: string[] } |
 	{ kind: 'saveNote'; id: string; expectedRevision: number; expectedContentRevision?: number; body: string } |
@@ -40,6 +40,7 @@ export function validateFileRecordingRequest(value: unknown): FileRecordingReque
 	if (!value || typeof value !== 'object') { throw new Error('Invalid recording filing request.'); }
 	const request = value as FileRecordingRequest;
 	if (request.version !== 1 || !Number.isSafeInteger(request.expectedPlacementRevision) || request.expectedPlacementRevision < 0) { throw new Error('Invalid recording placement revision.'); }
+	if (request.body !== undefined && (typeof request.body !== 'string' || request.body.length > 1000000)) { throw new Error('Invalid recording note content.'); }
 	const requestId = localLibraryId(request.requestId);
 	const destination = request.destination;
 	if (!destination || !['createNote', 'createTab', 'appendPage'].includes(destination.kind)) { throw new Error('Choose a document destination.'); }
@@ -49,7 +50,7 @@ export function validateFileRecordingRequest(value: unknown): FileRecordingReque
 	else if (validated.kind === 'createTab') { target = { kind: validated.kind, id: validated.id, expectedRevision: validated.expectedRevision, title: validated.title }; }
 	else if (validated.kind === 'appendPage') { target = { kind: validated.kind, id: validated.id, tabId: validated.tabId, expectedRevision: validated.expectedRevision }; }
 	else { throw new Error('Invalid recording destination.'); }
-	return { version: 1, requestId, recordingId: localLibraryId(request.recordingId), expectedPlacementRevision: request.expectedPlacementRevision, destination: target };
+	return { version: 1, requestId, recordingId: localLibraryId(request.recordingId), expectedPlacementRevision: request.expectedPlacementRevision, destination: target, ...(request.body !== undefined ? { body: request.body } : {}) };
 }
 /** The legacy body is the first tab, preserving editor URIs, histories and recording references. */
 export function localDocumentTabs(note: LocalNote): LocalDocumentTab[] {

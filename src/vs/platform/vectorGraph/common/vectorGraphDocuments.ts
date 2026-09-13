@@ -30,3 +30,13 @@ export function parseVectorGraphCanvas(value: unknown): IVectorGraphCanvas {
 	if (elements.length > 5000) { throw new Error('Canvas is too large.'); }
 	return { id: vectorGraphId(row.id), title: vectorGraphText(row.title), projectIds: vectorGraphArray(row.links).map(vectorGraphRecord).filter(link => link.targetType === 'project').map(link => vectorGraphId(link.targetId)), scene: { elements: elements.map(vectorGraphRecord) } };
 }
+
+export interface IVectorGraphDocumentFiling { readonly fromProjectId: string | null; readonly toProjectId: string | null; readonly expectedRevisionNumber: number }
+export function validateVectorGraphDocumentFiling(value: unknown): IVectorGraphDocumentFiling {
+	const row = vectorGraphRecord(value);
+	if (Object.keys(row).some(key => !['fromProjectId', 'toProjectId', 'expectedRevisionNumber'].includes(key)) || !Number.isSafeInteger(row.expectedRevisionNumber) || Number(row.expectedRevisionNumber) < 1) { throw new Error('Invalid document filing request.'); }
+	const fromProjectId = row.fromProjectId === null ? null : vectorGraphId(row.fromProjectId);
+	const toProjectId = row.toProjectId === null ? null : vectorGraphId(row.toProjectId);
+	if (fromProjectId === toProjectId) { throw new Error('Choose a different source or destination project.'); }
+	return { fromProjectId, toProjectId, expectedRevisionNumber: Number(row.expectedRevisionNumber) };
+}

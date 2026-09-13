@@ -17,6 +17,7 @@ class BrowserVectorGraphService implements IVectorGraphService {
 	listDocuments() { return this.unavailable(); }
 	getDocument() { return this.unavailable(); }
 	createDocument() { return this.unavailable(); }
+	fileDocument() { return this.unavailable(); }
 	saveDocument() { return this.unavailable(); }
 	listProjects() { return this.unavailable(); }
 	getTeamMetadata() { return this.unavailable(); }

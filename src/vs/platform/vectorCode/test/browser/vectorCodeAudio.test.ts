@@ -92,6 +92,16 @@ suite('VectorCode local audio capability', () => {
 		} finally { capture.dispose(); oscillator.disconnect(); await context.close(); }
 	});
 
+	test('undecodable saved audio rejects instead of silently succeeding after the media error clears playback', async () => {
+		const backend = { read: async () => ({ recording: { mimeType: 'audio/webm' }, data: VSBuffer.fromString('invalid audio') }) } as unknown as IVectorCodeRecordingsService;
+		const capture = store.add(new LocalAudioCapture(backend));
+		let failure: Error | undefined;
+		store.add(capture.onDidStopPlayback(error => { failure = error; }));
+		await rejects(capture.play('invalid'), /Saved audio could not be played/);
+		strictEqual(capture.isPlaying, false);
+		strictEqual(failure?.message.includes('still available to export'), true);
+	});
+
 	test('disposal releases microphone tracks even when the window closes before storage finishes', async () => {
 		const f = fixture(); await f.capture.start('note'); f.capture.dispose();
 		strictEqual(f.stopped() > 0, true);

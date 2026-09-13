@@ -6,7 +6,7 @@
 import { deepStrictEqual, rejects, strictEqual } from 'assert';
 import { ICommandService, CommandsRegistry } from '../../../../../platform/commands/common/commands.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { isResourceEditorInput } from '../../../../common/editor.js';
+import { VectorGraphArtifactInput } from '../../browser/vectorGraphArtifactEditor.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import '../../browser/vectorGraphDocuments.contribution.js';
 import { Emitter } from '../../../../../base/common/event.js';
@@ -133,7 +133,7 @@ suite('VectorGraph work projects without local folders', () => {
 		const inst = store.add(new TestInstantiationService());
 		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
 		inst.stub(IQuickInputService, { input: async () => 'Brief' });
-		inst.stub(IEditorService, { openEditor: async input => { strictEqual(isResourceEditorInput(input) ? input.resource.authority : undefined, binding.workspace.id); opened++; return undefined; } });
+		inst.stub(IEditorService, { openEditor: async input => { strictEqual(input instanceof VectorGraphArtifactInput, true); if (input instanceof VectorGraphArtifactInput) { store.add(input); strictEqual(input.workspace, binding.workspace.id); strictEqual(input.kind, 'document'); } opened++; return undefined; } });
 		await inst.invokeFunction(accessor => CommandsRegistry.getCommand('vectorCode.newDocument')!.handler(accessor));
 		strictEqual(created, 1); strictEqual(opened, 1);
 	});
@@ -234,7 +234,7 @@ suite('VectorGraph work projects without local folders', () => {
 		};
 		const inst = store.add(new TestInstantiationService());
 		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
-		inst.stub(IQuickInputService, { input: async () => 'Brief' }); inst.stub(IEditorService, { openEditor: async () => undefined });
+		inst.stub(IQuickInputService, { input: async () => 'Brief' }); inst.stub(IEditorService, { openEditor: async input => { if (input instanceof VectorGraphArtifactInput) { store.add(input); } return undefined; } });
 		await inst.invokeFunction(accessor => CommandsRegistry.getCommand('vectorCode.newDocument')!.handler(accessor, true));
 		strictEqual(created, 1);
 	});
@@ -286,7 +286,7 @@ suite('VectorGraph work projects without local folders', () => {
 		inst.stub(IVectorCodeWorkbenchService, f.projects); inst.stub(IStorageService, f.storage); inst.stub(IVectorGraphService, f.graph);
 		inst.stub(IQuickInputService, { pick: async items => (await items)[0], input: async () => 'Quick note' });
 		const opened: string[] = [];
-		inst.stub(IEditorService, { openEditor: async input => { if (isResourceEditorInput(input)) { opened.push(input.resource.toString()); } return undefined; } });
+		inst.stub(IEditorService, { openEditor: async input => { if (input instanceof VectorGraphArtifactInput) { store.add(input); opened.push(input.resource.toString()); } return undefined; } });
 		f.graph.listProjects = async () => { throw new Error('No project lookup is required'); };
 		const document = { id: binding.team.id, title: 'Quick note', body: '', teamId: binding.team.id, projectIds: [], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
 		const run = async (command = 'vectorCode.newNote') => inst.invokeFunction(accessor => CommandsRegistry.getCommand(command)!.handler(accessor));

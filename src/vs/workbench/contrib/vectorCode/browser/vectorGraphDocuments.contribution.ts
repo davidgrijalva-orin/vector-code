@@ -18,10 +18,11 @@ import { IVectorGraphDocument } from '../../../../platform/vectorGraph/common/ve
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
+import { VectorGraphArtifactInput } from './vectorGraphArtifactEditor.js';
 import { readSelectedWorkProject } from '../common/vectorCodeWorkProject.js';
 import { manageWorkProjectFolders, workProjectFolderItems } from './vectorCodeWorkProject.js';
 import { chooseDocumentScope, chooseDocumentWorkProject, VectorGraphDocumentContext } from './vectorGraphDocumentContext.js';
-import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem, vectorGraphDocumentResource } from './vectorGraphDocumentFileSystem.js';
+import { VECTOR_GRAPH_DOCUMENT_SCHEME, VectorGraphDocumentFileSystem } from './vectorGraphDocumentFileSystem.js';
 
 class VectorGraphDocumentsContribution extends Disposable {
 	static readonly ID = 'workbench.contrib.vectorGraphDocuments';
@@ -52,7 +53,7 @@ registerAction2(class extends Action2 {
 		} finally { selection.dispose(); }
 	}
 });
-async function openDocument(editors: IEditorService, workspace: string, document: IVectorGraphDocument): Promise<void> { await editors.openEditor({ resource: vectorGraphDocumentResource(workspace, document.id), label: document.title, description: 'VectorGraph', options: { pinned: true } }); }
+export async function openVectorGraphDocument(editors: IEditorService, workspace: string, document: IVectorGraphDocument): Promise<void> { await editors.openEditor(new VectorGraphArtifactInput(workspace, document.id, document.title), { pinned: true }); }
 registerAction2(class extends Action2 {
 	constructor() { super({ id: 'vectorCode.openDocuments', title: localize2('openDocuments', 'VectorGraph: Open Document'), f1: true }); }
 	async run(accessor: ServicesAccessor, workProject = false): Promise<void> {
@@ -65,7 +66,7 @@ registerAction2(class extends Action2 {
 			let selected = await value.quick.pick([...linked.map(document => ({ label: document.title, description: document.teamId ? value.binding.team.name : '', document })), { label: localize('browseWorkspaceDocuments', 'Browse all workspace documents…'), description: localize('explicitWorkspaceScope', 'Includes documents outside this project'), document: undefined }], { placeHolder: localize('projectDocuments', 'Documents linked to {0}', value.binding.project?.name ?? value.binding.team.name) });
 			if (!selected || !unchanged(value)) { return; }
 			if (!selected.document) { selected = await value.quick.pick(documents.map(document => ({ label: document.title, description: document.teamId === value.binding.team.id ? value.binding.team.name : localize('workspaceDocument', 'Workspace document'), document })), { placeHolder: localize('workspaceDocuments', 'All documents in {0}', value.binding.workspace.name) }); }
-			if (selected?.document && unchanged(value)) { await openDocument(value.editors, value.binding.workspace.id, selected.document); }
+			if (selected?.document && unchanged(value)) { await openVectorGraphDocument(value.editors, value.binding.workspace.id, selected.document); }
 		} finally { value.selection.dispose(); }
 	}
 });
@@ -96,7 +97,7 @@ async function createDocument(value: { storage: IStorageService; graph: IVectorG
 	value.storage.store(key, request, StorageScope.PROFILE, StorageTarget.MACHINE);
 	const document = await value.graph.createDocument(binding.workspace.id, binding.team.id, projectId, request.title, request.id);
 	if (value.storage.getObject<PendingCreate>(key, StorageScope.PROFILE)?.id === request.id) { value.storage.remove(key, StorageScope.PROFILE); }
-	if (value.selection.isCurrent()) { await openDocument(value.editors, binding.workspace.id, document); }
+	if (value.selection.isCurrent()) { await openVectorGraphDocument(value.editors, binding.workspace.id, document); }
 }
 
 registerAction2(class extends Action2 {
@@ -168,7 +169,7 @@ registerAction2(class extends Action2 {
 				title: localize('teamDocuments', 'Documents in {0} / {1}', binding.workspace.name, binding.team.name),
 				placeHolder: localize('teamDocumentsHint', 'Includes notes saved without choosing a project')
 			});
-			if (selected && selection.isCurrent()) { await openDocument(editors, binding.workspace.id, selected.document); }
+			if (selected && selection.isCurrent()) { await openVectorGraphDocument(editors, binding.workspace.id, selected.document); }
 		} finally { selection.dispose(); }
 	}
 });

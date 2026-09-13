@@ -13,7 +13,8 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/c
 import { FileRecordingRequest, VectorCodeLibraryChannel, IVectorCodeLibraryService, LibraryMutation } from '../../common/vectorCodeLibrary.js';
 import { VectorCodeLibrary } from '../../node/vectorCodeLibrary.js';
 import { VectorCodeRecordings } from '../../node/vectorCodeRecordings.js';
-import { RecordingStart, VectorCodeRecordingsChannel } from '../../common/vectorCodeRecordings.js';
+import { RecordingStart, VectorCodeRecordingsChannel, VectorCodeRecordingsChannelClient } from '../../common/vectorCodeRecordings.js';
+import { BufferReader, BufferWriter, deserialize, serialize } from '../../../../base/parts/ipc/common/ipc.js';
 
 suite('VectorCode durable local recordings', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
@@ -26,6 +27,22 @@ suite('VectorCode durable local recordings', () => {
 		request = { version: 1, id: generateUuid(), noteId: note.id, mimeType: 'audio/webm;codecs=opus' };
 	});
 	teardown(async () => { await fs.rm(directory, { recursive: true, force: true }); });
+	test('desktop IPC roundtrip preserves binary audio for playback and export', async () => {
+		const channel = new VectorCodeRecordingsChannel(service);
+		const roundtrip = <T>(value: T): T => { const writer = new BufferWriter(); serialize(writer, value); return deserialize(new BufferReader(writer.buffer)); };
+		const client = new VectorCodeRecordingsChannelClient({
+			listen: () => { throw new Error('No recording events'); },
+			call: async (command, args) => roundtrip(await channel.call(undefined, command, roundtrip(args)))
+		});
+		await client.begin(request);
+		const bytes = VSBuffer.wrap(new Uint8Array([0, 255, 17, 128, 42]));
+		await client.append(request.id, 0, bytes); await client.finish(request.id, 1, 1000);
+		const result = await client.read(request.id);
+		strictEqual(result.data instanceof VSBuffer, true);
+		deepStrictEqual(result.data.buffer, bytes.buffer);
+		strictEqual(result.recording.id, request.id);
+		strictEqual(result.recording.status, 'stopped');
+	});
 	test('filing during capture atomically creates a destination and preserves original audio and provenance', async () => {
 		const started = await service.begin(request); await service.append(request.id, 0, VSBuffer.fromString('before'));
 		const filing: FileRecordingRequest = { version: 1, requestId: generateUuid(), recordingId: request.id, expectedPlacementRevision: 0, destination: { kind: 'createNote', title: 'Filed recording', projectIds: [] } };

@@ -5,7 +5,7 @@
 
 import { Event } from '../../../base/common/event.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
-import { IServerChannel } from '../../../base/parts/ipc/common/ipc.js';
+import { IChannel, IServerChannel, ProxyChannel } from '../../../base/parts/ipc/common/ipc.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 import { localLibraryId, FileRecordingRequest, RecordingPlacement, validateFileRecordingRequest } from './vectorCodeLibrary.js';
 
@@ -42,7 +42,26 @@ export class VectorCodeRecordingsChannel implements IServerChannel {
 		if (command === 'append' && args.length === 3 && args[2] instanceof VSBuffer) { return await this.service.append(localLibraryId(args[0]), recordingSequence(args[1]), args[2]) as T; }
 		if (command === 'finish' && args.length === 3) { return await this.service.finish(localLibraryId(args[0]), recordingSequence(args[1]), args[2]) as T; }
 		if (command === 'list' && args.length === 1) { return await this.service.list(localLibraryId(args[0])) as T; }
-		if (command === 'read' && args.length === 1) { return await this.service.read(localLibraryId(args[0])) as T; }
+		if (command === 'read' && args.length === 1) {
+			const { recording, data } = await this.service.read(localLibraryId(args[0]));
+			// IPC preserves binary values in arrays, but JSON-serializes object members.
+			return [recording, data] as T;
+		}
 		throw new Error('Unsupported recording operation.');
+	}
+}
+
+export class VectorCodeRecordingsChannelClient implements IVectorCodeRecordingsService {
+	declare readonly _serviceBrand: undefined;
+	private readonly proxy: IVectorCodeRecordingsService;
+	constructor(private readonly channel: IChannel) { this.proxy = ProxyChannel.toService<IVectorCodeRecordingsService>(channel); }
+	file(request: FileRecordingRequest): Promise<RecordingPlacement> { return this.proxy.file(request); }
+	begin(request: RecordingStart): Promise<LocalRecording> { return this.proxy.begin(request); }
+	append(id: string, sequence: number, data: VSBuffer): Promise<number> { return this.proxy.append(id, sequence, data); }
+	finish(id: string, chunks: number, durationMs: number): Promise<LocalRecording> { return this.proxy.finish(id, chunks, durationMs); }
+	list(noteId: string): Promise<LocalRecording[]> { return this.proxy.list(noteId); }
+	async read(id: string): Promise<{ recording: LocalRecording; data: VSBuffer }> {
+		const [recording, data] = await this.channel.call<[LocalRecording, VSBuffer]>('read', [id]);
+		return { recording, data };
 	}
 }

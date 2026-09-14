@@ -17,7 +17,6 @@ import { IVectorGraphService, IVectorGraphBinding, IVectorGraphTicket, IVectorGr
 import { IVectorCodeWorkbenchService } from '../common/vectorCode.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IVectorGraphWorkService, VECTOR_GRAPH_DETAILS_VIEW } from '../common/vectorGraphWork.js';
-import './vectorGraphDetails.contribution.js';
 import './vectorGraphDocuments.contribution.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { VECTOR_GRAPH_BINDING_KEY as BINDING_KEY, readVectorGraphBinding } from '../common/vectorGraphBinding.js';

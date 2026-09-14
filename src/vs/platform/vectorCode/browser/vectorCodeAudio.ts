@@ -128,18 +128,19 @@ export class LocalAudioCapture extends Disposable implements IVectorCodeAudioSer
 		const audio = new Audio(url); this.player = audio; this.playerUrl = url;
 		let playbackError: Error | undefined;
 		audio.addEventListener('ended', () => { if (this.player === audio) { this.stopPlayback(); } }, { once: true });
-		audio.addEventListener('error', () => {
+		const failPlayback = () => {
 			if (this.player === audio) {
 				playbackError = new Error('Saved audio could not be played. The recording is still available to export.');
 				this.stopPlayback(playbackError);
 			}
-		}, { once: true });
-		try { await audio.play(); } catch (error) {
+		};
+		audio.addEventListener('error', failPlayback, { once: true });
+		try { await audio.play(); } catch {
 			// A media error clears the player before play() rejects. Preserve that failure;
 			// only cancellation or replacement of this playback should return silently.
 			if (playbackError) { throw playbackError; }
 			if (this.player !== audio) { return; }
-			this.stopPlayback(); throw error;
+			failPlayback(); throw playbackError;
 		}
 	}
 	stopPlayback(error?: Error): void { const wasPlaying = !!this.player; this.playbackGeneration++; this.player?.pause(); this.player?.removeAttribute('src'); this.player = undefined; if (this.playerUrl) { URL.revokeObjectURL(this.playerUrl); this.playerUrl = undefined; } if (wasPlaying) { this.playbackStoppedEmitter.fire(error); } }

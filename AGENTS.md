@@ -1,3 +1,52 @@
+<!-- BEGIN SHARED PROGRESS POLICY -->
+## Required agent progress and handoff log
+
+Every project/repository keeps one canonical root `PROGRESS.md`, committed and
+published to `main`. Read it before starting or resuming work. This owner-requested
+policy supersedes older rules that forbid repository progress logs or keep progress
+only in tickets/chat; existing product, security, review and release gates still apply.
+
+- Every agent, including each parallel worker, records its own entries with a stable
+  agent/session ID. Record the start/scope, meaningful milestones, decisions, blockers
+  and final handoff. The coordinator checks that every worker's entries are present.
+- Append dated entries; preserve all previous agents' entries. Use the actual clock
+  and ISO 8601 timestamp with timezone offset, plus agent/session, ticket/topic and
+  status (`in-progress`, `blocked`, `ready`, `complete`). Keep entries concise and
+  factual, usually 3–5 bullets: changed paths and decisions; branch/commit/PR;
+  commands and actual results; remaining blocker; exact next action.
+- Separate local implementation, CI, merge, deployment and user acceptance evidence.
+  Never call unrun tests, pending merges or unverified deployments complete. Do not
+  include secrets, credentials, personal data or raw verbose tool output.
+- From a worktree, locate the primary checkout with `git worktree list --porcelain`
+  and append to its root log. Do not create independent operational logs in scratch
+  folders. Preserve the full canonical history when publishing from an isolated
+  documentation branch; a primary checkout is not necessarily currently on `main`.
+- Serialize read/append/write operations on the shared file (a file lock or a single
+  coordinator queue). Every worker authors its own entry. On Git conflicts, preserve
+  both agents' entries; never resolve by dropping a side or replacing the whole log.
+- Publish progress to `main` at milestones and before handoff, even while code work
+  remains on a feature branch. Commit only the log and necessary logging instructions
+  in a separate documentation commit. Use direct non-force push only where repository
+  rules allow it; otherwise promptly open and merge a documentation PR through required
+  checks. Do not bundle unfinished code, force-push `main` or weaken protections.
+- Verify the log is readable on remote `main`. If delivery is blocked, retain the entry
+  locally, record the exact blocker and PR/branch, and report publication as pending.
+  For projects without a remote, commit to local `main` and record that limitation.
+- A new repository/project must establish this log and these instructions before
+  material work. For a project spanning repositories, each repository logs its own
+  changes and links related repository work rather than duplicating its history.
+
+Entry format:
+
+```markdown
+### 2026-10-09T00:15:00-05:00 | agent/session | ticket or topic | in-progress
+- Changed: concrete result, relevant paths and decision/reason.
+- Evidence: branch, commit/PR; commands run and actual results.
+- Remaining: exact blocker or unverified gate; none when there is none.
+- Next: first executable action for the next agent.
+```
+<!-- END SHARED PROGRESS POLICY -->
+
 # VectorCode Agents Instructions
 
 ## Persistent engineering workflow

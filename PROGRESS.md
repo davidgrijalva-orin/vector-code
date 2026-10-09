@@ -44,3 +44,9 @@ must be able to continue from it alone. All agents working on the repo write to 
 - **Verified:** 34-project policy/routing/history preservation and diff checks passed; 12 concurrent append writers preserved once each. Remote main protection checked and direct delivery allowed.
 - **State / next step:** complete. This log-only commit is being delivered to remote main. Resume your project task from its latest relevant entry; local checkout alignment and instruction-file delivery remain with the project owner. Decisions: Separate Git index and remote-parent log-only commit preserve unrelated staged files and avoid rebasing active work.
 - **Needs owner:** None
+
+### 2026-10-09T00:17:11-05:00 | Codex/01a11f12-08b6-72d0-8453-b7cc2e3b85bb | shared progress policy | ready
+- Changed: established root PROGRESS.md and required logging instructions in AGENTS.md and CLAUDE.md; preserved existing instructions and progress history.
+- Evidence: documentation-only candidate based on main `f8d5fa0e8f6254d5b2822efd84398e1d01d29893`; checked history preservation, required fields and instruction synchronization. Application/build/runtime validation is outside this documentation change.
+- Remaining: publish this candidate through repository delivery gates; readiness here does not assert merge or deployment.
+- Next: read the latest entry for your task, append your own timestamped scope and milestones, and verify each log update is published on main.

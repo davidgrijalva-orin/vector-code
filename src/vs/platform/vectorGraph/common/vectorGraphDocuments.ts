@@ -22,3 +22,21 @@ export function validateVectorGraphDocumentSave(value: unknown): IVectorGraphDoc
 	if (Object.keys(row).some(key => !['body', 'expectedRevisionNumber', 'expectedVersionNumber'].includes(key)) || typeof row.body !== 'string' || row.body.length > 1000000 || !Number.isSafeInteger(row.expectedRevisionNumber) || Number(row.expectedRevisionNumber) < 1 || !Number.isSafeInteger(row.expectedVersionNumber) || Number(row.expectedVersionNumber) < 1) { throw new Error('Invalid document save.'); }
 	return { body: row.body, expectedRevisionNumber: Number(row.expectedRevisionNumber), expectedVersionNumber: Number(row.expectedVersionNumber) };
 }
+
+export interface IVectorGraphCanvas { readonly id: string; readonly title: string; readonly projectIds: readonly string[]; readonly scene: { readonly elements: readonly Record<string, unknown>[] } }
+export function parseVectorGraphCanvas(value: unknown): IVectorGraphCanvas {
+	const row = vectorGraphRecord(value); const scene = vectorGraphRecord(row.scene);
+	const elements = vectorGraphArray(scene.elements);
+	if (elements.length > 5000) { throw new Error('Canvas is too large.'); }
+	return { id: vectorGraphId(row.id), title: vectorGraphText(row.title), projectIds: vectorGraphArray(row.links).map(vectorGraphRecord).filter(link => link.targetType === 'project').map(link => vectorGraphId(link.targetId)), scene: { elements: elements.map(vectorGraphRecord) } };
+}
+
+export interface IVectorGraphDocumentFiling { readonly fromProjectId: string | null; readonly toProjectId: string | null; readonly expectedRevisionNumber: number }
+export function validateVectorGraphDocumentFiling(value: unknown): IVectorGraphDocumentFiling {
+	const row = vectorGraphRecord(value);
+	if (Object.keys(row).some(key => !['fromProjectId', 'toProjectId', 'expectedRevisionNumber'].includes(key)) || !Number.isSafeInteger(row.expectedRevisionNumber) || Number(row.expectedRevisionNumber) < 1) { throw new Error('Invalid document filing request.'); }
+	const fromProjectId = row.fromProjectId === null ? null : vectorGraphId(row.fromProjectId);
+	const toProjectId = row.toProjectId === null ? null : vectorGraphId(row.toProjectId);
+	if (fromProjectId === toProjectId) { throw new Error('Choose a different source or destination project.'); }
+	return { fromProjectId, toProjectId, expectedRevisionNumber: Number(row.expectedRevisionNumber) };
+}

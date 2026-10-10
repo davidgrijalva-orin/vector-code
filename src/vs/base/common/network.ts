@@ -12,6 +12,7 @@ import * as paths from './path.js';
 export namespace Schemas {
 
 	/** VectorGraph documents use the API's UTF-8 Markdown representation. */
+	export const vectorCodeNote = 'vectorcode-note';
 	export const vectorGraphDocument = 'vectorgraph-document';
 
 	/**

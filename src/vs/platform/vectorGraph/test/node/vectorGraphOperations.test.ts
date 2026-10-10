@@ -35,6 +35,29 @@ suite('VectorGraph work operations', () => {
 		strictEqual(calls.length, 2);
 		await rejects(new VectorGraphOperations(async () => ({ document, error: { code: 'document_version_conflict' } })).saveDocument(workspace, project, save, key), /changed on VectorGraph/);
 	});
+	test('project filing sends only the explicit edge intent and rejects invalid mutations', async () => {
+		const calls: unknown[][] = [];
+		const document = { id: project, title: 'Note', body: 'Retained', teamId: team, links: [], revisionNumber: 4, versionNumber: 3, updatedAt: '' };
+		const service = new VectorGraphOperations(async (...args) => { calls.push(args); return { document }; });
+		const filing = { fromProjectId: project, toProjectId: null, expectedRevisionNumber: 3 };
+		await service.fileDocument(workspace, project, filing, key);
+		deepStrictEqual(calls[0], [workspace, 'updateApiWorkspaceDocument', {}, { documentId: project }, { expectedRevisionNumber: 3, projectFiling: { fromProjectId: project, toProjectId: null }, saveMode: 'versioned' }, key]);
+		await rejects(service.fileDocument(workspace, project, { ...filing, expectedRevisionNumber: 0 }, key));
+		await rejects(service.fileDocument(workspace, project, { ...filing, toProjectId: project }, key));
+		await rejects(service.fileDocument(workspace, project, { ...filing, links: [] } as typeof filing, key));
+		strictEqual(calls.length, 1);
+		await rejects(new VectorGraphOperations(async () => ({ error: { code: 'document_version_conflict' } })).fileDocument(workspace, project, filing, key), /changed on VectorGraph/);
+	});
+	test('notes use the existing create API with no project links and retain explicit team scope', async () => {
+		const calls: unknown[][] = [];
+		const document = { id: project, title: 'Note', body: '', teamId: team, links: [], revisionNumber: 1, versionNumber: 1, updatedAt: '' };
+		const service = new VectorGraphOperations(async (...args) => { calls.push(args); return { document }; });
+		deepStrictEqual((await service.createDocument(workspace, team, undefined, 'Note', key)).projectIds, []);
+		deepStrictEqual(calls[0], [workspace, 'createApiWorkspaceDocument', {}, {}, { title: 'Note', body: '', teamId: team, links: [] }, key]);
+		await rejects(service.createDocument(workspace, team, '', 'Note', key));
+		await rejects(service.createDocument(workspace, '', undefined, 'Note', key));
+		strictEqual(calls.length, 1);
+	});
 	test('repository access rejects outside roots, missing trust, and symlink escapes', async () => {
 		const directory = await fs.mkdtemp(join(tmpdir(), 'vg-access-'));
 		try {
@@ -65,6 +88,11 @@ suite('VectorGraph work operations', () => {
 		deepStrictEqual(calls[2], [workspace, 'createApiIssueComment', {}, { issueIdentifier: 'VC-57' }, { body: 'Comment' }, key]);
 		await rejects(service.addComment(workspace, 'VC-57', ' ', key));
 		strictEqual(calls.length, 3);
+	});
+	test('all mutable ticket metadata survives validation, including explicit clears', () => {
+		const patch = { projectId: null, sprintId: project, projectMilestoneId: null, targetDate: '2026-09-12', parentIssueIdentifier: 'VC-58', estimatePoints: 0, labelIds: [team], assigneeUserId: null };
+		deepStrictEqual(validateVectorGraphPatch(patch), patch);
+		for (const value of [{ estimatePoints: -1 }, { estimatePoints: 1.5 }, { labelIds: ['wrong'] }, { targetDate: '2026-02-30' }, { parentIssueIdentifier: 'bad' }, { sprintId: 'wrong' }]) { throws(() => validateVectorGraphPatch(value)); }
 	});
 	test('rejects arbitrary write payloads and unrelated PR links', () => {
 		for (const value of [{ operation: 'archiveApiIssue' }, { title: '' }, { statusId: 'wrong' }, { assigneeUserId: {} }, { priority: 'super' }]) { throws(() => validateVectorGraphPatch(value)); }

@@ -1,21 +1,43 @@
-# VectorCode as the native VectorGraph client
+# VectorCode as a native work application
 
-VectorCode is the native application client for VectorGraph. All exposed non-billing product capabilities belong in the native experience. Billing, subscriptions, payment methods and invoices always open on the VectorGraph website.
+The [work application brief](work-application-brief.md) is authoritative for product
+direction. VectorCode contains the IDE and specialized work tools; non-development
+projects must not require repositories or local folders. The [architecture decision](work-application-architecture.md)
+and [four-repository audit](work-application-audit.md) define ownership and evidence.
 
-VectorGraph remains the authority for identity, authorization, business rules, records, relationships, revisions and audit history. The IDE stores only credentials in its protected main-process store, local presentation state, cached data and recoverable drafts. It must not create a second backend or rely on web embeds for normal product workflows.
+VectorGraph owns identity, workspace authorization, business rules, records,
+relationships, revisions and audit. VectorCode owns native presentation, protected
+main-process credentials, local state and recoverable drafts. Reuse typed operation
+adapters and server revision/idempotency checks. Do not duplicate the backend.
 
-## Client architecture
+Native/web coverage follows explicit workflow priorities: first project documents,
+then bounded voice, budgets/charts, and presentations. This supersedes blanket
+non-billing API parity. Billing remains web; additional web-only workflows may be
+chosen explicitly. Existing web, local development, and voice functionality remains
+useful. A catalogue of APIs is not a native workflow or runtime capability proof.
 
-Use one account and workspace context, a shared authenticated transport, explicit typed operation adapters, consistent API errors, and server-supported idempotency and revision checks. API coverage means usable native workflows, not a generic endpoint console. Project navigation owns the selected context; documents and tickets open through shared editor identities and links. Missing grants and offline state are visible and actionable. Billing is the sole intentional web-only product boundary.
+VC-61 owns the document-first integration milestone. VC-58/VC-60 are independently
+owned existing work; reconcile their scope with this direction without silently
+claiming or rewriting their tasks. VC-59's existing native document provider is
+reused. Keep merged source, local checks, packaged builds, and authenticated
+installed-app acceptance as separate evidence gates.
 
-Native surfaces should cover project/team planning, issues and relationships, documents and collections, canvases, context and search, evidence and review, integrations and repository data, operational records, and workspace administration according to the API and the signed-in user's permissions. Full API parity must be tracked and verified capability by capability; adding document tabs does not complete it.
+For every native workflow, record its API operations/scopes, entry points,
+project/workspace behavior, conflict handling, offline/permission states, checks,
+and installed-app proof. Preserve backend rich content and relationships; never
+silently convert away unsupported data. Use shared authenticated transport and
+editor identities rather than embedding the website as the normal native workflow.
 
-## Delivery and coverage
+## Standalone IDE
 
-VC-58 tracks full native API coverage. VC-57 tracks the existing ticket workflow and its live secondary-sidebar correction. VC-59 delivers document browsing, creation, native Markdown tabs and revision-aware saves. The current CLI operation catalogue is a discovery input, not proof that every public API endpoint has been audited or implemented. Reconcile it with the canonical VectorGraph API definitions before declaring full coverage.
+VectorCode is also a complete standalone IDE. Local projects, files, editing, Git, terminals, debugging, extensions and MCP must work without a VectorGraph account or service connection. VectorGraph adds shared tickets, documents, planning and relationships. Keep optional connection onboarding separate from local development actions, and validate both disconnected and connected workflows.
 
-Verified foundations: IDE-owned device sign-in, main-process authenticated API transport, explicit workspace selection, project/ticket queries, ticket editing/comments, active work and repository/PR links. Document support is in progress. Other API families remain tracked work; none should be described as complete from catalogue presence alone.
+Use the same project workspace and navigation in both cases. Connecting VectorGraph enriches the current repository with shared context and native workflows; it must not require switching to a separate application experience. A repository without a VectorGraph association remains a normal, useful project. Losing the service connection must not interrupt local development.
 
-## Acceptance
+## Persistent project rail
 
-For each native capability, record its API operations and scopes, native entry points, workspace/project behavior, write and conflict semantics, offline/permission handling, deterministic checks, and visible installed-app proof. Preserve backend rich content and relationships. Never silently convert away unsupported data. Merged source, packaged builds and authenticated runtime acceptance are separate evidence requirements.
+Project Workspace is a permanent native destination in the right sidebar. Its section navigation stays there. Opening a ticket creates a named tab in that rail; opening it again selects the existing tab. Closing a ticket returns to Workspace without closing the workspace itself. Ticket edits stay inline alongside the activity and comments. Mutable metadata follows the API schema; permission-limited planning choices show an explicit access message and preserve existing values.
+
+Documents open rendered previews by default, with an explicit source-edit action retaining the established native draft and save path. Canvas browsing uses the workspace artifact API and opens native scene previews. Canvas editing, collaboration, and full relationship-canvas parity remain separate coverage requirements; preview access does not complete them.
+
+Local terminals use the standard shell profile and environment. No bundled coding-agent runtime is required. Mobile connection currently depends on deployment-provided relay enrollment; a QR or redesigned setup screen alone is not proof of a finished personal-device pairing flow.

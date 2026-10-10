@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IVectorGraphDocumentSave, parseVectorGraphDocument, validateVectorGraphDocumentSave } from '../common/vectorGraphDocuments.js';
+import { parseVectorGraphCanvas, IVectorGraphDocumentFiling, IVectorGraphDocumentSave, parseVectorGraphDocument, validateVectorGraphDocumentSave, validateVectorGraphDocumentFiling } from '../common/vectorGraphDocuments.js';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { URI } from '../../../base/common/uri.js';
@@ -13,11 +13,19 @@ import { IVectorGraphIssueDraft, IVectorGraphIssuePatch, IVectorGraphProject, IV
 type Call = (workspace: string, operation: string, query?: object, path?: object, body?: object, key?: string) => Promise<unknown>;
 export class VectorGraphOperations {
 	constructor(private readonly call: Call) { }
+	async listCanvases(workspace: string) { const result = vectorGraphRecord(await this.call(workspace, 'listApiWorkspaceCanvases')); return vectorGraphArray(result.canvases).map(parseVectorGraphCanvas); }
+	async getCanvas(workspace: string, canvas: string) { const result = vectorGraphRecord(await this.call(workspace, 'getApiWorkspaceCanvas', {}, { canvasId: vectorGraphId(canvas) })); return parseVectorGraphCanvas(result.canvas); }
 	async listDocuments(workspace: string) { const result = vectorGraphRecord(await this.call(workspace, 'listApiWorkspaceDocuments')); return vectorGraphArray(result.documents).map(parseVectorGraphDocument); }
 	async getDocument(workspace: string, document: string) { const result = vectorGraphRecord(await this.call(workspace, 'getApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) })); return parseVectorGraphDocument(result.document); }
-	async createDocument(workspace: string, team: string, project: string, title: string, requestId: string) {
+	async createDocument(workspace: string, team: string, project: string | undefined, title: string, requestId: string) {
 		if (!title.trim() || title.length > 1000) { throw new Error('Enter a document title of at most 1000 characters.'); }
-		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
+		const result = vectorGraphRecord(await this.call(workspace, 'createApiWorkspaceDocument', {}, {}, { title, body: '', teamId: vectorGraphId(team), links: project === undefined ? [] : [{ targetType: 'project', targetId: vectorGraphId(project) }] }, vectorGraphId(requestId)));
+		return parseVectorGraphDocument(result.document);
+	}
+	async fileDocument(workspace: string, document: string, filing: IVectorGraphDocumentFiling, requestId: string) {
+		const { expectedRevisionNumber, ...projectFiling } = validateVectorGraphDocumentFiling(filing);
+		const result = vectorGraphRecord(await this.call(workspace, 'updateApiWorkspaceDocument', {}, { documentId: vectorGraphId(document) }, { expectedRevisionNumber, projectFiling, saveMode: 'versioned' }, vectorGraphId(requestId)));
+		if (result.error) { throw new Error('Document changed on VectorGraph. Refresh before filing it again.'); }
 		return parseVectorGraphDocument(result.document);
 	}
 	async saveDocument(workspace: string, document: string, save: IVectorGraphDocumentSave, requestId: string) {
@@ -35,7 +43,15 @@ export class VectorGraphOperations {
 		vectorGraphId(team);
 		const result = vectorGraphRecord(await this.call(workspace, 'listApiTeams'));
 		const statuses = vectorGraphRecord(result.statusesByTeam)[team];
+		let planning: IVectorGraphTeamMetadata['planning']; let planningError: string | undefined;
+		try {
+			const snapshot = vectorGraphRecord(vectorGraphRecord(await this.call(workspace, 'getApiPlanningOverview')).planning);
+			const named = (value: unknown) => vectorGraphArray(value).map(value => { const row = vectorGraphRecord(value); return { id: vectorGraphId(row.id), name: vectorGraphText(row.name) }; });
+			planning = { projects: named(snapshot.projects), labels: named(snapshot.labels), sprints: named(vectorGraphArray(snapshot.sprints).filter(value => vectorGraphRecord(value).teamId === team)), milestones: Object.entries(vectorGraphRecord(snapshot.milestonesByProject)).flatMap(([projectId, values]) => named(values).map(value => ({ ...value, projectId }))) };
+		} catch { planningError = 'Project, sprint, milestone and label choices require planning access. Reconnect VectorGraph with planning read access.'; }
+
 		return {
+			planning, planningError,
 			statuses: vectorGraphArray(statuses).map(value => { const row = vectorGraphRecord(value); return { id: vectorGraphId(row.id), name: vectorGraphText(row.name), category: vectorGraphText(row.category) }; }),
 			members: vectorGraphArray(result.members).map(value => { const row = vectorGraphRecord(value); return { id: vectorGraphId(row.id), name: typeof row.name === 'string' ? row.name : vectorGraphText(row.email) }; })
 		};

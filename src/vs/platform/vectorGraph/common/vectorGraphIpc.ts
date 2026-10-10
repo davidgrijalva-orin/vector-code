@@ -29,6 +29,8 @@ export class VectorGraphChannel implements IServerChannel {
 		}
 		let result: Promise<unknown>;
 		switch (command) {
+			case 'listCanvases': result = this.service.listCanvases(args[0]); break;
+			case 'getCanvas': result = this.service.getCanvas(args[0], args[1]); break;
 			case 'listDocuments': result = this.service.listDocuments(args[0]); break;
 			case 'getDocument': result = this.service.getDocument(args[0], args[1]); break;
 			case 'createDocument': result = this.service.createDocument(args[0], args[1], args[2], args[3], args[4]); break;
